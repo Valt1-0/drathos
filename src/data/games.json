@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "title": "The Witcher 3",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1wyy.png",
+    "storyline": "The Witcher 3: Wild Hunt is a story-driven open-world RPG set in a visually stunning fantasy universe..."
+  },
+  {
+    "id": 2,
+    "title": "Cyberpunk 2077",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co7497.png",
+    "storyline": "Cyberpunk 2077 is an open-world action-adventure RPG set in Night City..."
+  },
+  {
+    "id": 3,
+    "title": "Red Dead Redemption 2",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1q1f.png",
+    "storyline": "Red Dead Redemption 2 is an epic tale of life in America’s unforgiving heartland..."
+  },
+  {
+    "id": 4,
+    "title": "God of War",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1tmu.png",
+    "storyline": "God of War is an action-adventure game that combines the best of Greek and Norse mythology..."
+  },
+  {
+    "id": 5,
+    "title": "The Last of Us Part II",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1wyy.png",
+    "storyline": "The Last of Us Part II is a story-driven action-adventure game set in a post-apocalyptic world..."
+  },
+  {
+    "id": 6,
+    "title": "Ghost of Tsushima",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1wyy.png",
+    "storyline": "Ghost of Tsushima is an action-adventure game set in feudal Japan..."
+  },
+  {
+    "id": 7,
+    "title": "Horizon Zero Dawn",
+    "imageSrc": "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1wyy.png",
+    "storyline": "Horizon Zero Dawn is an action RPG set in a post-apocalyptic world overrun by robots..."
+  }
+]
