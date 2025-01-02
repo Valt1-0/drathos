@@ -1,19 +1,19 @@
 import React, { useState } from "react";
-import { FaHome, FaInfoCircle, FaCogs, FaPhone, FaBars } from "react-icons/fa";
+import { FaHome, FaInfoCircle, FaCogs, FaPhone, FaBars, FaWeebly } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import logo from "../assets/drathos2.png";
-import { FaWeebly } from "react-icons/fa6";
+import { useAuth } from "../contexts/authContext";
 
 const menuItems = [
   { label: "Home", icon: <FaHome />, path: "/" },
   { label: "About", icon: <FaInfoCircle />, path: "/about" },
   { label: "Services", icon: <FaCogs />, path: "/services" },
   { label: "Contact", icon: <FaPhone />, path: "/contact" },
-  { label: "Welcome", icon: <FaWeebly />, path: "/welcome" },
+  { label: "Profile", icon: <FaWeebly />, path: "/profile" },
 ];
 
 const Drawer = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div className="flex h-screen">
@@ -51,15 +51,21 @@ const Drawer = ({ children }) => {
           ))}
         </nav>
 
-        <div className="absolute bottom-4 w-full text-center">
-          <img
-            src={logo}
-            alt="Drathos Logo"
-            className={`mx-auto transition-all duration-300 ${
-              isOpen ? "w-16 h-16" : "w-8 h-8"
-            }`}
-          />
-        </div>
+        {/* User Info */}
+        {user && (
+          <div className="absolute bottom-4 w-full text-center">
+            <img
+              src={user.profilePicture}
+              alt="User Avatar"
+              className={`mx-auto rounded-full border-2 border-gray-300 transition-all duration-300 ${
+                isOpen ? "w-16 h-16" : "w-8 h-8"
+              }`}
+            />
+            {isOpen && (
+              <p className="mt-2 text-sm text-gray-400">{user.username}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Content */}

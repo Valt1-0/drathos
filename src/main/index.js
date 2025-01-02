@@ -2,7 +2,6 @@ import { app, shell, BrowserWindow, ipcMain } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/drathos2.png?asset";
-const { exec } = require("child_process");
 
 function createWindow() {
   // Create the browser window.
@@ -74,3 +73,33 @@ app.on("window-all-closed", () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
+
+import { initializeStorage, loadData, saveData, clearData } from "./storage.js";
+
+const userDataPath = app.getPath("userData");
+
+// Initialiser le stockage avec le chemin userData
+initializeStorage(userDataPath);
+
+// Listen for storage operations
+ipcMain.handle("storage-get", (event, key) => {
+  const data = loadData();
+  return data[key];
+});
+
+ipcMain.handle("storage-set", (event, key, value) => {
+  const data = loadData();
+  data[key] = value;
+  saveData(data);
+});
+
+ipcMain.handle("storage-delete", (event, key) => {
+  const data = loadData();
+  delete data[key];
+  saveData(data);
+});
+
+// Add handler for clearing data
+ipcMain.handle("storage-clear", () => {
+  clearData();
+});

@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkServerStatus } from "../api/functions";
+import { checkServerStatus } from "../api/server";
+import { useAuth } from "../contexts/authContext";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const { login, register } = useAuth();
 
-  const [authMode, setAuthMode] = useState("login");
+  const [authMode, setAuthMode] = useState("register");
   const [currentStep, setCurrentStep] = useState(1);
   const [serverAddress, setServerAddress] = useState("");
   const [isChecking, setIsChecking] = useState(false);
@@ -15,6 +18,9 @@ const Welcome = () => {
     password: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Valide si l'adresse est une IP ou un DNS
   const validateAddress = (address) => {
@@ -63,8 +69,29 @@ const Welcome = () => {
     );
   };
 
-  const handleAuth = () => {
-    // Handle authentication logic here
+  const handleAuth = async () => {
+    setError(null);
+
+    if (authMode === "register") {
+      if (formData.password !== formData.confirmPassword) {
+        setError("Les mots de passe ne correspondent pas.");
+        return;
+      }
+
+      const result = await register(formData.username, formData.password);
+      if (result.success) {
+        navigate("/");
+      } else {
+        setError(result.error || "Échec de l'inscription.");
+      }
+    } else {
+      const result = await login(formData.username, formData.password);
+      if (result.success) {
+        navigate("/");
+      } else {
+        setError(result.error || "Échec de la connexion.");
+      }
+    }
   };
 
   // Rendu des étapes
@@ -135,6 +162,7 @@ const Welcome = () => {
               {authMode === "login" ? "Connexion" : "Inscription"}
             </h2>
             <div className="max-w-md mx-auto">
+              {error && <p className="text-red-500 mb-4">{error}</p>}
               <input
                 type="text"
                 placeholder="Nom d'utilisateur"
@@ -144,28 +172,44 @@ const Welcome = () => {
                   setFormData({ ...formData, username: e.target.value })
                 }
               />
-              <input
-                type="password"
-                placeholder="Mot de passe"
-                className="w-full p-3 rounded-lg mb-4 text-gray-800"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
-              {authMode === "register" && (
+              <div className="relative mb-4">
                 <input
-                  type="password"
-                  placeholder="Confirmer le mot de passe"
-                  className="w-full p-3 rounded-lg mb-4 text-gray-800"
-                  value={formData.confirmPassword}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mot de passe"
+                  className="w-full p-3 rounded-lg text-gray-800"
+                  value={formData.password}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
+                    setFormData({ ...formData, password: e.target.value })
                   }
                 />
+                <div
+                  className="absolute text-blue-700 inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </div>
+              </div>
+              {authMode === "register" && (
+                <div className="relative mb-4">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirmer le mot de passe"
+                    className="w-full p-3 rounded-lg text-gray-800"
+                    value={formData.confirmPassword}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                  />
+                  <div
+                    className="absolute text-blue-700 inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                  </div>
+                </div>
               )}
               <div className="flex justify-between items-center mb-4">
                 <button
