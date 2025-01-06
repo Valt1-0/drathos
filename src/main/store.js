@@ -9,9 +9,6 @@ const schema = {
   },
 };
 
-const store = new Store({ schema });
+const store = new Store({ schema, encryptionKey: "DR4TH0S" });
 
 export default store;
-
-
-// encryptionKey: "DAADADZDEFGAQDJZ"
