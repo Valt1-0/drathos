@@ -1,6 +1,5 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
-import { loadData, saveData, clearData } from "../main/storage.js";
 
 // Custom APIs for renderer
 const api = {};
@@ -12,24 +11,10 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld("electron", electronAPI);
     contextBridge.exposeInMainWorld("api", api);
-    contextBridge.exposeInMainWorld("secureStorage", {
-      get: (key) => {
-        const data = loadData();
-        return data[key];
-      },
-      set: (key, value) => {
-        const data = loadData();
-        data[key] = value;
-        saveData(data);
-      },
-      delete: (key) => {
-        const data = loadData();
-        delete data[key];
-        saveData(data);
-      },
-      clear: () => {
-        clearData();
-      },
+    contextBridge.exposeInMainWorld("store", {
+      get: (key) => ipcRenderer.invoke("store-get", key),
+      set: (key, value) => ipcRenderer.invoke("store-set", key, value),
+      delete: (key) => ipcRenderer.invoke("store-delete", key),
     });
   } catch (error) {
     console.error(error);

@@ -9,16 +9,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = window.secureStorage.get("jwtToken");
-    if (token) {
+    const fetchToken = async () => {
       try {
-        const decoded = jwtDecode(token);
-        setUser(decoded.user);
-      } catch {
-        window.secureStorage.delete("jwtToken");
+        // Wait for the promise to resolve
+        const token = await window.store.get("userToken");
+        if (token && Object.keys(token).length !== 0) {
+          try {
+            const decoded = jwtDecode(token);
+            setUser(decoded.user);
+          } catch (error) {
+            window.store.delete("userToken");
+          }
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error retrieving token:", error);
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    fetchToken(); // Call the async function to retrieve the token
   }, []);
 
   const login = async (username, password) => {
@@ -42,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await window.secureStorage.delete("jwtToken");
+    await window.store.delete("userToken");
     setUser(null);
   };
 

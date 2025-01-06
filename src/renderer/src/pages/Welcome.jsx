@@ -46,6 +46,7 @@ const Welcome = () => {
     try {
       const status = await checkServerStatus(serverAddress);
       setServerStatus(status);
+      window.store.set("serverAddress", serverAddress);
     } catch (error) {
       setServerStatus({ online: false, error: error.message });
     } finally {

@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { FaHome, FaInfoCircle, FaCogs, FaPhone, FaBars, FaWeebly } from "react-icons/fa";
+import {
+  FaHome,
+  FaInfoCircle,
+  FaCogs,
+  FaPhone,
+  FaBars,
+  FaWeebly,
+} from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/authContext";
 

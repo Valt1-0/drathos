@@ -74,32 +74,16 @@ app.on("window-all-closed", () => {
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
 
-import { initializeStorage, loadData, saveData, clearData } from "./storage.js";
+import store from "./store";
 
-const userDataPath = app.getPath("userData");
-
-// Initialiser le stockage avec le chemin userData
-initializeStorage(userDataPath);
-
-// Listen for storage operations
-ipcMain.handle("storage-get", (event, key) => {
-  const data = loadData();
-  return data[key];
+ipcMain.handle("store-get", (event, key) => {
+  return store.get(key);
 });
 
-ipcMain.handle("storage-set", (event, key, value) => {
-  const data = loadData();
-  data[key] = value;
-  saveData(data);
+ipcMain.handle("store-set", (event, key, value) => {
+  store.set(key, value);
 });
 
-ipcMain.handle("storage-delete", (event, key) => {
-  const data = loadData();
-  delete data[key];
-  saveData(data);
-});
-
-// Add handler for clearing data
-ipcMain.handle("storage-clear", () => {
-  clearData();
+ipcMain.handle("store-delete", (event, key) => {
+  store.delete(key);
 });
