@@ -6,21 +6,33 @@ import {
   FaPhone,
   FaBars,
   FaWeebly,
+  FaTrash,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/authContext";
 
 const menuItems = [
   { label: "Home", icon: <FaHome />, path: "/" },
-  { label: "About", icon: <FaInfoCircle />, path: "/about" },
-  { label: "Services", icon: <FaCogs />, path: "/services" },
-  { label: "Contact", icon: <FaPhone />, path: "/contact" },
+  // { label: "About", icon: <FaInfoCircle />, path: "/about" },
+  // { label: "Services", icon: <FaCogs />, path: "/services" },
+  // { label: "Contact", icon: <FaPhone />, path: "/contact" },
   { label: "Profile", icon: <FaWeebly />, path: "/profile" },
+  { label: "Delete", icon: <FaTrash /> },
 ];
 
 const Drawer = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+
+  let text = "";
+
+  const handlerDeleteUserData = () => {
+    if (confirm("Are you sure you want to delete your account?")) {
+      window.store.clear();
+    } else {
+      text = "You didn't delete your account!";
+    }
+  };
 
   return (
     <div className="flex h-screen">
@@ -38,24 +50,45 @@ const Drawer = ({ children }) => {
         </button>
 
         <nav className="mt-10 space-y-4">
-          {menuItems.map((item, index) => (
-            <Link
-              key={index}
-              to={item.path}
-              className="group flex items-center hover:bg-gray-800 px-4 py-2 rounded-md cursor-pointer"
-            >
-              <div className="text-2xl text-[#66FCF1] group-hover:text-white">
-                {item.icon}
-              </div>
-              <span
-                className={`ml-4 transition-opacity duration-300 ${
-                  isOpen ? "opacity-100" : "opacity-0"
-                } ${isOpen ? "block" : "hidden"}`}
+          {menuItems.map((item, index) =>
+            item.label === "Delete" ? (
+              <button
+                onClick={() => {
+                  handlerDeleteUserData();
+                }}
+                key={index}
+                className="group flex items-center hover:bg-gray-800 px-4 py-2 rounded-md cursor-pointer"
               >
-                {item.label}
-              </span>
-            </Link>
-          ))}
+                <div className="text-2xl text-[#66FCF1] group-hover:text-white">
+                  {item.icon}
+                </div>
+                <span
+                  className={`ml-4 transition-opacity duration-300 ${
+                    isOpen ? "opacity-100" : "opacity-0"
+                  } ${isOpen ? "block" : "hidden"}`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            ) : (
+              <Link
+                key={index}
+                to={item.path}
+                className="group flex items-center hover:bg-gray-800 px-4 py-2 rounded-md cursor-pointer"
+              >
+                <div className="text-2xl text-[#66FCF1] group-hover:text-white">
+                  {item.icon}
+                </div>
+                <span
+                  className={`ml-4 transition-opacity duration-300 ${
+                    isOpen ? "opacity-100" : "opacity-0"
+                  } ${isOpen ? "block" : "hidden"}`}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            ),
+          )}
         </nav>
 
         {/* User Info */}

@@ -58,9 +58,7 @@ const Welcome = () => {
     if (!serverStatus) return null;
 
     return (
-      <div
-        className={`mt-4 p-3 rounded-lg ${serverStatus.online ? "bg-green-500" : "bg-red-500"}`}
-      >
+      <div>
         {serverStatus.online ? (
           <p>✅ Serveur en ligne</p>
         ) : (
@@ -129,6 +127,22 @@ const Welcome = () => {
                 placeholder="Adresse IP ou DNS du serveur"
                 className="w-full p-3 rounded-lg mb-4 text-gray-800"
               />
+
+              <span class="relative flex h-3 w-3 h-">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+
+              <span class="relative flex h-3 w-3 h-">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+              </span>
+
+              <span class="relative flex h-3 w-3 h-">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+
               <button
                 onClick={handleServerCheck}
                 disabled={isChecking || !serverAddress}

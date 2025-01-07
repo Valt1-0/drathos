@@ -16,6 +16,7 @@ function createWindow() {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
     },
+    alwaysOnTop: true,
   });
 
   mainWindow.on("ready-to-show", () => {
@@ -86,4 +87,8 @@ ipcMain.handle("store-set", (event, key, value) => {
 
 ipcMain.handle("store-delete", (event, key) => {
   store.delete(key);
+});
+
+ipcMain.handle("store-clear", () => {
+  store.clear();
 });
