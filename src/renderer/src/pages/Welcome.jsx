@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { checkServerStatus } from "../api/server";
 import { useAuth } from "../contexts/authContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import BackgroundScene from "../components/Three/BackgroundScene";
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -128,19 +129,19 @@ const Welcome = () => {
                 className="w-full p-3 rounded-lg mb-4 text-gray-800"
               />
 
-              <span class="relative flex h-3 w-3 h-">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              <span className="relative flex h-3 w-3 h-">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
               </span>
 
-              <span class="relative flex h-3 w-3 h-">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+              <span className="relative flex h-3 w-3 h-">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
               </span>
 
-              <span class="relative flex h-3 w-3 h-">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              <span className="relative flex h-3 w-3 h-">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
               </span>
 
               <button
@@ -260,19 +261,29 @@ const Welcome = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-500 to-blue-700 flex flex-col items-center justify-center px-4">
-      <div className="max-w-2xl w-full">
-        <div className="mb-8 flex justify-between">
-          {[1, 2, 3].map((step) => (
-            <div
-              key={step}
-              className={`w-1/3 h-2 rounded-full mx-1 ${
-                step <= currentStep ? "bg-white" : "bg-blue-300"
-              }`}
-            />
-          ))}
+    <div className="relative min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
+      {/* Arrière-plan 3D */}
+      <div className="absolute inset-0 z-0">
+        <BackgroundScene />
+      </div>
+
+      {/* Premier plan (Contenu principal) */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen">
+        <div className="max-w-2xl w-full bg-white bg-opacity-20 backdrop-blur-lg rounded-lg p-8 shadow-lg">
+          {/* Barre de progression */}
+          <div className="mb-8 flex justify-between">
+            {[1, 2, 3].map((step) => (
+              <div
+                key={step}
+                className={`w-1/3 h-2 rounded-full mx-1 ${
+                  step <= currentStep ? "bg-white" : "bg-blue-300"
+                }`}
+              />
+            ))}
+          </div>
+          {/* Contenu dynamique du step */}
+          {renderStep()}
         </div>
-        {renderStep()}
       </div>
     </div>
   );

@@ -1,12 +1,10 @@
 import React, { useState } from "react";
 import {
   FaHome,
-  FaInfoCircle,
-  FaCogs,
-  FaPhone,
   FaBars,
   FaWeebly,
   FaTrash,
+  FaStreetView,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/authContext";
@@ -18,6 +16,7 @@ const menuItems = [
   // { label: "Contact", icon: <FaPhone />, path: "/contact" },
   { label: "Profile", icon: <FaWeebly />, path: "/profile" },
   { label: "Delete", icon: <FaTrash /> },
+  { label: "MViewer", icon: <FaStreetView />, path: "/mviewer" },
 ];
 
 const Drawer = ({ children }) => {
