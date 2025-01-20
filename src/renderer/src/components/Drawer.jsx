@@ -16,7 +16,6 @@ const menuItems = [
   // { label: "Contact", icon: <FaPhone />, path: "/contact" },
   { label: "Profile", icon: <FaWeebly />, path: "/profile" },
   { label: "Delete", icon: <FaTrash /> },
-  { label: "MViewer", icon: <FaStreetView />, path: "/mviewer" },
 ];
 
 const Drawer = ({ children }) => {
