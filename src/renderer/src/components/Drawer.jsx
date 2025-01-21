@@ -11,10 +11,7 @@ import { useAuth } from "../contexts/authContext";
 
 const menuItems = [
   { label: "Home", icon: <FaHome />, path: "/" },
-  // { label: "About", icon: <FaInfoCircle />, path: "/about" },
-  // { label: "Services", icon: <FaCogs />, path: "/services" },
-  // { label: "Contact", icon: <FaPhone />, path: "/contact" },
-  { label: "Profile", icon: <FaWeebly />, path: "/profile" },
+  { label: "Welcome", icon: <FaWeebly />, path: "/welcome" },
   { label: "Delete", icon: <FaTrash /> },
 ];
 

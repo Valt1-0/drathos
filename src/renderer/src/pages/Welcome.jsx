@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { checkServerStatus } from "../api/server";
 import { useAuth } from "../contexts/authContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import BackgroundScene from "../components/Three/BackgroundScene";
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -120,7 +119,7 @@ const Welcome = () => {
             <h2 className="text-3xl font-bold mb-6">
               Configuration du serveur
             </h2>
-            <div className="max-w-md mx-auto">
+            <div className="max-w-md mx-auto relative">
               <input
                 type="text"
                 value={serverAddress}
@@ -128,21 +127,26 @@ const Welcome = () => {
                 placeholder="Adresse IP ou DNS du serveur"
                 className="w-full p-3 rounded-lg mb-4 text-gray-800"
               />
-
-              <span className="relative flex h-3 w-3 h-">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-
-              <span className="relative flex h-3 w-3 h-">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-              </span>
-
-              <span className="relative flex h-3 w-3 h-">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
+              <div className="absolute top-0 right-0 mt-3 mr-3">
+                {isChecking ? (
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                  </span>
+                ) : serverStatus ? (
+                  serverStatus.online ? (
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                  ) : (
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                  )
+                ) : null}
+              </div>
 
               <button
                 onClick={handleServerCheck}
@@ -151,7 +155,7 @@ const Welcome = () => {
               >
                 {isChecking ? "Vérification..." : "Vérifier la connexion"}
               </button>
-              {renderServerStatus()}
+              {serverStatus && renderServerStatus()}
               <div className="flex justify-between items-center mt-4">
                 <button
                   onClick={() => setCurrentStep(1)}
@@ -261,27 +265,19 @@ const Welcome = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
-      {/* Arrière-plan 3D */}
-      <div className="absolute inset-0 z-0">
-        <BackgroundScene />
-      </div>
-
-      {/* Premier plan (Contenu principal) */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen">
+    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="max-w-2xl w-full bg-white bg-opacity-20 backdrop-blur-lg rounded-lg p-8 shadow-lg">
-          {/* Barre de progression */}
           <div className="mb-8 flex justify-between">
             {[1, 2, 3].map((step) => (
               <div
                 key={step}
                 className={`w-1/3 h-2 rounded-full mx-1 ${
-                  step <= currentStep ? "bg-white" : "bg-blue-300"
+                  step <= currentStep ? "bg-blue-300" : "bg-white"
                 }`}
               />
             ))}
           </div>
-          {/* Contenu dynamique du step */}
           {renderStep()}
         </div>
       </div>

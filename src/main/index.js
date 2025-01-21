@@ -16,6 +16,13 @@ function createWindow() {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
     },
+
+    // titleBarStyle: "hidden",
+    // titleBarOverlay: {
+    //   color: "#2f3241",
+    //   symbolColor: "#74b1be",
+    //   height: 20,
+    // },
   });
 
   mainWindow.on("ready-to-show", () => {

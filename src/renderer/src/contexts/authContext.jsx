@@ -7,6 +7,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -35,6 +36,7 @@ export const AuthProvider = ({ children }) => {
     if (success) {
       const decoded = jwtDecode(token);
       setUser(decoded.user);
+      setIsAuthenticated(true);
       return { success: true };
     }
     return { success: false, error };
@@ -45,6 +47,7 @@ export const AuthProvider = ({ children }) => {
     if (success) {
       const decoded = jwtDecode(token);
       setUser(decoded.user);
+      setIsAuthenticated(true);
       return { success: true };
     }
     return { success: false, error };
@@ -56,7 +59,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, isAuthenticated }}>
       {!loading && children}
     </AuthContext.Provider>
   );
