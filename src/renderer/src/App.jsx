@@ -1,31 +1,62 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Drawer from "./components/Drawer";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/authContext";
+
 import Home from "./pages/Home";
 import Welcome from "./pages/Welcome";
-import { AuthProvider } from "./contexts/authContext";
+import Drawer from "./components/Drawer";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-function App() {
+function AppRoutes() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      {!user && <Route path="/welcome" element={<Welcome />} />}
+
+      {user && (
+        <>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Drawer>
+                  <Home />
+                </Drawer>
+              </ProtectedRoute>
+            }
+          />
+          {/* <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Drawer>
+                  <Home />
+                </Drawer>
+              </ProtectedRoute>
+            }
+          /> */}
+        </>
+      )}
+
+      <Route
+        path="*"
+        element={<Navigate to={user ? "/" : "/welcome"} replace />}
+      />
+    </Routes>
+  );
+}
+
+export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <Drawer>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/welcome" element={<Welcome />} />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Welcome />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Drawer>
+        <AppRoutes />
       </Router>
     </AuthProvider>
   );
 }
-
-export default App;

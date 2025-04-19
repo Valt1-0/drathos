@@ -6,9 +6,13 @@ import icon from "../../resources/drathos2.png?asset";
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    title: "Drathos",
+    width: 1280,
+    height: 800,
+    minWidth: 1280,
+    minHeight: 800,
     show: false,
+    frames: true,
     autoHideMenuBar: false,
     icon: icon,
     ...(process.platform === "linux" ? { icon } : {}),
@@ -17,12 +21,12 @@ function createWindow() {
       sandbox: false,
     },
 
-    // titleBarStyle: "hidden",
-    // titleBarOverlay: {
-    //   color: "#2f3241",
-    //   symbolColor: "#74b1be",
-    //   height: 20,
-    // },
+    titleBarStyle: "",
+    titleBarOverlay: {
+      color: "#2f3241",
+      symbolColor: "#74b1be",
+      height: 20,
+    },
   });
 
   mainWindow.on("ready-to-show", () => {

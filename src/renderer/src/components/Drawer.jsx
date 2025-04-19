@@ -11,7 +11,7 @@ import { useAuth } from "../contexts/authContext";
 
 const menuItems = [
   { label: "Home", icon: <FaHome />, path: "/" },
-  { label: "Welcome", icon: <FaWeebly />, path: "/welcome" },
+  // { label: "Welcome", icon: <FaWeebly />, path: "/welcome" },
   { label: "Delete", icon: <FaTrash /> },
 ];
 
@@ -24,16 +24,17 @@ const Drawer = ({ children }) => {
   const handlerDeleteUserData = () => {
     if (confirm("Are you sure you want to delete your account?")) {
       window.store.clear();
+      window.location.reload();
     } else {
       text = "You didn't delete your account!";
     }
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen drag-zone">
       {/* Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full bg-gray-900 text-white transition-all duration-300 ${
+        className={`no-drag fixed top-0 left-0 h-full bg-gray-900 text-white transition-all duration-300 ${
           isOpen ? "w-48" : "w-16"
         }`}
       >
