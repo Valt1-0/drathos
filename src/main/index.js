@@ -1,7 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain } from "electron";
-import { join } from "path";
+// Fichier: drathos/src/main/index.js
+
+import {
+  app,
+  shell,
+  BrowserWindow,
+  ipcMain,
+  Tray,
+  Menu,
+  dialog,
+} from "electron";
+import path, { join } from "path";
+import fs from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
-import icon from "../../resources/drathos2.png?asset";
+import icon from "../../resources/logo2.png?asset";
 
 function createWindow() {
   // Create the browser window.
@@ -19,6 +30,7 @@ function createWindow() {
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
+      nodeIntegrationInWorker: true,
     },
 
     titleBarStyle: "",
@@ -61,10 +73,22 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  // IPC test
-  ipcMain.on("ping", () => console.log("pong"));
+  //* IPC test
+  //* ipcMain.on("ping", () => console.log("pong"));
 
   createWindow();
+
+  // Create a tray icon
+  let tray = null;
+  tray = new Tray(icon);
+  const contextMenu = Menu.buildFromTemplate([
+    { label: "Item1", type: "radio" },
+    { label: "Item2", type: "radio" },
+    { label: "Item3", type: "radio", checked: true },
+    { label: "Item4", type: "radio" },
+  ]);
+  tray.setToolTip("Drathos");
+  tray.setContextMenu(contextMenu);
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
@@ -85,6 +109,7 @@ app.on("window-all-closed", () => {
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
 
+//* Store
 import store from "./store";
 
 ipcMain.handle("store-get", (event, key) => {
@@ -101,4 +126,64 @@ ipcMain.handle("store-delete", (event, key) => {
 
 ipcMain.handle("store-clear", () => {
   store.clear();
+});
+
+//* Open file dialog */
+ipcMain.handle("dialog:selectAndCreate", async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory"],
+  });
+
+  if (result.canceled || !result.filePaths.length) return null;
+
+  const basePath = result.filePaths[0];
+  const subfolder = path.join(basePath, "DrathosGames");
+
+  if (!fs.existsSync(subfolder)) {
+    fs.mkdirSync(subfolder);
+  }
+
+  return subfolder;
+});
+
+ipcMain.handle("dialog:openFolder", async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory"],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  return result.filePaths[0];
+});
+
+//* Install game */
+
+import workerPath from "./installWorker.js?modulePath";
+import { Worker } from "node:worker_threads";
+
+ipcMain.handle("installGame", async (event, { serverGame }) => {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(workerPath, {
+      workerData: { serverGame, storeData: store.store },
+    });
+
+    worker.on("message", (data) => {
+      event.sender.send("downloadProgress", { id: serverGame._id, ...data });
+
+      if (data.stage === "Completed") resolve({ success: true });
+      if (data.stage === "Failed") reject(new Error(data.error));
+    });
+
+    worker.on("error", (err) => {
+      event.sender.send("downloadProgress", {
+        id: serverGame._id,
+        progress: 0,
+        stage: "Failed",
+        error: err.message,
+      });
+      reject(err);
+    });
+  });
 });

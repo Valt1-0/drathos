@@ -2,7 +2,16 @@ import { contextBridge, ipcRenderer } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
 
 // Custom APIs for renderer
-const api = {};
+const api = {
+  selectAndCreateFolder: (subfolderName) =>
+    ipcRenderer.invoke("dialog:selectAndCreate", subfolderName),
+  selectFolder: () => ipcRenderer.invoke("dialog:openFolder"),
+  installGame: (game) =>
+    ipcRenderer.invoke("installGame", { serverGame: game }),
+  onDownloadProgress: (callback) =>
+    ipcRenderer.on("downloadProgress", (_event, data) => callback(data)),
+
+};
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

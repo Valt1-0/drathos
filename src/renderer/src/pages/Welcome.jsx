@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { checkServerStatus } from "../api/server";
 import { useAuth } from "../contexts/authContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -99,23 +99,22 @@ const Welcome = () => {
       case 1:
         return (
           <div className="text-center text-white">
-            <h1 className="text-5xl font-bold mb-6">Bienvenue sur Drathos</h1>
-            <p className="text-xl mb-8">
+            <h1 className="text-5xl font-bold mb-8">Bienvenue sur Drathos</h1>
+            <p className="text-xl mb-10">
               Votre nouvelle bibliothèque de jeux personnalisée. Commençons la
               configuration !
             </p>
             <button
               onClick={() => setCurrentStep(2)}
-              className="bg-white text-blue-700 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-blue-50"
+              className="bg-white text-blue-700 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-blue-100 transition"
             >
               Commencer
             </button>
           </div>
         );
-
       case 2:
         return (
-          <div className="text-center text-white">
+          <div className="text-center text-black">
             <h2 className="text-3xl font-bold mb-6">
               Configuration du serveur
             </h2>

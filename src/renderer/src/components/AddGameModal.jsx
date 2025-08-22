@@ -1,100 +1,174 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { searchGamesFromIGDB } from "../api/igdb";
+import { addGameToServer } from "../api/serverGames";
 
-const AddGameModal = ({ isOpen, onClose, onSave }) => {
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    releaseDate: "",
-    imageSrc: "",
-    badgeType: "new",
-  });
+const AddGameModal = ({ isOpen, onClose }) => {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
+  const [version, setVersion] = useState("1.0.0");
+  const [isPublic, setIsPublic] = useState(true);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const data = await searchGamesFromIGDB(query);
+        setSuggestions(data || []);
+      } catch (err) {
+        console.error("Erreur dans la recherche IGDB :", err);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  const handleSelect = (id) => {
+    const game = suggestions.find((g) => g.id === id);
+    setSelectedGame(game);
+    setSuggestions([]);
+    setQuery(game.name);
   };
 
-  const handleSubmit = () => {
-    const newGame = {
-      ...form,
-      addedDate: new Date().toISOString(),
-    };
-    onSave(newGame);
-    onClose();
+  const handleUpload = async () => {
+    if (!selectedGame || !zipFile) {
+      alert("Veuillez sélectionner un jeu et un fichier .zip");
+      return;
+    }
+
+    try {
+      await addGameToServer(
+        zipFile,
+        version,
+        isPublic,
+        selectedGame.id,
+        setUploadProgress, // met à jour la barre de progression
+      );
+
+      alert("Jeu ajouté avec succès !");
+      onClose();
+      setUploadProgress(0);
+      setSelectedGame(null);
+      setZipFile(null);
+      setVersion("1.0.0");
+    } catch (err) {
+      console.error("Erreur d'upload :", err);
+      alert("Erreur lors de l'ajout du jeu : " + err.message);
+      setUploadProgress(0);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-gray-900 text-white p-6 rounded-xl w-full max-w-lg relative shadow-2xl animate-fade-in">
-        {/* Close Button */}
+      <div className="bg-gray-900 text-white p-6 rounded-xl w-full max-w-lg relative shadow-lg">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-400 hover:text-white"
         >
-          <span className="text-2xl">&times;</span>
+          &times;
         </button>
 
-        <h2 className="text-2xl font-semibold mb-4">Add a New Game</h2>
+        <h2 className="text-2xl font-bold mb-4">Ajouter un jeu</h2>
 
-        <div className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Game Name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full p-2 rounded bg-gray-800 border border-gray-700"
-          />
-          <textarea
-            name="description"
-            placeholder="Description"
-            value={form.description}
-            onChange={handleChange}
-            rows={3}
-            className="w-full p-2 rounded bg-gray-800 border border-gray-700"
-          />
-          <input
-            type="date"
-            name="releaseDate"
-            value={form.releaseDate}
-            onChange={handleChange}
-            className="w-full p-2 rounded bg-gray-800 border border-gray-700"
-          />
-          <input
-            type="text"
-            name="imageSrc"
-            placeholder="Image URL"
-            value={form.imageSrc}
-            onChange={handleChange}
-            className="w-full p-2 rounded bg-gray-800 border border-gray-700"
-          />
-          <select
-            name="badgeType"
-            value={form.badgeType}
-            onChange={handleChange}
-            className="w-full p-2 rounded bg-gray-800 border border-gray-700"
-          >
-            <option value="new">New</option>
-            <option value="popular">Popular</option>
-            <option value="soon">Coming Soon</option>
-          </select>
-        </div>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setSelectedGame(null);
+          }}
+          placeholder="Tape le nom du jeu..."
+          className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+        />
 
-        <div className="flex justify-end gap-4 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-          >
-            Add Game
-          </button>
-        </div>
+        {!selectedGame && (
+          <div className="mt-4 max-h-60 overflow-y-auto">
+            {loading && (
+              <div className="text-sm text-gray-400">Chargement...</div>
+            )}
+
+            {!loading && suggestions.length > 0 && (
+              <ul className="space-y-2">
+                {suggestions.map((game) => (
+                  <li
+                    key={game.id}
+                    className="p-2 border border-gray-700 rounded hover:bg-gray-700 cursor-pointer"
+                    onClick={() => handleSelect(game.id)}
+                  >
+                    <div className="font-medium">{game.name}</div>
+                    <div className="text-sm text-gray-400">
+                      {game.first_release_date
+                        ? new Date(game.first_release_date * 1000).getFullYear()
+                        : "Date inconnue"}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {!loading && query.length >= 2 && suggestions.length === 0 && (
+              <div className="text-sm text-gray-400">Aucun jeu trouvé.</div>
+            )}
+          </div>
+        )}
+
+        {selectedGame && (
+          <div className="mt-4 space-y-3">
+            <div>
+              <strong>Jeu sélectionné :</strong> {selectedGame.name}
+            </div>
+            <input
+              type="file"
+              accept=".zip,.7z,.rar,.tar,.gz"
+              onChange={(e) => setZipFile(e.target.files[0])}
+              className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+            />
+            <input
+              type="text"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              placeholder="Version (ex: 1.0.0)"
+              className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+            />
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={() => setIsPublic(!isPublic)}
+              />
+              <span>Jeu public</span>
+            </label>
+
+            {uploadProgress > 0 && (
+              <div className="w-full bg-gray-700 h-2 rounded">
+                <div
+                  className="bg-green-500 h-full rounded"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            )}
+
+            <button
+              onClick={handleUpload}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
+            >
+              Uploader le jeu
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,11 +1,14 @@
-import Store from "electron-store";
+import Store from 'electron-store'
 
 const schema = {
   userToken: {
-    type: "string",
+    type: 'string',
   },
   serverAddress: {
-    type: "string",
+    type: 'string',
+  },
+  downloadPath: {
+    type: 'string',
   },
 };
 

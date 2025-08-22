@@ -1,17 +1,21 @@
 import React, { useState } from "react";
 import {
-  FaHome,
   FaBars,
-  FaWeebly,
   FaTrash,
-  FaStreetView,
-} from "react-icons/fa";
-import { Link } from "react-router-dom";
+  FaGamepad,
+  FaDownload,
+  FaGear,
+  FaGauge,
+} from "react-icons/fa6";
+import { FaHome } from "react-icons/fa";
+import { Link } from "react-router";
 import { useAuth } from "../contexts/authContext";
 
 const menuItems = [
   { label: "Home", icon: <FaHome />, path: "/" },
-  // { label: "Welcome", icon: <FaWeebly />, path: "/welcome" },
+  { label: "Games", icon: <FaGamepad />, path: "/games" },
+  { label: "Download", icon: <FaDownload />, path: "/download" },
+  { label: "Settings", icon: <FaGear />, path: "/settings" },
   { label: "Delete", icon: <FaTrash /> },
 ];
 

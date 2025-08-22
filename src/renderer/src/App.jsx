@@ -1,15 +1,18 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { AuthProvider, useAuth } from "./contexts/authContext";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
+import { Toaster } from "sonner";
 
-import Home from "./pages/Home";
-import Welcome from "./pages/Welcome";
+import { AuthProvider, useAuth } from "./contexts/authContext";
+import { DownloadProvider } from "./contexts/downloadContext";
+
 import Drawer from "./components/Drawer";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+// * Pages
+import Home from "./pages/Home";
+import Welcome from "./pages/Welcome";
+import Games from "./pages/Games";
+import Download from "./pages/Download";
+import Settings from "./pages/Settings";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -30,16 +33,36 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
-          {/* <Route
-            path="/profile"
+          <Route
+            path="/games"
             element={
               <ProtectedRoute>
                 <Drawer>
-                  <Home />
+                  <Games />
                 </Drawer>
               </ProtectedRoute>
             }
-          /> */}
+          />
+          <Route
+            path="/download"
+            element={
+              <ProtectedRoute>
+                <Drawer>
+                  <Download />
+                </Drawer>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Drawer>
+                  <Settings />
+                </Drawer>
+              </ProtectedRoute>
+            }
+          />
         </>
       )}
 
@@ -54,9 +77,12 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <DownloadProvider>
+        <Router>
+
+          <AppRoutes />
+        </Router>
+      </DownloadProvider>
     </AuthProvider>
   );
 }
