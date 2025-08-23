@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { checkServerStatus } from "../api/server";
 import { useAuth } from "../contexts/authContext";
@@ -58,11 +58,13 @@ const Welcome = () => {
     if (!serverStatus) return null;
 
     return (
-      <div>
+      <div className="mt-4">
         {serverStatus.online ? (
-          <p>✅ Serveur en ligne</p>
+          <p className="text-green-300 font-medium">✅ Serveur en ligne</p>
         ) : (
-          <p>❌ Serveur hors ligne: {serverStatus.error}</p>
+          <p className="text-red-300 font-medium">
+            ❌ Serveur hors ligne: {serverStatus.error}
+          </p>
         )}
       </div>
     );
@@ -106,7 +108,7 @@ const Welcome = () => {
             </p>
             <button
               onClick={() => setCurrentStep(2)}
-              className="bg-white text-blue-700 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-blue-100 transition"
+              className="bg-white text-blue-700 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-blue-100 transition-colors duration-200"
             >
               Commencer
             </button>
@@ -114,7 +116,7 @@ const Welcome = () => {
         );
       case 2:
         return (
-          <div className="text-center text-black">
+          <div className="text-center text-white">
             <h2 className="text-3xl font-bold mb-6">
               Configuration du serveur
             </h2>
@@ -124,7 +126,7 @@ const Welcome = () => {
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
                 placeholder="Adresse IP ou DNS du serveur"
-                className="w-full p-3 rounded-lg mb-4 text-gray-800"
+                className="w-full p-3 rounded-lg mb-4 text-gray-800 bg-white border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
               <div className="absolute top-0 right-0 mt-3 mr-3">
                 {isChecking ? (
@@ -150,22 +152,24 @@ const Welcome = () => {
               <button
                 onClick={handleServerCheck}
                 disabled={isChecking || !serverAddress}
-                className="bg-white text-blue-700 px-6 py-2 rounded-lg font-semibold text-lg hover:bg-blue-50 disabled:opacity-50"
+                className="bg-white text-blue-700 px-6 py-2 rounded-lg font-semibold text-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mb-4"
               >
                 {isChecking ? "Vérification..." : "Vérifier la connexion"}
               </button>
-              {serverStatus && renderServerStatus()}
-              <div className="flex justify-between items-center mt-4">
+
+              {renderServerStatus()}
+
+              <div className="flex justify-between items-center mt-6">
                 <button
                   onClick={() => setCurrentStep(1)}
-                  className="bg-white/20 px-4 py-2 rounded-lg"
+                  className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm"
                 >
                   Retour
                 </button>
                 <button
                   onClick={() => setCurrentStep(3)}
                   disabled={!serverStatus || !serverStatus.online}
-                  className="bg-white text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                  className="bg-white text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   Suivant
                 </button>
@@ -181,39 +185,46 @@ const Welcome = () => {
               {authMode === "login" ? "Connexion" : "Inscription"}
             </h2>
             <div className="max-w-md mx-auto">
-              {error && <p className="text-red-500 mb-4">{error}</p>}
+              {error && (
+                <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4 backdrop-blur-sm">
+                  {error}
+                </div>
+              )}
+
               <input
                 type="text"
                 placeholder="Nom d'utilisateur"
-                className="w-full p-3 rounded-lg mb-4 text-gray-800"
+                className="w-full p-3 rounded-lg mb-4 text-gray-800 bg-white border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                 value={formData.username}
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
                 }
               />
+
               <div className="relative mb-4">
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Mot de passe"
-                  className="w-full p-3 rounded-lg text-gray-800"
+                  className="w-full p-3 rounded-lg text-gray-800 bg-white border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
                 />
                 <div
-                  className="absolute text-blue-700 inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                  className="absolute text-blue-600 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-800 transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </div>
               </div>
+
               {authMode === "register" && (
                 <div className="relative mb-4">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirmer le mot de passe"
-                    className="w-full p-3 rounded-lg text-gray-800"
+                    className="w-full p-3 rounded-lg text-gray-800 bg-white border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       setFormData({
@@ -223,32 +234,34 @@ const Welcome = () => {
                     }
                   />
                   <div
-                    className="absolute text-blue-700 inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                    className="absolute text-blue-600 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-800 transition-colors"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </div>
                 </div>
               )}
-              <div className="flex justify-between items-center mb-4">
+
+              <div className="flex justify-between items-center mb-6">
                 <button
                   onClick={() => setCurrentStep(2)}
-                  className="bg-white/20 px-6 py-2 rounded-lg"
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm"
                 >
                   Retour
                 </button>
                 <button
                   onClick={handleAuth}
-                  className="bg-white text-blue-700 px-6 py-2 rounded-lg hover:bg-blue-50"
+                  className="bg-white text-blue-700 px-6 py-2 rounded-lg hover:bg-blue-50 font-semibold transition-all duration-200"
                 >
                   {authMode === "login" ? "Se connecter" : "S'inscrire"}
                 </button>
               </div>
+
               <button
                 onClick={() =>
                   setAuthMode(authMode === "login" ? "register" : "login")
                 }
-                className="text-white underline"
+                className="text-white underline hover:text-blue-200 transition-colors duration-200"
               >
                 {authMode === "login"
                   ? "Créer un compte"
@@ -264,20 +277,27 @@ const Welcome = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="max-w-2xl w-full bg-white bg-opacity-20 backdrop-blur-lg rounded-lg p-8 shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 overflow-hidden">
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="max-w-2xl w-full bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+          {/* Progress Bar */}
           <div className="mb-8 flex justify-between">
             {[1, 2, 3].map((step) => (
               <div
                 key={step}
-                className={`w-1/3 h-2 rounded-full mx-1 ${
-                  step <= currentStep ? "bg-blue-300" : "bg-white"
+                className={`flex-1 h-2 rounded-full mx-1 transition-all duration-300 ${
+                  step <= currentStep
+                    ? "bg-gradient-to-r from-blue-400 to-purple-400"
+                    : "bg-white/30"
                 }`}
               />
             ))}
           </div>
-          {renderStep()}
+
+          {/* Step Content */}
+          <div className="min-h-[400px] flex items-center justify-center">
+            {renderStep()}
+          </div>
         </div>
       </div>
     </div>
