@@ -11,6 +11,18 @@ const api = {
   onDownloadProgress: (callback) =>
     ipcRenderer.on("downloadProgress", (_event, data) => callback(data)),
 
+  launchGame: (gameData, installedPath) =>
+    ipcRenderer.invoke("launchGame", { gameData, installedPath }),
+  stopGame: (gameId, force = false) =>
+    ipcRenderer.invoke("stopGame", { gameId, force }),
+  getActiveGames: () =>
+    ipcRenderer.invoke("getActiveGames"),
+  onGameStatusChanged: (callback) =>
+    ipcRenderer.on("gameStatusChanged", (_event, data) => callback(data)),
+  listGameFiles: (gameId) =>
+    ipcRenderer.invoke("listGameFiles", gameId),
+  configureExecutable: (gameId, config) =>
+    ipcRenderer.invoke("configureExecutable", { gameId, config }),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

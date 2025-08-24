@@ -187,3 +187,35 @@ ipcMain.handle("installGame", async (event, { serverGame }) => {
     });
   });
 });
+
+import { GameLauncher } from "./gameLauncher.js";
+
+// Instance globale du lanceur
+const gameLauncher = new GameLauncher();
+
+// Handler pour lancer un jeu
+ipcMain.handle("launchGame", async (event, gameConfig) => {
+  return await gameLauncher.launchGame(
+    gameConfig.gameData,
+    gameConfig.installedPath,
+    (status) => {
+      // Envoyer les mises à jour de statut au renderer
+      event.sender.send("gameStatusChanged", status);
+    }
+  );
+});
+
+// Handler pour arrêter un jeu
+ipcMain.handle("stopGame", async (event, { gameId, force = false }) => {
+  return await gameLauncher.stopGame(gameId, force);
+});
+
+// Handler pour obtenir les jeux actifs
+ipcMain.handle("getActiveGames", () => {
+  return gameLauncher.getActiveGames();
+});
+
+// Nettoyage à la fermeture
+app.on("before-quit", () => {
+  gameLauncher.cleanup();
+});
