@@ -1,8 +1,11 @@
+// drathos/src/preload/index.js
+
 import { contextBridge, ipcRenderer } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
 
 // Custom APIs for renderer
 const api = {
+  // === APIS EXISTANTES (inchangées) ===
   selectAndCreateFolder: (subfolderName) =>
     ipcRenderer.invoke("dialog:selectAndCreate", subfolderName),
   selectFolder: () => ipcRenderer.invoke("dialog:openFolder"),
@@ -11,18 +14,43 @@ const api = {
   onDownloadProgress: (callback) =>
     ipcRenderer.on("downloadProgress", (_event, data) => callback(data)),
 
+  // === ANCIENNES APIS DE JEU (conservées pour compatibilité) ===
   launchGame: (gameData, installedPath) =>
     ipcRenderer.invoke("launchGame", { gameData, installedPath }),
   stopGame: (gameId, force = false) =>
     ipcRenderer.invoke("stopGame", { gameId, force }),
-  getActiveGames: () =>
-    ipcRenderer.invoke("getActiveGames"),
+  getActiveGames: () => ipcRenderer.invoke("getActiveGames"),
   onGameStatusChanged: (callback) =>
     ipcRenderer.on("gameStatusChanged", (_event, data) => callback(data)),
-  listGameFiles: (gameId) =>
-    ipcRenderer.invoke("listGameFiles", gameId),
+  listGameFiles: (gameId) => ipcRenderer.invoke("listGameFiles", gameId),
   configureExecutable: (gameId, config) =>
     ipcRenderer.invoke("configureExecutable", { gameId, config }),
+
+  // === NOUVELLES APIS DE DÉTECTION D'EXÉCUTABLES ===
+  // Détecter tous les exécutables dans un dossier de jeu
+  detectExecutables: ({ gamePath, gameName }) =>
+    ipcRenderer.invoke("detectExecutables", { gamePath, gameName }),
+
+  // Obtenir le meilleur exécutable pour un jeu
+  getBestExecutable: ({ gamePath, gameName }) =>
+    ipcRenderer.invoke("getBestExecutable", { gamePath, gameName }),
+
+  // Vérifier si un fichier est exécutable
+  isFileExecutable: (filePath) =>
+    ipcRenderer.invoke("isFileExecutable", filePath),
+
+  // Lister le contenu d'un dossier de jeu
+  listGameDirectory: (gamePath) =>
+    ipcRenderer.invoke("listGameDirectory", gamePath),
+
+  // Ouvrir le dossier d'un jeu
+  openGameFolder: (gamePath) => ipcRenderer.invoke("openGameFolder", gamePath),
+
+  // Obtenir les infos d'un processus de jeu
+  getGameProcess: (gameId) => ipcRenderer.invoke("getGameProcess", gameId),
+
+  // Vérifier si un jeu est en cours
+  isGameRunning: (gameId) => ipcRenderer.invoke("isGameRunning", gameId),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to
@@ -38,10 +66,23 @@ if (process.contextIsolated) {
       delete: (key) => ipcRenderer.invoke("store-delete", key),
       clear: () => ipcRenderer.invoke("store-clear"),
     });
+
+    console.log("[Preload] APIs exposées avec succès");
+    console.log("[Preload] Nouvelles APIs:", [
+      "getBestExecutable",
+      "detectExecutables",
+      "openGameFolder",
+    ]);
   } catch (error) {
-    console.error(error);
+    console.error("Erreur lors de l'exposition des APIs:", error);
   }
 } else {
   window.electron = electronAPI;
   window.api = api;
+  window.store = {
+    get: (key) => ipcRenderer.invoke("store-get", key),
+    set: (key, value) => ipcRenderer.invoke("store-set", key, value),
+    delete: (key) => ipcRenderer.invoke("store-delete", key),
+    clear: () => ipcRenderer.invoke("store-clear"),
+  };
 }

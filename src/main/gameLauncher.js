@@ -7,97 +7,96 @@ import { shell } from "electron";
 
 export class GameLauncher {
   constructor() {
-    this.activeProcesses = new Map(); // Tracking des processus actifs
-    this.sessionTrackers = new Map(); // Tracking des sessions
+    this.activeProcesses = new Map(); // Map<gameId, ProcessInfo>
+    this.sessionTrackers = new Map(); // Map<gameId, IntervalId>
   }
 
   /**
-   * Lance un jeu avec configuration complète
+   * Lance un jeu de manière simplifiée
+   * @param {string} gameId - ID du jeu
+   * @param {string} gamePath - Chemin vers le dossier du jeu
+   * @param {string} executableName - Nom de l'exécutable (ex: "game.exe")
+   * @param {Function} onStatusChange - Callback pour les changements d'état
    */
-  async launchGame(gameConfig, installedGamePath, onStatusChange) {
-    const { executable, launchConfig = {}, gameId, gameName } = gameConfig;
-
+  async launchGame(
+    gameId,
+    gamePath,
+    executableName,
+    onStatusChange = () => {}
+  ) {
     try {
-      console.log(`[GameLauncher] Launching ${gameName}...`);
+      console.log(`[GameLauncher] Lancement du jeu ${gameId}...`);
 
-      // Vérifications pré-lancement
-      await this.prelaunchChecks(executable, installedGamePath, launchConfig);
+      // Vérification si le jeu est déjà en cours
+      if (this.activeProcesses.has(gameId)) {
+        throw new Error("Le jeu est déjà en cours d'exécution");
+      }
 
-      // Construire le chemin complet de l'executable
-      const executablePath = path.join(
-        installedGamePath,
-        executable.relativePath || executable.fileName
-      );
+      // Construction du chemin complet vers l'exécutable
+      const executablePath = path.join(gamePath, executableName);
 
+      // Vérification de l'existence du fichier
       if (!fs.existsSync(executablePath)) {
-        throw new Error(`Executable non trouvé: ${executablePath}`);
+        throw new Error(`Exécutable non trouvé : ${executablePath}`);
       }
 
-      // Exécuter les commandes pré-lancement
-      if (launchConfig.prelaunchCommands?.length > 0) {
-        await this.executeCommands(
-          launchConfig.prelaunchCommands,
-          installedGamePath
+      // Vérification des permissions
+      const stats = fs.statSync(executablePath);
+      if (!stats.isFile()) {
+        throw new Error(
+          `Le chemin spécifié n'est pas un fichier : ${executablePath}`
         );
       }
 
-      // Déterminer le répertoire de travail
-      const workingDir = executable.workingDirectory
-        ? path.join(installedGamePath, executable.workingDirectory)
-        : path.dirname(executablePath);
+      console.log(`[GameLauncher] Exécution de : ${executablePath}`);
+      console.log(`[GameLauncher] Répertoire de travail : ${gamePath}`);
 
-      // Préparer les variables d'environnement
-      const env = { ...process.env };
-      if (launchConfig.environmentVariables) {
-        Object.entries(launchConfig.environmentVariables).forEach(
-          ([key, value]) => {
-            env[key] = value;
-          }
-        );
-      }
-
-      // Préparer les arguments
-      const args = executable.arguments ? executable.arguments.split(" ") : [];
-
-      console.log(`[GameLauncher] Executing: ${executablePath}`);
-      console.log(`[GameLauncher] Working dir: ${workingDir}`);
-      console.log(`[GameLauncher] Arguments: ${args.join(" ")}`);
-
-      // Lancer le processus
-      const gameProcess = spawn(executablePath, args, {
-        cwd: workingDir,
-        env: env,
-        detached: true, // Permet au jeu de continuer même si l'app se ferme
-        stdio: ["ignore", "pipe", "pipe"],
+      // Lancement du processus
+      const gameProcess = spawn(executablePath, [], {
+        cwd: gamePath, // Répertoire de travail
+        detached: true, // Permet au processus de continuer après fermeture de l'app
+        stdio: ["ignore", "pipe", "pipe"], // Ignore stdin, capture stdout/stderr
+        env: { ...process.env }, // Hérite des variables d'environnement
       });
 
-      // Tracking du processus
-      this.activeProcesses.set(gameId, {
+      // Stockage des informations du processus
+      const processInfo = {
         process: gameProcess,
-        startTime: Date.now(),
-        gameName: gameName,
         pid: gameProcess.pid,
-      });
+        gameId,
+        gamePath,
+        executableName,
+        startTime: Date.now(),
+        status: "starting",
+      };
 
-      // Tracking de session
-      this.startSessionTracking(gameId, onStatusChange);
+      this.activeProcesses.set(gameId, processInfo);
 
       // Gestion des événements du processus
       gameProcess.on("spawn", () => {
         console.log(
-          `[GameLauncher] ${gameName} started successfully (PID: ${gameProcess.pid})`
+          `[GameLauncher] Jeu ${gameId} démarré avec succès (PID: ${gameProcess.pid})`
         );
+        processInfo.status = "running";
+
+        // Démarrer le tracking de session
+        this.startSessionTracking(gameId, onStatusChange);
+
         onStatusChange({
           gameId,
           status: "running",
           pid: gameProcess.pid,
-          startTime: Date.now(),
+          startTime: processInfo.startTime,
         });
       });
 
       gameProcess.on("error", (error) => {
-        console.error(`[GameLauncher] Error launching ${gameName}:`, error);
+        console.error(
+          `[GameLauncher] Erreur lors du lancement de ${gameId}:`,
+          error
+        );
         this.cleanupProcess(gameId);
+
         onStatusChange({
           gameId,
           status: "failed",
@@ -105,58 +104,54 @@ export class GameLauncher {
         });
       });
 
-      gameProcess.on("exit", async (code, signal) => {
+      gameProcess.on("exit", (code, signal) => {
         console.log(
-          `[GameLauncher] ${gameName} exited with code ${code}, signal ${signal}`
+          `[GameLauncher] Jeu ${gameId} fermé (code: ${code}, signal: ${signal})`
         );
 
-        const processInfo = this.activeProcesses.get(gameId);
-        const sessionDuration = processInfo
-          ? Date.now() - processInfo.startTime
+        const sessionDuration = processInfo.startTime
+          ? Math.floor((Date.now() - processInfo.startTime) / 1000)
           : 0;
 
-        // Exécuter les commandes post-lancement
-        if (launchConfig.postlaunchCommands?.length > 0) {
-          try {
-            await this.executeCommands(
-              launchConfig.postlaunchCommands,
-              installedGamePath
-            );
-          } catch (error) {
-            console.warn(`[GameLauncher] Post-launch commands failed:`, error);
-          }
-        }
-
         this.cleanupProcess(gameId);
+
         onStatusChange({
           gameId,
           status: "stopped",
           exitCode: code,
-          sessionDuration: Math.floor(sessionDuration / 1000),
+          signal,
+          sessionDuration,
         });
       });
 
-      // Log de sortie du jeu (optionnel, pour debug)
-      gameProcess.stdout?.on("data", (data) => {
-        console.log(`[${gameName}] ${data.toString().trim()}`);
-      });
+      // Capture des logs (optionnel, pour debug)
+      if (gameProcess.stdout) {
+        gameProcess.stdout.on("data", (data) => {
+          console.log(`[${gameId}] STDOUT: ${data.toString().trim()}`);
+        });
+      }
 
-      gameProcess.stderr?.on("data", (data) => {
-        console.error(`[${gameName}] ERROR: ${data.toString().trim()}`);
-      });
+      if (gameProcess.stderr) {
+        gameProcess.stderr.on("data", (data) => {
+          console.log(`[${gameId}] STDERR: ${data.toString().trim()}`);
+        });
+      }
 
       return {
         success: true,
         pid: gameProcess.pid,
-        message: `${gameName} lancé avec succès`,
+        message: `Jeu ${gameId} lancé avec succès`,
       };
     } catch (error) {
-      console.error(`[GameLauncher] Failed to launch ${gameName}:`, error);
+      console.error(`[GameLauncher] Échec du lancement de ${gameId}:`, error);
+      this.cleanupProcess(gameId);
+
       onStatusChange({
         gameId,
         status: "failed",
         error: error.message,
       });
+
       return {
         success: false,
         error: error.message,
@@ -166,46 +161,64 @@ export class GameLauncher {
 
   /**
    * Arrête un jeu en cours
+   * @param {string} gameId - ID du jeu à arrêter
+   * @param {boolean} force - Forcer l'arrêt (SIGKILL au lieu de SIGTERM)
    */
   async stopGame(gameId, force = false) {
     const processInfo = this.activeProcesses.get(gameId);
 
     if (!processInfo) {
-      return { success: false, message: "Aucun processus actif trouvé" };
+      return {
+        success: false,
+        message: "Aucun processus actif trouvé pour ce jeu",
+      };
     }
 
     try {
-      const { process: gameProcess, gameName } = processInfo;
+      const { process: gameProcess } = processInfo;
+
+      console.log(
+        `[GameLauncher] Arrêt du jeu ${gameId} (PID: ${gameProcess.pid})`
+      );
 
       if (force) {
-        // Kill forcé
+        // Arrêt forcé immédiat
         gameProcess.kill("SIGKILL");
-        console.log(`[GameLauncher] Force killed ${gameName}`);
+        console.log(`[GameLauncher] Jeu ${gameId} arrêté de force`);
       } else {
         // Arrêt gracieux
         gameProcess.kill("SIGTERM");
-        console.log(`[GameLauncher] Gracefully stopping ${gameName}`);
+        console.log(`[GameLauncher] Demande d'arrêt gracieux pour ${gameId}`);
 
-        // Si pas arrêté après 10 secondes, kill forcé
+        // Si le processus ne répond pas après 10 secondes, forcer l'arrêt
         setTimeout(() => {
           if (this.activeProcesses.has(gameId)) {
             console.log(
-              `[GameLauncher] Force killing ${gameName} after timeout`
+              `[GameLauncher] Timeout atteint, arrêt forcé de ${gameId}`
             );
             gameProcess.kill("SIGKILL");
           }
         }, 10000);
       }
 
-      return { success: true, message: `${gameName} en cours d'arrêt` };
+      return {
+        success: true,
+        message: `Arrêt de ${gameId} en cours`,
+      };
     } catch (error) {
-      console.error(`[GameLauncher] Error stopping game:`, error);
-      return { success: false, error: error.message };
+      console.error(
+        `[GameLauncher] Erreur lors de l'arrêt de ${gameId}:`,
+        error
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
 
   /**
-   * Obtient le statut de tous les jeux actifs
+   * Obtient la liste des jeux actifs
    */
   getActiveGames() {
     const activeGames = [];
@@ -213,10 +226,11 @@ export class GameLauncher {
     this.activeProcesses.forEach((processInfo, gameId) => {
       activeGames.push({
         gameId,
-        gameName: processInfo.gameName,
         pid: processInfo.pid,
         startTime: processInfo.startTime,
         duration: Date.now() - processInfo.startTime,
+        status: processInfo.status,
+        executableName: processInfo.executableName,
       });
     });
 
@@ -224,69 +238,21 @@ export class GameLauncher {
   }
 
   /**
-   * Vérifications pré-lancement
+   * Vérifie si un jeu est en cours d'exécution
    */
-  async prelaunchChecks(executable, gamePath, launchConfig) {
-    // Vérifier l'espace disque
-    if (launchConfig.minimumDiskSpace) {
-      // TODO: Vérifier l'espace disque disponible
-    }
-
-    // Vérifier la RAM
-    if (launchConfig.minimumRAM) {
-      const totalMem = require("os").totalmem();
-      const freeMem = require("os").freemem();
-
-      if (freeMem < launchConfig.minimumRAM * 1024 * 1024) {
-        console.warn(
-          `[GameLauncher] Low memory warning: ${Math.floor(
-            freeMem / 1024 / 1024
-          )}MB free, ${launchConfig.minimumRAM}MB required`
-        );
-      }
-    }
-
-    // Vérifier que le fichier executable existe et est exécutable
-    const execPath = path.join(
-      gamePath,
-      executable.relativePath || executable.fileName
-    );
-
-    if (!fs.existsSync(execPath)) {
-      throw new Error(`Executable non trouvé: ${execPath}`);
-    }
-
-    const stats = fs.statSync(execPath);
-    if (!stats.isFile()) {
-      throw new Error(`Le chemin spécifié n'est pas un fichier: ${execPath}`);
-    }
+  isGameRunning(gameId) {
+    return this.activeProcesses.has(gameId);
   }
 
   /**
-   * Exécute des commandes système
-   */
-  async executeCommands(commands, workingDir) {
-    for (const command of commands) {
-      await new Promise((resolve, reject) => {
-        exec(command, { cwd: workingDir }, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`[GameLauncher] Command failed: ${command}`, error);
-            reject(error);
-          } else {
-            console.log(`[GameLauncher] Command executed: ${command}`);
-            if (stdout) console.log(stdout);
-            if (stderr) console.warn(stderr);
-            resolve();
-          }
-        });
-      });
-    }
-  }
-
-  /**
-   * Tracking de session
+   * Démarre le tracking de session pour un jeu
    */
   startSessionTracking(gameId, onStatusChange) {
+    // Nettoyer un éventuel tracker existant
+    if (this.sessionTrackers.has(gameId)) {
+      clearInterval(this.sessionTrackers.get(gameId));
+    }
+
     const interval = setInterval(() => {
       const processInfo = this.activeProcesses.get(gameId);
       if (processInfo) {
@@ -295,42 +261,70 @@ export class GameLauncher {
           gameId,
           status: "running",
           sessionDuration: Math.floor(duration / 1000),
+          pid: processInfo.pid,
         });
       } else {
+        // Le processus n'existe plus, arrêter le tracking
         clearInterval(interval);
         this.sessionTrackers.delete(gameId);
       }
-    }, 30000); // Update toutes les 30 secondes
+    }, 30000); // Mise à jour toutes les 30 secondes
 
     this.sessionTrackers.set(gameId, interval);
   }
 
   /**
-   * Nettoyage des ressources
+   * Nettoie les ressources pour un jeu spécifique
    */
   cleanupProcess(gameId) {
+    // Supprimer le processus de la liste
     this.activeProcesses.delete(gameId);
 
+    // Arrêter le tracking de session
     const tracker = this.sessionTrackers.get(gameId);
     if (tracker) {
       clearInterval(tracker);
       this.sessionTrackers.delete(gameId);
     }
+
+    console.log(`[GameLauncher] Ressources nettoyées pour ${gameId}`);
   }
 
   /**
-   * Nettoyage global à la fermeture de l'app
+   * Nettoie toutes les ressources lors de la fermeture de l'application
    */
   cleanup() {
-    console.log("[GameLauncher] Cleaning up all active games...");
+    console.log("[GameLauncher] Nettoyage de tous les jeux actifs...");
 
-    // Arrêter tous les jeux actifs
+    // Arrêter tous les jeux en cours
     this.activeProcesses.forEach((processInfo, gameId) => {
-      this.stopGame(gameId, true); // Force stop
+      console.log(`[GameLauncher] Arrêt forcé de ${gameId}`);
+      this.stopGame(gameId, true); // Arrêt forcé
     });
 
-    // Nettoyer les trackers
+    // Nettoyer tous les trackers
     this.sessionTrackers.forEach((interval) => clearInterval(interval));
     this.sessionTrackers.clear();
+
+    console.log("[GameLauncher] Nettoyage terminé");
+  }
+
+  /**
+   * Ouvre le dossier du jeu dans l'explorateur
+   */
+  openGameFolder(gamePath) {
+    if (fs.existsSync(gamePath)) {
+      shell.openPath(gamePath);
+      return { success: true };
+    } else {
+      return { success: false, error: "Dossier non trouvé" };
+    }
+  }
+
+  /**
+   * Obtient les informations d'un processus actif
+   */
+  getGameProcess(gameId) {
+    return this.activeProcesses.get(gameId) || null;
   }
 }

@@ -2,41 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { getAllServerGames } from "../api/serverGames";
-import {
-  getInstalledGames,
-  launchGame,
-  stopGame,
-  getGameStats,
-} from "../api/installedGames";
+import { getInstalledGames } from "../api/installedGames";
 import { useDownload } from "../contexts/downloadContext";
+import gameManager from "../api/gameManager";
 import dayjs from "dayjs";
-import { jwtDecode } from "jwt-decode";
 
 const Games = () => {
   const [games, setGames] = useState([]);
   const [installedGames, setInstalledGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
-  const [gameStats, setGameStats] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // États pour le tracking des jeux en cours
   const [playingGames, setPlayingGames] = useState(new Set());
+  const [gameStats, setGameStats] = useState(new Map());
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
-        const token = await window.store.get("userToken");
-
-        if (!token || typeof token !== "string") {
-          throw new Error("Token utilisateur invalide.");
-        }
-
-        const decoded = jwtDecode(token);
-        const userId = decoded.user.id;
-
         const [allGames, installed] = await Promise.all([
           getAllServerGames(),
           getInstalledGames(),
@@ -45,11 +33,10 @@ const Games = () => {
         setGames(allGames || []);
         setInstalledGames(installed || []);
 
-        // Détecter les jeux en cours de lecture
-        const currentlyPlaying = installed
-          .filter((game) => game.formattedStats?.isCurrentlyPlaying)
-          .map((game) => game.serverGameId._id);
-        setPlayingGames(new Set(currentlyPlaying));
+        // Initialiser l'état des jeux en cours
+        const activeGames = await gameManager.getActiveGames();
+        const playingSet = new Set(activeGames.map((game) => game.gameId));
+        setPlayingGames(playingSet);
       } catch (err) {
         console.error("Erreur lors du chargement des jeux :", err);
         setError("Erreur lors du chargement des jeux.");
@@ -61,23 +48,158 @@ const Games = () => {
     fetchGames();
   }, []);
 
-  // Charger les stats quand un jeu est sélectionné
+  // Gestionnaire global de changement de statut des jeux
   useEffect(() => {
-    if (selectedGame && isInstalled(selectedGame._id)) {
-      getGameStats(selectedGame._id)
-        .then((stats) => setGameStats(stats))
-        .catch((err) => console.error("Error loading stats:", err));
-    } else {
-      setGameStats(null);
-    }
-  }, [selectedGame, installedGames]);
+    const handleGameStatusChange = (status) => {
+      console.log("[Games] Changement de statut:", status);
 
+      setPlayingGames((prev) => {
+        const newSet = new Set(prev);
+
+        if (status.status === "running") {
+          newSet.add(status.gameId);
+        } else if (status.status === "stopped" || status.status === "failed") {
+          newSet.delete(status.gameId);
+        }
+
+        return newSet;
+      });
+
+      // Mettre à jour les stats du jeu
+      if (status.sessionDuration) {
+        setGameStats((prev) => {
+          const newStats = new Map(prev);
+          newStats.set(status.gameId, {
+            ...newStats.get(status.gameId),
+            currentSessionDuration: status.sessionDuration,
+            lastActivity: Date.now(),
+          });
+          return newStats;
+        });
+      }
+    };
+
+    // Ajouter le listener global
+    gameManager.addStatusListener("*", handleGameStatusChange);
+
+    // Nettoyage à la désactivation du composant
+    return () => {
+      gameManager.removeStatusListener("*", handleGameStatusChange);
+    };
+  }, []);
+
+  // Utilitaires
   const isInstalled = (gameId) =>
     installedGames.some((g) => g.serverGameId._id === gameId);
 
   const getInstalledGameData = (gameId) =>
     installedGames.find((g) => g.serverGameId._id === gameId);
 
+  const isGamePlaying = (gameId) => playingGames.has(gameId);
+
+  // Gestionnaire de lancement de jeu
+  const handleLaunchGame = async (game) => {
+    try {
+      const installedData = getInstalledGameData(game._id);
+      if (!installedData) {
+        console.error("Données d'installation non trouvées pour", game.name);
+        return;
+      }
+
+      console.log("[Games] Lancement de", game.name);
+      console.log("[Games] Chemin:", installedData.path);
+
+      // Utiliser la détection automatique (pas besoin de spécifier l'exécutable)
+      const result = await gameManager.launchGame(
+        game._id,
+        installedData.path,
+        null, // Exécutable détecté automatiquement
+        game.name // Nom du jeu pour aider la détection
+      );
+
+      if (!result.success) {
+        console.error("Échec du lancement:", result.error);
+
+        // Si la détection automatique échoue, proposer une sélection manuelle
+        if (result.error.includes("détecter l'exécutable")) {
+          await handleManualExecutableSelection(game, installedData);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors du lancement de", game.name, ":", error);
+    }
+  };
+
+  // Gestionnaire pour la sélection manuelle d'exécutable
+  const handleManualExecutableSelection = async (game, installedData) => {
+    try {
+      // Détecter tous les exécutables disponibles
+      const executables = await gameManager.detectExecutables(
+        installedData.path,
+        game.name
+      );
+
+      if (executables.length === 0) {
+        console.error("Aucun exécutable trouvé pour", game.name);
+        return;
+      }
+
+      // Pour l'instant, prendre le premier exécutable trouvé
+      // TODO: Ouvrir un dialogue pour laisser l'utilisateur choisir
+      const selectedExecutable = executables[0].fileName;
+
+      console.log(`[Games] Sélection manuelle: ${selectedExecutable}`);
+
+      const result = await gameManager.launchGame(
+        game._id,
+        installedData.path,
+        selectedExecutable,
+        game.name
+      );
+
+      if (!result.success) {
+        console.error(
+          "Échec du lancement même avec sélection manuelle:",
+          result.error
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la sélection manuelle:", error);
+    }
+  };
+
+  // Gestionnaire d'arrêt de jeu
+  const handleStopGame = async (game) => {
+    try {
+      console.log("[Games] Arrêt de", game.name);
+
+      const result = await gameManager.stopGame(game._id);
+
+      if (!result.success) {
+        console.error("Échec de l'arrêt:", result.error);
+        // TODO: Afficher une notification d'erreur
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'arrêt de", game.name, ":", error);
+    }
+  };
+
+  // Gestionnaire d'arrêt forcé
+  const handleForceStopGame = async (game) => {
+    try {
+      console.log("[Games] Arrêt forcé de", game.name);
+
+      const result = await gameManager.stopGame(game._id, true);
+
+      if (!result.success) {
+        console.error("Échec de l'arrêt forcé:", result.error);
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'arrêt forcé de", game.name, ":", error);
+    }
+  };
+
+  // Gestionnaire d'installation
   const handleInstall = async (game) => {
     const downloadId = `${game._id}-${Date.now()}`;
     addDownload({
@@ -101,6 +223,7 @@ const Games = () => {
           totalSize: data.totalSize,
           eta: data.eta,
         });
+
         if (data.stage === "completed" || data.stage === "failed") {
           setTimeout(() => {
             removeDownload(downloadId);
@@ -119,48 +242,23 @@ const Games = () => {
         setInstalledGames(updated);
       }
     } catch (error) {
-      console.error("Installation error:", error);
+      console.error("Erreur d'installation:", error);
     }
   };
 
-  const handleLaunchGame = async (game) => {
+  // Gestionnaire pour ouvrir le dossier du jeu
+  const handleOpenGameFolder = async (installedData) => {
     try {
-      setPlayingGames((prev) => new Set([...prev, game._id]));
-
-      const result = await launchGame(game._id);
-      console.log("Game launched:", result);
-
-      // Ici vous pouvez ajouter la logique pour lancer le jeu réellement
-      // Par exemple: window.api.launchGameExecutable(result.gamePath)
+      const result = await gameManager.openGameFolder(installedData.path);
+      if (!result.success) {
+        console.error("Impossible d'ouvrir le dossier:", result.error);
+      }
     } catch (error) {
-      console.error("Error launching game:", error);
-      setPlayingGames((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(game._id);
-        return newSet;
-      });
+      console.error("Erreur lors de l'ouverture du dossier:", error);
     }
   };
 
-  const handleStopGame = async (game) => {
-    try {
-      const result = await stopGame(game._id);
-      console.log("Game stopped:", result);
-
-      setPlayingGames((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(game._id);
-        return newSet;
-      });
-
-      // Recharger les stats
-      const updatedStats = await getGameStats(game._id);
-      setGameStats(updatedStats);
-    } catch (error) {
-      console.error("Error stopping game:", error);
-    }
-  };
-
+  // Formatage des utilitaires
   const formatFileSize = (sizeInMB) => {
     if (sizeInMB >= 1024) {
       return `${(sizeInMB / 1024).toFixed(1)} GB`;
@@ -168,6 +266,20 @@ const Games = () => {
     return `${sizeInMB} MB`;
   };
 
+  const formatDuration = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  // Filtrage des jeux
   const filteredGames = games.filter((game) => {
     const matchSearch = game.name
       .toLowerCase()
@@ -178,227 +290,197 @@ const Games = () => {
     return matchSearch && matchGenre;
   });
 
-  const allGenres = [
-    "All",
-    ...new Set(
-      games.flatMap((g) => g.genres?.map((genre) => genre.name)).filter(Boolean)
-    ),
-  ];
+  // Gestion du loading et des erreurs
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-white">Chargement des jeux...</div>
+      </div>
+    );
+  }
 
-  if (loading)
+  if (error) {
     return (
-      <div className="flex justify-center items-center h-screen text-white">
-        Chargement...
+      <div className="flex items-center justify-center h-full">
+        <div className="text-red-400">{error}</div>
       </div>
     );
-  if (error)
-    return (
-      <div className="flex justify-center items-center h-screen text-red-400">
-        {error}
-      </div>
-    );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 border-r border-gray-700 flex flex-col">
-        <input
-          type="text"
-          placeholder="🔍 Rechercher"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-2 mb-3 bg-gray-700 text-sm rounded placeholder-gray-400"
-        />
-        <select
-          value={selectedGenre}
-          onChange={(e) => setSelectedGenre(e.target.value)}
-          className="w-full mb-3 p-2 bg-gray-700 text-sm rounded"
-        >
-          {allGenres.map((genre) => (
-            <option key={genre} value={genre}>
-              {genre}
-            </option>
-          ))}
-        </select>
+    <div className="h-full bg-gray-900 text-white p-6">
+      {/* Header avec recherche et filtres */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <input
+            type="text"
+            placeholder="Rechercher un jeu..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
 
-        <ul className="overflow-y-auto flex-1 text-sm space-y-1">
-          {filteredGames.map((game) => {
-            const installed = isInstalled(game._id);
-            const isPlaying = playingGames.has(game._id);
+          <select
+            value={selectedGenre}
+            onChange={(e) => setSelectedGenre(e.target.value)}
+            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="All">Tous les genres</option>
+            {/* TODO: Extraire dynamiquement les genres */}
+            <option value="Action">Action</option>
+            <option value="Adventure">Aventure</option>
+            <option value="RPG">RPG</option>
+            <option value="Strategy">Stratégie</option>
+          </select>
+        </div>
 
-            return (
-              <li
-                key={game._id}
-                onClick={() => setSelectedGame(game)}
-                className={`p-2 rounded cursor-pointer transition-colors ${
-                  selectedGame?._id === game._id
-                    ? "bg-gray-700"
-                    : "hover:bg-gray-700"
-                } ${
-                  installed
-                    ? "text-white border-l-2 border-green-500"
-                    : "text-gray-500"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{game.name}</span>
-                  {isPlaying && (
-                    <span className="text-green-400 text-xs">●</span>
-                  )}
-                  {installed && !isPlaying && (
-                    <span className="text-blue-400 text-xs">✓</span>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="text-sm text-gray-400">
+          {filteredGames.length} jeu(s) • {installedGames.length} installé(s) •{" "}
+          {playingGames.size} en cours
+        </div>
       </div>
 
-      {/* Détails du jeu sélectionné */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        {selectedGame ? (
-          <div className="max-w-5xl mx-auto space-y-6">
-            <div className="flex gap-6">
-              <img
-                src={`https:${selectedGame.coverUrl}`}
-                alt={selectedGame.name}
-                className="w-80 h-48 object-cover rounded shadow-lg"
-              />
+      {/* Grille des jeux */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredGames.map((game) => {
+          const installed = isInstalled(game._id);
+          const playing = isGamePlaying(game._id);
+          const installedData = installed
+            ? getInstalledGameData(game._id)
+            : null;
+          const stats = gameStats.get(game._id);
 
-              <div className="flex-1">
-                <h2 className="text-3xl font-bold text-blue-500">
-                  {selectedGame.name}
-                </h2>
+          return (
+            <div
+              key={game._id}
+              className={`bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-all duration-200 hover:shadow-xl ${
+                playing ? "ring-2 ring-green-500" : ""
+              }`}
+            >
+              {/* Image du jeu */}
+              <div className="relative">
+                <img
+                  src={game.coverUrl || "/placeholder-game.jpg"}
+                  alt={game.name}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    e.target.src = "/placeholder-game.jpg";
+                  }}
+                />
 
-                <div className="text-sm mt-2 space-y-1 text-gray-300">
-                  <p>
-                    <strong>Genres:</strong>{" "}
-                    {selectedGame.genres?.map((g) => g.name).join(", ")}
-                  </p>
-                  <p>
-                    <strong>Plateformes:</strong>{" "}
-                    {selectedGame.platforms?.join(", ")}
-                  </p>
-                  <p>
-                    <strong>Version:</strong> {selectedGame.version}
-                  </p>
-                  <p>
-                    <strong>Taille:</strong>{" "}
-                    {formatFileSize(selectedGame.sizeMB)}
-                  </p>
-                  <p>
-                    <strong>Date de sortie:</strong>{" "}
-                    {dayjs(selectedGame.releaseDate).format("DD/MM/YYYY")}
-                  </p>
-                  <p>
-                    <strong>Note IGDB:</strong>{" "}
-                    {selectedGame.aggregatedRating || "?"}/100
-                  </p>
+                {playing && (
+                  <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-bold">
+                    EN COURS
+                  </div>
+                )}
+              </div>
+
+              {/* Informations du jeu */}
+              <div className="p-4">
+                <h3 className="text-lg font-bold mb-2 truncate">{game.name}</h3>
+
+                {/* Genres */}
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {game.genres?.slice(0, 2).map((genre, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-gray-700 text-xs rounded"
+                    >
+                      {genre.name}
+                    </span>
+                  ))}
                 </div>
 
-                {/* Boutons d'action dynamiques */}
-                <div className="mt-4 flex gap-2">
-                  {!isInstalled(selectedGame._id) ? (
+                {/* Taille et note */}
+                <div className="text-sm text-gray-400 mb-3">
+                  <div>{formatFileSize(game.sizeMB)}</div>
+                  {game.rating && (
+                    <div>Note: {Math.round(game.rating)}/100</div>
+                  )}
+                </div>
+
+                {/* Stats si installé et des stats existent */}
+                {installed && installedData?.stats && (
+                  <div className="text-sm text-gray-400 mb-3 border-t border-gray-700 pt-2">
+                    <div>
+                      Temps joué: {installedData.stats.totalPlayTime || 0}h
+                    </div>
+                    <div>
+                      Sessions: {installedData.stats.totalSessions || 0}
+                    </div>
+                    {installedData.stats.lastPlayed && (
+                      <div>
+                        Dernière fois:{" "}
+                        {dayjs(installedData.stats.lastPlayed).format(
+                          "DD/MM/YY"
+                        )}
+                      </div>
+                    )}
+                    {stats?.currentSessionDuration && (
+                      <div className="text-green-400">
+                        Session: {formatDuration(stats.currentSessionDuration)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Boutons d'action */}
+                <div className="flex gap-2">
+                  {!installed ? (
                     <button
-                      onClick={() => handleInstall(selectedGame)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors"
+                      onClick={() => handleInstall(game)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors"
                     >
-                      📥 Installer
+                      Installer
                     </button>
+                  ) : !playing ? (
+                    <>
+                      <button
+                        onClick={() => handleLaunchGame(game)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
+                      >
+                        Jouer
+                      </button>
+                      <button
+                        onClick={() => handleOpenGameFolder(installedData)}
+                        className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+                        title="Ouvrir le dossier"
+                      >
+                        📁
+                      </button>
+                    </>
                   ) : (
                     <>
-                      {!playingGames.has(selectedGame._id) ? (
-                        <button
-                          onClick={() => handleLaunchGame(selectedGame)}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm transition-colors"
-                        >
-                          ▶️ Jouer
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleStopGame(selectedGame)}
-                          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm transition-colors"
-                        >
-                          ⏹️ Arrêter
-                        </button>
-                      )}
                       <button
-                        onClick={() =>
-                          console.log("Désinstaller", selectedGame)
-                        }
-                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-sm transition-colors"
+                        onClick={() => handleStopGame(game)}
+                        className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded transition-colors"
                       >
-                        🗑️ Désinstaller
+                        Arrêter
+                      </button>
+                      <button
+                        onClick={() => handleForceStopGame(game)}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                        title="Arrêt forcé"
+                      >
+                        ⏹️
                       </button>
                     </>
                   )}
                 </div>
-
-                {/* Statistiques de jeu */}
-                {gameStats && (
-                  <div className="mt-4 bg-gray-800/50 rounded-lg p-4">
-                    <h4 className="font-semibold mb-2 text-green-400">
-                      📊 Statistiques
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-gray-400">Temps total:</span>
-                        <span className="ml-2 text-white">
-                          {gameStats.totalPlayTime}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Sessions:</span>
-                        <span className="ml-2 text-white">
-                          {gameStats.totalSessions}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Dernière partie:</span>
-                        <span className="ml-2 text-white">
-                          {gameStats.lastPlayed
-                            ? new Date(
-                                gameStats.lastPlayed
-                              ).toLocaleDateString()
-                            : "Jamais joué"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Moyenne/session:</span>
-                        <span className="ml-2 text-white">
-                          {gameStats.averageSessionTime}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* Reste du contenu... */}
-            <div className="bg-gray-800 rounded p-4">
-              <h3 className="text-lg font-semibold mb-2">Résumé</h3>
-              <p className="text-gray-300 text-sm">
-                {selectedGame.summary || "Aucun résumé."}
-              </p>
-            </div>
-
-            {selectedGame.storyline && (
-              <div className="bg-gray-800 rounded p-4">
-                <h3 className="text-lg font-semibold mb-2">Histoire</h3>
-                <p className="text-gray-400 text-sm italic">
-                  {selectedGame.storyline}
-                </p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 mt-32 text-lg">
-            Sélectionnez un jeu à gauche pour voir les détails.
-          </div>
-        )}
+          );
+        })}
       </div>
+
+      {/* Message si aucun jeu */}
+      {filteredGames.length === 0 && (
+        <div className="text-center text-gray-400 mt-12">
+          <div className="text-6xl mb-4">🎮</div>
+          <div className="text-xl mb-2">Aucun jeu trouvé</div>
+          <div>Essayez de modifier vos critères de recherche</div>
+        </div>
+      )}
     </div>
   );
 };
