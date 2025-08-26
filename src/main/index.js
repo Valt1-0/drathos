@@ -14,6 +14,9 @@ import fs from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/logo2.png?asset";
 
+import { GameLauncher } from "./gameLauncher.js";
+const gameLauncher = new GameLauncher();
+
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -101,9 +104,16 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
+  gameLauncher.cleanup();
+
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+// Nettoyage à la fermeture de l'application
+app.on("before-quit", () => {
+  gameLauncher.cleanup();
 });
 
 // In this file you can include the rest of your app"s specific main process
@@ -164,34 +174,75 @@ import workerPath from "./installWorker.js?modulePath";
 import { Worker } from "node:worker_threads";
 
 ipcMain.handle("installGame", async (event, { serverGame }) => {
+  console.log(`[Main] 🚀 Installation demandée: ${serverGame.name}`);
+
   return new Promise((resolve, reject) => {
+    // Créer le worker avec le nouveau système simplifié
     const worker = new Worker(workerPath, {
-      workerData: { serverGame, storeData: store.store },
+      workerData: {
+        serverGame,
+        storeData: store.store,
+      },
     });
 
+    // Écouter les messages de progression
     worker.on("message", (data) => {
-      event.sender.send("downloadProgress", { id: serverGame._id, ...data });
+      console.log(
+        `[Main] 📊 Progression ${serverGame.name}:`,
+        data.stage,
+        `${data.progress}%`
+      );
 
-      if (data.stage === "Completed") resolve({ success: true });
-      if (data.stage === "Failed") reject(new Error(data.error));
+      // Envoyer la progression au renderer
+      event.sender.send("downloadProgress", {
+        id: serverGame._id,
+        ...data,
+      });
+
+      // Gérer les états finaux
+      if (data.stage === "Completed") {
+        console.log(`[Main] ✅ Installation terminée: ${serverGame.name}`);
+        resolve({ success: true, path: data.finalPath });
+      }
+
+      if (data.stage === "Failed") {
+        console.error(
+          `[Main] ❌ Installation échouée: ${serverGame.name} - ${data.error}`
+        );
+        reject(new Error(data.error));
+      }
     });
 
+    // Gérer les erreurs du worker
     worker.on("error", (err) => {
+      console.error(`[Main] 💥 Erreur worker pour ${serverGame.name}:`, err);
+
+      // Notifier le renderer
       event.sender.send("downloadProgress", {
         id: serverGame._id,
         progress: 0,
         stage: "Failed",
         error: err.message,
       });
+
       reject(err);
+    });
+
+    // Gérer la fermeture inattendue du worker
+    worker.on("exit", (code) => {
+      if (code !== 0) {
+        console.error(
+          `[Main] ⚠️ Worker fermé avec code ${code} pour ${serverGame.name}`
+        );
+        reject(new Error(`Worker process exited with code ${code}`));
+      }
     });
   });
 });
 
-// Import du détecteur
+// === GAME DETECTION ===
 import { SimpleExecutableDetector } from "./simpleExecutableDetector.js";
 
-// Instance unique du détecteur
 let detectorInstance = null;
 const getDetector = () => {
   if (!detectorInstance) {
@@ -200,29 +251,28 @@ const getDetector = () => {
   return detectorInstance;
 };
 
-// === HANDLERS DE JEUX (VERSION PROPRE) ===
-
-// Handler unique pour obtenir le meilleur exécutable
 ipcMain.handle("getBestExecutable", async (event, { gamePath, gameName }) => {
-  console.log(`[IPC-Clean] Recherche exécutable pour: ${gameName}`);
-  console.log(`[IPC-Clean] Dans le dossier: ${gamePath}`);
+  console.log(`[Main] Recherche du meilleur exécutable pour ${gameName}`);
+  const detector = getDetector();
 
   try {
-    const detector = getDetector();
-    const executable = await detector.getBestExecutable(gamePath, gameName);
+    const bestExecutable = await detector.getBestExecutable(gamePath, gameName);
 
-    if (executable) {
-      console.log(`[IPC-Clean] ✅ Exécutable trouvé: ${executable}`);
+    if (bestExecutable) {
+      return {
+        success: true,
+        executable: bestExecutable,
+        message: "Exécutable détecté avec succès",
+      };
     } else {
-      console.log(`[IPC-Clean] ❌ Aucun exécutable trouvé`);
+      return {
+        success: false,
+        error: "Aucun exécutable trouvé",
+        executable: null,
+      };
     }
-
-    return {
-      success: executable !== null,
-      executable: executable,
-    };
   } catch (error) {
-    console.error("[IPC-Clean] ❌ Erreur détection:", error);
+    console.error(`[Main] Erreur lors de la détection:`, error);
     return {
       success: false,
       error: error.message,
@@ -231,25 +281,151 @@ ipcMain.handle("getBestExecutable", async (event, { gamePath, gameName }) => {
   }
 });
 
-// Handler pour détecter tous les exécutables (debug)
-ipcMain.handle("detectExecutables", async (event, { gamePath, gameName }) => {
-  console.log(`[IPC-Clean] Liste complète des exécutables pour: ${gameName}`);
+// === GAME MANAGEMENT - UTILISE UNIQUEMENT GameLauncher ===
+
+/**
+ * Lance un jeu - VERSION NETTOYÉE utilisant GameLauncher
+ */
+ipcMain.handle("launchGame", async (event, params) => {
+  console.log(`[Main] === DEMANDE DE LANCEMENT ===`);
+  console.log(`[Main] Paramètres reçus:`, JSON.stringify(params, null, 2));
 
   try {
-    const detector = getDetector();
-    const executables = await detector.listAllExecutables(gamePath, gameName);
+    let gameId, gamePath, executableName, gameName;
 
-    console.log(`[IPC-Clean] Trouvé ${executables.length} exécutable(s):`);
-    executables.forEach((exe, i) => {
-      console.log(`  ${i + 1}. ${exe.relativePath} (score: ${exe.score})`);
-    });
+    // Extraction flexible des paramètres selon le format
+    if (params.gameId && params.gamePath && params.executableName) {
+      // Format direct: { gameId, gamePath, executableName, gameName }
+      gameId = params.gameId;
+      gamePath = params.gamePath;
+      executableName = params.executableName;
+      gameName = params.gameName;
+      console.log(`[Main] Format direct détecté`);
+    } else if (params.gameData) {
+      // Format avec wrapping gameData
+      const data = params.gameData;
+      gameId = data.gameId || data._id;
+      gamePath = data.gamePath;
+      executableName = data.executableName;
+      gameName = data.gameName || data.name;
+      console.log(`[Main] Format gameData détecté`);
+    } else {
+      // Essayer d'extraire depuis la racine des params
+      gameId = params._id || params.id;
+      gamePath = params.installedPath || params.path;
+      executableName = params.executableName;
+      gameName = params.name || params.title;
+      console.log(`[Main] Format racine détecté`);
+    }
+
+    // Vérifications des paramètres essentiels
+    if (!gameId) {
+      throw new Error("gameId manquant dans les paramètres");
+    }
+    if (!gamePath) {
+      throw new Error("gamePath manquant dans les paramètres");
+    }
+
+    console.log(`[Main] Jeu: ${gameName || "Nom inconnu"} (ID: ${gameId})`);
+    console.log(`[Main] Dossier: ${gamePath}`);
+    console.log(
+      `[Main] Exécutable spécifié: ${executableName || "Détection automatique"}`
+    );
+
+    // Si aucun exécutable spécifié, détecter automatiquement
+    if (!executableName) {
+      console.log(`[Main] 🔍 Détection automatique de l'exécutable...`);
+      const detector = getDetector();
+      const bestExecutable = await detector.getBestExecutable(
+        gamePath,
+        gameName || ""
+      );
+
+      if (bestExecutable) {
+        executableName = bestExecutable;
+        console.log(`[Main] ✅ Exécutable détecté: ${executableName}`);
+      } else {
+        throw new Error(
+          "Impossible de détecter automatiquement l'exécutable du jeu"
+        );
+      }
+    }
+
+    // Utiliser GameLauncher au lieu du code dupliqué
+    const result = await gameLauncher.launchGame(
+      gameId,
+      gamePath,
+      executableName,
+      // Callback pour les changements d'état
+      (statusData) => {
+        event.sender.send("gameStatusChanged", statusData);
+      }
+    );
+
+    console.log(`[Main] ✅ Résultat du lancement:`, result);
+    return result;
+  } catch (error) {
+    console.error(`[Main] ❌ Erreur lors du lancement:`, error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
+
+/**
+ * Arrête un jeu
+ */
+ipcMain.handle("stopGame", async (event, { gameId, force = false }) => {
+  console.log(`[Main] Arrêt demandé pour ${gameId}`);
+  return await gameLauncher.stopGame(gameId, force);
+});
+
+/**
+ * Obtient la liste des jeux actifs
+ */
+ipcMain.handle("getActiveGames", () => {
+  return gameLauncher.getActiveGames();
+});
+
+/**
+ * Vérifie si un jeu est en cours d'exécution
+ */
+ipcMain.handle("isGameRunning", (event, { gameId }) => {
+  return gameLauncher.isGameRunning(gameId);
+});
+
+/**
+ * Ouvre le dossier du jeu
+ */
+ipcMain.handle("openGameFolder", (event, { gamePath }) => {
+  return gameLauncher.openGameFolder(gamePath);
+});
+
+/**
+ * Obtient les informations d'un processus
+ */
+ipcMain.handle("getGameProcess", (event, { gameId }) => {
+  return gameLauncher.getGameProcess(gameId);
+});
+
+/**
+ * Détecte tous les exécutables disponibles pour un jeu
+ */
+ipcMain.handle("detectExecutables", async (event, { gamePath, gameName }) => {
+  console.log(`[Main] Détection de tous les exécutables pour ${gameName}`);
+  const detector = getDetector();
+
+  try {
+    const executables = await detector.listAllExecutables(gamePath, gameName);
 
     return {
       success: true,
       executables: executables,
+      count: executables.length,
     };
   } catch (error) {
-    console.error("[IPC-Clean] Erreur liste exécutables:", error);
+    console.error(`[Main] Erreur lors de la détection:`, error);
     return {
       success: false,
       error: error.message,
@@ -258,218 +434,51 @@ ipcMain.handle("detectExecutables", async (event, { gamePath, gameName }) => {
   }
 });
 
-// Handler principal pour lancer un jeu
-ipcMain.handle("launchGame", async (event, params) => {
-  console.log("\n[IPC-Clean] === DEMANDE DE LANCEMENT ===");
-  console.log("[IPC-Clean] Paramètres reçus:", JSON.stringify(params, null, 2));
-
+/**
+ * Liste le contenu d'un dossier de jeu
+ */
+ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
   try {
-    let gameId, gamePath, executableName, gameName;
+    if (!fs.existsSync(gamePath)) {
+      return {
+        success: false,
+        error: "Dossier non trouvé",
+      };
+    }
 
-    console.log("[IPC-Clean] Analyse des paramètres...");
+    const items = fs.readdirSync(gamePath);
+    const files = [];
+    const directories = [];
 
-    if (params.gameData) {
-      console.log("[IPC-Clean] Structure avec gameData détectée");
+    for (const item of items) {
+      const itemPath = path.join(gamePath, item);
+      const stats = fs.statSync(itemPath);
 
-      // Cas 1: Double wrapping gameData.gameData
-      if (params.gameData.gameData) {
-        console.log(
-          "[IPC-Clean] Double wrapping détecté - extraction niveau 2"
-        );
-        const data = params.gameData.gameData;
-        gameId = data.gameId || data._id;
-        gamePath = data.gamePath;
-        executableName = data.executableName;
-        gameName = data.gameName || data.name;
-      }
-      // Cas 2: Simple wrapping gameData
-      else {
-        console.log(
-          "[IPC-Clean] Simple wrapping détecté - extraction niveau 1"
-        );
-        const data = params.gameData;
-        gameId = data.gameId || data._id;
-        gamePath = data.gamePath || params.installedPath;
-        executableName =
-          data.executableName || (data.executable && data.executable.fileName);
-        gameName = data.gameName || data.name;
+      if (stats.isFile()) {
+        files.push({
+          name: item,
+          size: stats.size,
+          isExecutable: item.toLowerCase().endsWith(".exe"),
+        });
+      } else if (stats.isDirectory()) {
+        directories.push({
+          name: item,
+          path: itemPath,
+        });
       }
     }
-    // Cas 3: Format direct à la racine
-    else {
-      console.log("[IPC-Clean] Format direct détecté");
-      gameId = params.gameId;
-      gamePath = params.gamePath;
-      executableName = params.executableName;
-      gameName = params.gameName;
-    }
-
-    // Vérifications des paramètres essentiels
-    if (!gameId) {
-      throw new Error("gameId manquant dans les paramètres");
-    }
-
-    if (!gamePath) {
-      throw new Error("gamePath manquant dans les paramètres");
-    }
-
-    console.log(
-      `[IPC-Clean] Jeu: ${gameName || "Nom inconnu"} (ID: ${gameId})`
-    );
-    console.log(`[IPC-Clean] Dossier: ${gamePath}`);
-    console.log(`[IPC-Clean] Exécutable spécifié: ${executableName || "NON"}`);
-
-    // Si aucun exécutable spécifié, détecter automatiquement
-    if (!executableName) {
-      console.log("[IPC-Clean] 🔍 Détection automatique de l'exécutable...");
-      const detector = getDetector();
-      executableName = await detector.getBestExecutable(
-        gamePath,
-        gameName || ""
-      );
-
-      if (executableName) {
-        console.log(`[IPC-Clean] ✅ Exécutable détecté: ${executableName}`);
-      } else {
-        throw new Error(
-          "Impossible de détecter automatiquement l'exécutable du jeu"
-        );
-      }
-    }
-
-    // Construire le chemin complet vers l'exécutable
-    const executablePath = path.join(gamePath, executableName);
-    console.log(`[IPC-Clean] Chemin complet: ${executablePath}`);
-
-    // Vérifier que le fichier existe
-    if (!fs.existsSync(executablePath)) {
-      throw new Error(`Fichier exécutable introuvable: ${executablePath}`);
-    }
-
-    // Déterminer le répertoire de travail (dossier de l'exe)
-    const workingDirectory = path.dirname(executablePath);
-    console.log(`[IPC-Clean] Répertoire de travail: ${workingDirectory}`);
-
-    // Lancer le processus
-    console.log("[IPC-Clean] 🚀 Lancement du processus...");
-    const { spawn } = require("child_process");
-
-    const gameProcess = spawn(executablePath, [], {
-      cwd: workingDirectory,
-      detached: true, // Le processus continue même si l'app se ferme
-      stdio: ["ignore", "pipe", "pipe"], // Capturer stdout/stderr pour debug
-    });
-
-    // Gestion des événements du processus
-    gameProcess.on("spawn", () => {
-      console.log(
-        `[IPC-Clean] ✅ Processus lancé avec PID: ${gameProcess.pid}`
-      );
-
-      // Notifier le renderer
-      event.sender.send("gameStatusChanged", {
-        gameId,
-        status: "running",
-        pid: gameProcess.pid,
-        startTime: Date.now(),
-      });
-    });
-
-    gameProcess.on("error", (error) => {
-      console.error(`[IPC-Clean] ❌ Erreur du processus:`, error);
-
-      event.sender.send("gameStatusChanged", {
-        gameId,
-        status: "failed",
-        error: error.message,
-      });
-    });
-
-    gameProcess.on("exit", (code, signal) => {
-      console.log(
-        `[IPC-Clean] 🛑 Processus terminé (code: ${code}, signal: ${signal})`
-      );
-
-      event.sender.send("gameStatusChanged", {
-        gameId,
-        status: "stopped",
-        exitCode: code,
-        signal: signal,
-      });
-    });
-
-    // Capturer les logs du jeu (pour debug)
-    gameProcess.stdout?.on("data", (data) => {
-      console.log(`[Game-${gameId}] ${data.toString().trim()}`);
-    });
-
-    gameProcess.stderr?.on("data", (data) => {
-      console.log(`[Game-${gameId}] ERROR: ${data.toString().trim()}`);
-    });
-
-    // Détacher le processus pour qu'il survive à la fermeture de l'app
-    gameProcess.unref();
-
-    console.log("[IPC-Clean] ✅ Lancement initié avec succès");
-    console.log("[IPC-Clean] === FIN LANCEMENT ===\n");
 
     return {
       success: true,
-      pid: gameProcess.pid,
-      message: `Jeu ${gameName || gameId} lancé avec succès`,
+      files,
+      directories,
+      total: files.length + directories.length,
     };
   } catch (error) {
-    console.error("[IPC-Clean] ❌ ERREUR LANCEMENT:", error.message);
-    console.error("[IPC-Clean] Stack:", error.stack);
-
-    // Notifier le renderer de l'échec
-    const gameId =
-      params.gameId ||
-      (params.gameData && (params.gameData.gameId || params.gameData._id));
-    if (gameId) {
-      event.sender.send("gameStatusChanged", {
-        gameId,
-        status: "failed",
-        error: error.message,
-      });
-    }
-
+    console.error(`[Main] Erreur lors du listage:`, error);
     return {
       success: false,
       error: error.message,
     };
   }
-});
-
-// Handlers pour les autres fonctionnalités (stubs pour l'instant)
-ipcMain.handle("stopGame", async (event, { gameId, force = false }) => {
-  console.log(`[IPC-Clean] Demande d'arrêt pour ${gameId} (force: ${force})`);
-  // TODO: Implémenter l'arrêt des jeux
-  return { success: false, message: "Arrêt pas encore implémenté" };
-});
-
-ipcMain.handle("getActiveGames", () => {
-  // TODO: Retourner la liste des jeux actifs
-  return [];
-});
-
-ipcMain.handle("isGameRunning", (event, gameId) => {
-  // TODO: Vérifier si un jeu est en cours
-  return false;
-});
-
-ipcMain.handle("openGameFolder", (event, gamePath) => {
-  try {
-    shell.openPath(gamePath);
-    console.log(`[IPC-Clean] Dossier ouvert: ${gamePath}`);
-    return { success: true };
-  } catch (error) {
-    console.error(`[IPC-Clean] Erreur ouverture dossier:`, error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle("getGameProcess", (event, gameId) => {
-  // TODO: Retourner les infos du processus
-  return null;
 });

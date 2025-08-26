@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { useDownload } from "../contexts/downloadContext";
-import gameManager from "../api/gameManager";
+import gameManager from "../services/gameManager";
 import dayjs from "dayjs";
 
 const Games = () => {
