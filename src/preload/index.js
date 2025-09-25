@@ -14,11 +14,8 @@ const api = {
   onDownloadProgress: (callback) =>
     ipcRenderer.on("downloadProgress", (_event, data) => callback(data)),
 
-  // === ANCIENNES APIS DE JEU (conservées pour compatibilité) ===
   launchGame: (gameData, installedPath) =>
     ipcRenderer.invoke("launchGame", { gameData, installedPath }),
-  stopGame: (gameId, force = false) =>
-    ipcRenderer.invoke("stopGame", { gameId, force }),
   getActiveGames: () => ipcRenderer.invoke("getActiveGames"),
   onGameStatusChanged: (callback) =>
     ipcRenderer.on("gameStatusChanged", (_event, data) => callback(data)),
@@ -26,31 +23,48 @@ const api = {
   configureExecutable: (gameId, config) =>
     ipcRenderer.invoke("configureExecutable", { gameId, config }),
 
-  // === NOUVELLES APIS DE DÉTECTION D'EXÉCUTABLES ===
   // Détecter tous les exécutables dans un dossier de jeu
   detectExecutables: ({ gamePath, gameName }) =>
     ipcRenderer.invoke("detectExecutables", { gamePath, gameName }),
-
   // Obtenir le meilleur exécutable pour un jeu
   getBestExecutable: ({ gamePath, gameName }) =>
     ipcRenderer.invoke("getBestExecutable", { gamePath, gameName }),
-
   // Vérifier si un fichier est exécutable
   isFileExecutable: (filePath) =>
     ipcRenderer.invoke("isFileExecutable", filePath),
-
   // Lister le contenu d'un dossier de jeu
   listGameDirectory: (gamePath) =>
     ipcRenderer.invoke("listGameDirectory", gamePath),
-
   // Ouvrir le dossier d'un jeu
   openGameFolder: (gamePath) => ipcRenderer.invoke("openGameFolder", gamePath),
-
   // Obtenir les infos d'un processus de jeu
   getGameProcess: (gameId) => ipcRenderer.invoke("getGameProcess", gameId),
-
   // Vérifier si un jeu est en cours
   isGameRunning: (gameId) => ipcRenderer.invoke("isGameRunning", gameId),
+
+  // Arrêter un jeu normalement
+  stopGame: ({ gameId, force = false }) =>
+    ipcRenderer.invoke("stopGame", { gameId, force }),
+
+  // Arrêter un jeu de force
+  forceStopGame: ({ gameId }) =>
+    ipcRenderer.invoke("forceStopGame", { gameId }),
+
+  // Désinstaller un jeu
+  uninstallGame: ({ gameId, gamePath, gameName }) =>
+    ipcRenderer.invoke("uninstallGame", { gameId, gamePath, gameName }),
+
+  // Vérifier si un jeu peut être désinstallé
+  canUninstallGame: ({ gameId, gamePath }) =>
+    ipcRenderer.invoke("canUninstallGame", { gameId, gamePath }),
+
+  // Écouter la progression de désinstallation
+  onUninstallProgress: (callback) =>
+    ipcRenderer.on("uninstallProgress", (_event, data) => callback(data)),
+
+  // Obtenir la taille d'un jeu
+  getGameSize: ({ gamePath }) =>
+    ipcRenderer.invoke("getGameSize", { gamePath }),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

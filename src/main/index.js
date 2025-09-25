@@ -374,14 +374,6 @@ ipcMain.handle("launchGame", async (event, params) => {
 });
 
 /**
- * Arrête un jeu
- */
-ipcMain.handle("stopGame", async (event, { gameId, force = false }) => {
-  console.log(`[Main] Arrêt demandé pour ${gameId}`);
-  return await gameLauncher.stopGame(gameId, force);
-});
-
-/**
  * Obtient la liste des jeux actifs
  */
 ipcMain.handle("getActiveGames", () => {
@@ -482,3 +474,204 @@ ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
     };
   }
 });
+
+
+//------------------------------\\
+
+
+// === ARRÊT DE JEU - Utilise GameLauncher ===
+
+/**
+ * ✅ Arrête un jeu (déjà implémenté dans GameLauncher)
+ */
+ipcMain.handle("stopGame", async (event, { gameId, force = false }) => {
+  console.log(`[Main] 🛑 Arrêt demandé pour ${gameId} (force: ${force})`);
+  return await gameLauncher.stopGame(gameId, force);
+});
+
+/**
+ * ✅ Arrêt forcé d'un jeu
+ */
+ipcMain.handle("forceStopGame", async (event, { gameId }) => {
+  console.log(`[Main] ⚡ Arrêt forcé demandé pour ${gameId}`);
+  return await gameLauncher.stopGame(gameId, true); // Force = true
+});
+
+
+//------------------------------\\
+
+//* Désinstallation
+
+import uninstallWorkerPath from "./uninstallWorker.js?modulePath";
+
+
+
+// === DÉSINSTALLATION DE JEU - Utilise GameEngine via Worker ===
+
+/**
+ * 🗑️ Désinstalle un jeu complètement
+ */
+ipcMain.handle(
+  "uninstallGame",
+  async (event, { gameId, gamePath, gameName }) => {
+    console.log(`[Main] 🗑️ Désinstallation demandée: ${gameName} (${gameId})`);
+
+    // Vérifier si le jeu est en cours d'exécution
+    if (gameLauncher.isGameRunning(gameId)) {
+      console.log(`[Main] ⚠️ Jeu en cours - arrêt forcé avant désinstallation`);
+      await gameLauncher.stopGame(gameId, true);
+
+      // Attendre un peu pour s'assurer que le processus est fermé
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    return new Promise((resolve, reject) => {
+      // Créer le worker de désinstallation
+      const worker = new Worker(uninstallWorkerPath, {
+        workerData: {
+          gameId,
+          gamePath,
+          storeData: store.store,
+        },
+      });
+
+      // Écouter les messages de progression
+      worker.on("message", (data) => {
+        console.log(
+          `[Main] 🗑️ Progression désinstallation ${gameName}:`,
+          data.stage,
+          `${data.progress}%`
+        );
+
+        // Envoyer la progression au renderer
+        event.sender.send("uninstallProgress", {
+          id: gameId,
+          ...data,
+        });
+
+        // Gérer les états finaux
+        if (data.stage === "Completed") {
+          console.log(`[Main] ✅ Désinstallation terminée: ${gameName}`);
+          resolve({ success: true });
+        }
+
+        if (data.stage === "Failed") {
+          console.error(
+            `[Main] ❌ Désinstallation échouée: ${gameName} - ${data.error}`
+          );
+          reject(new Error(data.error));
+        }
+      });
+
+      // Gérer les erreurs du worker
+      worker.on("error", (err) => {
+        console.error(
+          `[Main] 💥 Erreur worker désinstallation pour ${gameName}:`,
+          err
+        );
+
+        // Notifier le renderer
+        event.sender.send("uninstallProgress", {
+          id: gameId,
+          progress: 0,
+          stage: "Failed",
+          error: err.message,
+        });
+
+        reject(err);
+      });
+
+      // Gérer la fermeture inattendue du worker
+      worker.on("exit", (code) => {
+        if (code !== 0) {
+          console.error(
+            `[Main] ⚠️ Worker désinstallation fermé avec code ${code} pour ${gameName}`
+          );
+          reject(new Error(`Worker process exited with code ${code}`));
+        }
+      });
+    });
+  }
+);
+
+// === HANDLERS DE VÉRIFICATION ===
+
+/**
+ * 🔍 Vérifie si un jeu peut être désinstallé
+ */
+ipcMain.handle("canUninstallGame", async (event, { gameId, gamePath }) => {
+  try {
+    // Vérifier si le dossier existe
+    if (!fs.existsSync(gamePath)) {
+      return {
+        canUninstall: false,
+        reason: "Dossier du jeu introuvable",
+      };
+    }
+
+    // Vérifier si le jeu est en cours
+    const isRunning = gameLauncher.isGameRunning(gameId);
+
+    return {
+      canUninstall: true,
+      isRunning,
+      warning: isRunning ? "Le jeu sera fermé avant désinstallation" : null,
+    };
+  } catch (error) {
+    console.error(`[Main] Erreur vérification désinstallation:`, error);
+    return {
+      canUninstall: false,
+      reason: error.message,
+    };
+  }
+});
+
+/**
+ * 📊 Obtient la taille d'un jeu installé
+ */
+ipcMain.handle("getGameSize", async (event, { gamePath }) => {
+  try {
+    if (!fs.existsSync(gamePath)) {
+      return { success: false, error: "Dossier introuvable" };
+    }
+
+    const size = await calculateDirectorySize(gamePath);
+    return {
+      success: true,
+      sizeBytes: size,
+      sizeMB: Math.round(size / (1024 * 1024)),
+      sizeGB: Math.round((size / (1024 * 1024 * 1024)) * 10) / 10,
+    };
+  } catch (error) {
+    console.error(`[Main] Erreur calcul taille:`, error);
+    return { success: false, error: error.message };
+  }
+});
+
+// === FONCTION UTILITAIRE ===
+
+/**
+ * Calcule la taille d'un dossier récursivement
+ */
+async function calculateDirectorySize(dirPath) {
+  let totalSize = 0;
+
+  try {
+    const items = await fs.promises.readdir(dirPath);
+
+    for (const item of items) {
+      const itemPath = path.join(dirPath, item);
+      const stats = await fs.promises.stat(itemPath);
+
+      if (stats.isDirectory()) {
+        totalSize += await calculateDirectorySize(itemPath);
+      } else {
+        totalSize += stats.size;
+      }
+    }
+  } catch (error) {
+    console.warn(`[Main] Erreur calcul taille ${dirPath}:`, error.message);
+  }
+
+  return totalSize;
+}

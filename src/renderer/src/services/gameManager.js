@@ -6,6 +6,7 @@
 class GameManager {
   constructor() {
     this.statusListeners = new Map(); // Map<gameId, callback[]>
+    this.uninstallListeners = new Map(); // Map<gameId, callback[]> - NOUVEAU
     this.setupEventListeners();
   }
 
@@ -21,6 +22,18 @@ class GameManager {
           callback(status);
         } catch (error) {
           console.error("Erreur dans le callback de statut:", error);
+        }
+      });
+    });
+
+    // NOUVEAU - Écouter les progressions de désinstallation
+    window.api.onUninstallProgress((progress) => {
+      const listeners = this.uninstallListeners.get(progress.id) || [];
+      listeners.forEach((callback) => {
+        try {
+          callback(progress);
+        } catch (error) {
+          console.error("Erreur dans le callback de désinstallation:", error);
         }
       });
     });
@@ -136,35 +149,6 @@ class GameManager {
     } catch (error) {
       console.error("[GameManager] Erreur lors du listage:", error);
       return [];
-    }
-  }
-
-  /**
-   * Arrête un jeu
-   * @param {string} gameId - ID du jeu à arrêter
-   * @param {boolean} force - Forcer l'arrêt
-   */
-  async stopGame(gameId, force = false) {
-    try {
-      console.log(`[GameManager] Arrêt de ${gameId}...`);
-
-      const result = await window.api.stopGame({ gameId, force });
-
-      // Nettoyer les listeners si le jeu s'arrête avec succès
-      if (result.success) {
-        this.removeStatusListeners(gameId);
-      }
-
-      return result;
-    } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors de l'arrêt de ${gameId}:`,
-        error
-      );
-      return {
-        success: false,
-        error: error.message,
-      };
     }
   }
 
@@ -293,6 +277,153 @@ class GameManager {
       return `${(sizeInMB / 1024).toFixed(1)} GB`;
     }
     return `${sizeInMB.toFixed(1)} MB`;
+  }
+
+  /**
+   * 🛑 Arrête un jeu en cours
+   * @param {string} gameId - ID du jeu à arrêter
+   * @param {boolean} force - Forcer l'arrêt
+   */
+  async stopGame(gameId, force = false) {
+    try {
+      console.log(`[GameManager] 🛑 Arrêt de ${gameId} (force: ${force})`);
+
+      const result = await window.api.stopGame({ gameId, force });
+
+      // Nettoyer les listeners si le jeu s'arrête avec succès
+      if (result.success) {
+        this.removeStatusListeners(gameId);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(
+        `[GameManager] Erreur lors de l'arrêt de ${gameId}:`,
+        error
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * ⚡ Arrêt forcé d'un jeu
+   * @param {string} gameId - ID du jeu à arrêter de force
+   */
+  async forceStopGame(gameId) {
+    try {
+      console.log(`[GameManager] ⚡ Arrêt forcé de ${gameId}`);
+
+      const result = await window.api.forceStopGame({ gameId });
+
+      if (result.success) {
+        this.removeStatusListeners(gameId);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(
+        `[GameManager] Erreur lors de l'arrêt forcé de ${gameId}:`,
+        error
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 🗑️ Désinstalle un jeu complètement
+   * @param {string} gameId - ID du jeu à désinstaller
+   * @param {string} gamePath - Chemin du jeu
+   * @param {string} gameName - Nom du jeu
+   * @param {Function} onProgress - Callback optionnel pour la progression
+   */
+  async uninstallGame(gameId, gamePath, gameName, onProgress = null) {
+    try {
+      console.log(`[GameManager] 🗑️ Désinstallation de ${gameName}...`);
+
+      // Ajouter le listener de progression si fourni
+      if (onProgress) {
+        this.addUninstallListener(gameId, onProgress);
+      }
+
+      const result = await window.api.uninstallGame({
+        gameId,
+        gamePath,
+        gameName,
+      });
+
+      console.log(`[GameManager] Résultat désinstallation:`, result);
+
+      // Nettoyer tous les listeners pour ce jeu
+      this.removeStatusListeners(gameId);
+      this.removeUninstallListeners(gameId);
+
+      return result;
+    } catch (error) {
+      console.error(
+        `[GameManager] Erreur lors de la désinstallation de ${gameName}:`,
+        error
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 🔍 Vérifie si un jeu peut être désinstallé
+   * @param {string} gameId - ID du jeu
+   * @param {string} gamePath - Chemin du jeu
+   */
+  async canUninstallGame(gameId, gamePath) {
+    try {
+      return await window.api.canUninstallGame({ gameId, gamePath });
+    } catch (error) {
+      console.error(
+        `[GameManager] Erreur vérification désinstallation:`,
+        error
+      );
+      return { canUninstall: false, reason: error.message };
+    }
+  }
+
+  /**
+   * 📊 Obtient la taille d'un jeu installé
+   * @param {string} gamePath - Chemin du jeu
+   */
+  async getGameSize(gamePath) {
+    try {
+      return await window.api.getGameSize({ gamePath });
+    } catch (error) {
+      console.error(`[GameManager] Erreur calcul taille:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Ajoute un listener pour la désinstallation
+   * @param {string} gameId - ID du jeu
+   * @param {Function} callback - Fonction à appeler
+   */
+  addUninstallListener(gameId, callback) {
+    if (!this.uninstallListeners.has(gameId)) {
+      this.uninstallListeners.set(gameId, []);
+    }
+    this.uninstallListeners.get(gameId).push(callback);
+  }
+
+  /**
+   * Supprime tous les listeners de désinstallation pour un jeu
+   * @param {string} gameId - ID du jeu
+   */
+  removeUninstallListeners(gameId) {
+    this.uninstallListeners.delete(gameId);
   }
 }
 
