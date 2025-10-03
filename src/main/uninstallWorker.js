@@ -1,28 +1,22 @@
-// src/main/uninstallWorker.js - Worker pour désinstallation 🗑️
+// src/main/uninstallWorker.js - VERSION FINALE 🚀
 
 import { parentPort, workerData } from "worker_threads";
-import { GameEngine } from "./gameEngine.js";
+import { UninstallEngine } from "./uninstallEngine.js";
 
-/**
- * Worker thread pour désinstallation de jeux
- */
 async function runUninstallation() {
-  const gameEngine = new GameEngine();
+  const uninstallEngine = new UninstallEngine();
 
   try {
     console.log(`[UninstallWorker] 🗑️ Désinstallation: ${workerData.gameId}`);
 
     // Lancer la désinstallation complète
-    const result = await gameEngine.uninstallGame(
+    const result = await uninstallEngine.uninstallGame(
       workerData.gameId,
       workerData.gamePath,
       {
-        // Interface store simplifiée
         store: {
           get: (key) => workerData.storeData[key],
         },
-
-        // Callback de progression
         sendProgress: (progressData) => {
           parentPort.postMessage(progressData);
         },
@@ -60,5 +54,4 @@ async function runUninstallation() {
   }
 }
 
-// Démarrer la désinstallation
 runUninstallation();
