@@ -126,7 +126,7 @@ const Welcome = () => {
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
                 placeholder="Adresse IP ou DNS du serveur"
-                className="w-full p-3 rounded-lg mb-4 text-gray-800 bg-white border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                className="w-full p-3 rounded-lg mb-4 text-indigo-700 bg-white border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
               <div className="absolute top-0 right-0 mt-3 mr-3">
                 {isChecking ? (

@@ -44,7 +44,7 @@ const Drawer = ({ children }) => {
       >
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-4 text-xl text-[#66FCF1] hover:text-white focus:outline-none"
+          className="p-4 text-xl text-[#66FCF1] hover:text-white focus:outline-none cursor-pointer"
         >
           <FaBars />
         </button>

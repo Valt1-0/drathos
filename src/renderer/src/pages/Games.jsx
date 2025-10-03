@@ -1,9 +1,11 @@
 // src/renderer/src/pages/Games.jsx - Interface Steam-like 🎮
+// Fixed: 401 error handling + Object rendering issues
 
 import { useState, useEffect } from "react";
 import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { useDownload } from "../contexts/downloadContext";
+import { useAuth } from "../contexts/authContext";
 import gameManager from "../services/gameManager";
 import dayjs from "dayjs";
 
@@ -23,17 +25,59 @@ const Games = () => {
   const [uninstalling, setUninstalling] = useState(new Set());
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
+  const { logout } = useAuth();
+
+  // === UTILITY FUNCTIONS ===
+  
+  // Safe genre extractor - handles both strings and objects
+  const extractGenreName = (genre) => {
+    if (!genre) return "Unknown";
+    if (typeof genre === "string") return genre;
+    return genre.name || genre.slug || genre.id || "Unknown";
+  };
+
+  // Safe platform extractor
+  const extractPlatformName = (platform) => {
+    if (!platform) return "Unknown";
+    if (typeof platform === "string") return platform;
+    return platform.name || platform.slug || platform.id || "Unknown";
+  };
+
+  // Get genres as array of strings
+  const getGenresArray = (game) => {
+    if (!game || !game.genres) return [];
+    if (!Array.isArray(game.genres)) return [];
+    return game.genres.map(extractGenreName);
+  };
+
+  // Get platforms as array of strings
+  const getPlatformsArray = (game) => {
+    if (!game || !game.platforms) return ["PC"];
+    if (!Array.isArray(game.platforms)) return ["PC"];
+    return game.platforms.map(extractPlatformName);
+  };
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
-        const [allGames, installed] = await Promise.all([
-          getAllServerGames(),
-          getInstalledGames(),
-        ]);
-
+        // Fetch server games
+        const allGames = await getAllServerGames();
         setGames(allGames || []);
-        setInstalledGames(installed || []);
+
+        // Try to fetch installed games, but don't fail if unauthorized
+        try {
+          const installed = await getInstalledGames();
+          setInstalledGames(installed || []);
+        } catch (installError) {
+          console.warn("Could not fetch installed games:", installError);
+          // Check if it's a 401 error
+          if (installError.message?.includes("401") || installError.message?.includes("Unauthorized")) {
+            console.error("Authentication expired. Please log in again.");
+            // Optionally redirect to login or show a message
+            // logout(); // Uncomment if you want to force logout on 401
+          }
+          setInstalledGames([]);
+        }
 
         // Initialiser l'état des jeux en cours
         const activeGames = await gameManager.getActiveGames();
@@ -90,7 +134,9 @@ const Games = () => {
 
       if (progress.stage === "uninstalled") {
         // Recharger la liste des jeux installés
-        getInstalledGames().then(setInstalledGames);
+        getInstalledGames().then(setInstalledGames).catch(err => {
+          console.warn("Could not refresh installed games:", err);
+        });
         setUninstalling((prev) => {
           const newSet = new Set(prev);
           newSet.delete(progress.id);
@@ -133,10 +179,10 @@ const Games = () => {
 
   // Utilitaires
   const isInstalled = (gameId) =>
-    installedGames.some((g) => g.serverGameId._id === gameId);
+    installedGames.some((g) => g.serverGameId?._id === gameId);
 
   const getInstalledGameData = (gameId) =>
-    installedGames.find((g) => g.serverGameId._id === gameId);
+    installedGames.find((g) => g.serverGameId?._id === gameId);
 
   const isGamePlaying = (gameId) => playingGames.has(gameId);
   const isGameUninstalling = (gameId) => uninstalling.has(gameId);
@@ -146,13 +192,21 @@ const Games = () => {
     const matchesSearch = game.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
+    
+    const gameGenres = getGenresArray(game);
     const matchesGenre =
-      selectedGenre === "All" || game.genres.includes(selectedGenre);
+      selectedGenre === "All" || gameGenres.includes(selectedGenre);
+    
     return matchesSearch && matchesGenre;
   });
 
-  // Obtenir tous les genres
-  const allGenres = ["All", ...new Set(games.flatMap((game) => game.genres))];
+  // Obtenir tous les genres (safe extraction)
+  const allGenres = [
+    "All",
+    ...new Set(
+      games.flatMap((game) => getGenresArray(game))
+    ),
+  ];
 
   // === GESTIONNAIRES D'ACTIONS ===
 
@@ -228,7 +282,9 @@ const Games = () => {
         if (data.stage === "completed" || data.stage === "failed") {
           setTimeout(() => {
             removeDownload(downloadId);
-            getInstalledGames().then(setInstalledGames);
+            getInstalledGames().then(setInstalledGames).catch(err => {
+              console.warn("Could not refresh installed games:", err);
+            });
           }, 2000);
         }
       }
@@ -342,8 +398,8 @@ const Games = () => {
             onChange={(e) => setSelectedGenre(e.target.value)}
             className="w-full bg-gray-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {allGenres.map((genre) => (
-              <option key={genre} value={genre}>
+            {allGenres.map((genre, index) => (
+              <option key={`${genre}-${index}`} value={genre}>
                 {genre}
               </option>
             ))}
@@ -356,6 +412,7 @@ const Games = () => {
             const installed = isInstalled(game._id);
             const playing = isGamePlaying(game._id);
             const uninstalling = isGameUninstalling(game._id);
+            const gameGenres = getGenresArray(game);
 
             return (
               <div
@@ -401,12 +458,7 @@ const Games = () => {
                     </div>
 
                     <div className="text-xs text-gray-500 truncate">
-                      {Array.isArray(game.genres)
-                        ? game.genres
-                            .slice(0, 2)
-                            .map((g) => (typeof g === "object" ? g.name : g))
-                            .join(", ")
-                        : "Inconnu"}
+                      {gameGenres.slice(0, 2).join(", ") || "Aucun genre"}
                     </div>
 
                     {installed && (
@@ -439,7 +491,7 @@ const Games = () => {
                   <img
                     src={selectedGame.coverUrl}
                     alt={selectedGame.name}
-                    className="w-full h-full object-cover opacity-30 blur-sm"
+                    className="w-full h-full object-cover opacity-70 blur-xs"
                   />
                 </div>
               )}
@@ -450,13 +502,8 @@ const Games = () => {
                 </h1>
                 <div className="flex items-center gap-4 text-gray-300">
                   <span>
-                    {Array.isArray(selectedGame.genres)
-                      ? selectedGame.genres
-                          .slice(0, 3)
-                          .map((g) => (typeof g === "object" ? g.name : g))
-                          .join(" • ")
-                      : "Inconnu"}
-                  </span>{" "}
+                    {getGenresArray(selectedGame).slice(0, 3).join(" • ") || "Aucun genre"}
+                  </span>
                   {selectedGame.releaseDate && (
                     <span>
                       • {dayjs(selectedGame.releaseDate).format("YYYY")}
@@ -602,31 +649,28 @@ const Games = () => {
                       <div>
                         <span className="text-gray-400">Genres:</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {Array.isArray(selectedGame.genres) &&
-                            selectedGame.genres.map((genre, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-blue-600 text-xs rounded"
-                              >
-                                {typeof genre === "object"
-                                  ? genre.name || genre.slug
-                                  : genre}
-                              </span>
-                            ))}
+                          {getGenresArray(selectedGame).map((genre, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-600 text-xs rounded"
+                            >
+                              {genre}
+                            </span>
+                          ))}
                         </div>
                       </div>
 
                       <div>
                         <span className="text-gray-400">Plateformes:</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {selectedGame.platforms?.map((platform) => (
+                          {getPlatformsArray(selectedGame).map((platform, index) => (
                             <span
-                              key={platform}
+                              key={index}
                               className="px-2 py-1 bg-gray-600 text-xs rounded"
                             >
                               {platform}
                             </span>
-                          )) || <span className="text-gray-500">PC</span>}
+                          ))}
                         </div>
                       </div>
 

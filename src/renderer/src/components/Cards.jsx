@@ -39,7 +39,7 @@ const Cards = ({
 
         <button
           onClick={onInstall}
-          className="mt-3 w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md flex items-center justify-center gap-2 transition-all"
+          className="mt-3 w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <FiDownload className="text-sm" />
           Install

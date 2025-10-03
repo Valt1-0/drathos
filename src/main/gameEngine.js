@@ -1,5 +1,5 @@
-// src/main/GameInstallationEngine.js - SYSTÈME UNIFIÉ 🚀
-// Remplace et fusionne DownloadEngine.js + installGame.js
+// src/main/gameEngine.js - SYSTÈME UNIFIÉ 🚀
+// Installation et Désinstallation de jeux
 
 import fs from "fs";
 import path from "path";
@@ -26,17 +26,18 @@ export class GameEngine {
     console.log(`[GameEngine] ✅ Système unifié initialisé`);
   }
 
+  // ========================================
+  // INSTALLATION DE JEUX
+  // ========================================
+
   /**
    * 🎯 MÉTHODE PRINCIPALE - Installe un jeu complet
-   * Remplace la fonction installGame() et utilise DownloadEngine en interne
    */
   async installGame(serverGame, { store, sendProgress }) {
     const gameId = serverGame._id;
 
     try {
-      console.log(
-        `[GameInstallationEngine] 🚀 Installation: ${serverGame.name}`
-      );
+      console.log(`[GameEngine] 🚀 Installation: ${serverGame.name}`);
 
       // Validation des paramètres
       if (!serverGame._id || !serverGame.zipFileName) {
@@ -55,9 +56,7 @@ export class GameEngine {
       // Étape 3: Finalisation et enregistrement
       await this.finalizeInstallation(filePath, extractPath, serverGame);
 
-      console.log(
-        `[GameInstallationEngine] ✅ Installation réussie: ${serverGame.name}`
-      );
+      console.log(`[GameEngine] ✅ Installation réussie: ${serverGame.name}`);
 
       // Nettoyage
       this.cleanupDownload(gameId);
@@ -65,7 +64,7 @@ export class GameEngine {
       return { success: true, path: extractPath };
     } catch (error) {
       console.error(
-        `[GameInstallationEngine] ❌ Installation échouée: ${serverGame.name}`,
+        `[GameEngine] ❌ Installation échouée: ${serverGame.name}`,
         error
       );
 
@@ -141,7 +140,7 @@ export class GameEngine {
     )}_${gameId}.zip`;
     const filePath = path.join(this.downloadPath, fileName);
 
-    console.log(`[GameInstallationEngine] 📥 Téléchargement: ${fileName}`);
+    console.log(`[GameEngine] 📥 Téléchargement: ${fileName}`);
 
     // Marquer comme en cours de téléchargement
     this.activeDownloads.set(gameId, {
@@ -204,9 +203,7 @@ export class GameEngine {
       }
 
       fileStream.end();
-      console.log(
-        `[GameInstallationEngine] ✅ Téléchargement terminé: ${fileName}`
-      );
+      console.log(`[GameEngine] ✅ Téléchargement terminé: ${fileName}`);
 
       return filePath;
     } catch (error) {
@@ -217,7 +214,7 @@ export class GameEngine {
         }
       } catch (cleanupError) {
         console.warn(
-          `[GameInstallationEngine] Impossible de supprimer le fichier partiel: ${cleanupError.message}`
+          `[GameEngine] Impossible de supprimer le fichier partiel: ${cleanupError.message}`
         );
       }
 
@@ -232,9 +229,7 @@ export class GameEngine {
     const gameId = serverGame._id;
     const extractPath = path.join(this.downloadPath, gameId);
 
-    console.log(
-      `[GameInstallationEngine] 📦 Extraction: ${path.basename(filePath)}`
-    );
+    console.log(`[GameEngine] 📦 Extraction: ${path.basename(filePath)}`);
 
     // Créer le dossier d'extraction
     if (!fs.existsSync(extractPath)) {
@@ -289,18 +284,14 @@ export class GameEngine {
    * 📂 Extraction ZIP avec progression fichier par fichier
    */
   async extractZipWithProgress(filePath, extractPath, gameId) {
-    console.log(
-      `[GameInstallationEngine] 📂 Extraction ZIP avec progression: ${filePath}`
-    );
+    console.log(`[GameEngine] 📂 Extraction ZIP avec progression: ${filePath}`);
 
     // Ouvrir l'archive pour analyser son contenu
     const directory = await unzipper.Open.file(filePath);
     const totalFiles = directory.files.length;
     let extractedCount = 0;
 
-    console.log(
-      `[GameInstallationEngine] 📊 Archive contient ${totalFiles} fichiers`
-    );
+    console.log(`[GameEngine] 📊 Archive contient ${totalFiles} fichiers`);
 
     this.sendProgress({
       id: gameId,
@@ -350,7 +341,7 @@ export class GameEngine {
         extractedCount++;
         const progress = Math.round((extractedCount / totalFiles) * 100);
 
-        // Envoyer la progression toutes les 10 fichiers ou à chaque 5% pour éviter le spam
+        // Envoyer la progression toutes les 10 fichiers ou à chaque 5%
         if (
           extractedCount % 10 === 0 ||
           progress % 5 === 0 ||
@@ -368,7 +359,7 @@ export class GameEngine {
         }
       } catch (error) {
         console.warn(
-          `[GameInstallationEngine] ⚠️ Erreur extraction fichier ${entry.path}:`,
+          `[GameEngine] ⚠️ Erreur extraction fichier ${entry.path}:`,
           error.message
         );
         // Continuer avec les autres fichiers même si un fichier échoue
@@ -377,7 +368,7 @@ export class GameEngine {
     }
 
     console.log(
-      `[GameInstallationEngine] ✅ Extraction ZIP terminée: ${extractedCount}/${totalFiles} fichiers`
+      `[GameEngine] ✅ Extraction ZIP terminée: ${extractedCount}/${totalFiles} fichiers`
     );
 
     this.sendProgress({
@@ -402,7 +393,7 @@ export class GameEngine {
     serverGame
   ) {
     console.log(
-      `[GameInstallationEngine] ⚠️ Extraction manuelle requise pour: ${serverGame.name}`
+      `[GameEngine] ⚠️ Extraction manuelle requise pour: ${serverGame.name}`
     );
 
     const instructionsPath = path.join(extractPath, "EXTRACTION_MANUELLE.txt");
@@ -440,7 +431,7 @@ Le jeu apparaîtra dans votre bibliothèque une fois extrait.
   async finalizeInstallation(filePath, extractPath, serverGame) {
     const gameId = serverGame._id;
 
-    console.log(`[GameInstallationEngine] ✅ Finalisation: ${serverGame.name}`);
+    console.log(`[GameEngine] ✅ Finalisation: ${serverGame.name}`);
 
     this.sendProgress({
       id: gameId,
@@ -452,12 +443,10 @@ Le jeu apparaîtra dans votre bibliothèque une fois extrait.
     // Supprimer fichier temporaire
     try {
       await fs.promises.unlink(filePath);
-      console.log(
-        `[GameInstallationEngine] 🗑️ Fichier temporaire supprimé: ${filePath}`
-      );
+      console.log(`[GameEngine] 🗑️ Fichier temporaire supprimé: ${filePath}`);
     } catch (err) {
       console.warn(
-        `[GameInstallationEngine] Impossible de supprimer le fichier temporaire: ${err.message}`
+        `[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`
       );
     }
 
@@ -485,7 +474,7 @@ Le jeu apparaîtra dans votre bibliothèque une fois extrait.
       throw new Error(errorData?.message || `HTTP ${response.status}`);
     }
 
-    console.log(`[GameInstallationEngine] ✅ Jeu enregistré dans l'API`);
+    console.log(`[GameEngine] ✅ Jeu enregistré dans l'API`);
 
     // Progression finale
     const metrics = this.metrics.get(gameId);
@@ -500,181 +489,286 @@ Le jeu apparaîtra dans votre bibliothèque une fois extrait.
     });
   }
 
+  // ========================================
+  // DÉSINSTALLATION DE JEUX
+  // ========================================
+
   /**
-   * 📊 Initialise les métriques pour un téléchargement
+   * 🗑️ MÉTHODE PRINCIPALE - Désinstalle complètement un jeu
+   */
+  async uninstallGame(gameId, gamePath, { store, sendProgress }) {
+    try {
+      console.log(`[GameEngine] 🗑️ Désinstallation: ${gameId}`);
+      console.log(`[GameEngine] Chemin: ${gamePath}`);
+
+      // Initialiser les paramètres
+      this.store = store;
+      this.sendProgress = sendProgress;
+      this.serverAddress = store.get("serverAddress");
+      this.userToken = store.get("userToken");
+
+      // Vérifier que le chemin existe
+      if (!fs.existsSync(gamePath)) {
+        throw new Error(`Le dossier du jeu n'existe pas: ${gamePath}`);
+      }
+
+      // Étape 1: Progression initiale
+      sendProgress({
+        id: gameId,
+        stage: "uninstalling",
+        progress: 10,
+        message: "Préparation de la désinstallation...",
+      });
+
+      // Étape 2: Supprimer les fichiers du jeu
+      sendProgress({
+        id: gameId,
+        stage: "uninstalling",
+        progress: 30,
+        message: "Suppression des fichiers...",
+      });
+
+      await this.deleteDirectory(gamePath, (progress) => {
+        sendProgress({
+          id: gameId,
+          stage: "uninstalling",
+          progress: 30 + Math.floor(progress * 0.5), // 30% -> 80%
+          message: `Suppression en cours... ${Math.floor(progress)}%`,
+        });
+      });
+
+      console.log(`[GameEngine] ✅ Fichiers supprimés: ${gamePath}`);
+
+      // Étape 3: Supprimer de la base de données
+      sendProgress({
+        id: gameId,
+        stage: "uninstalling",
+        progress: 85,
+        message: "Nettoyage de la base de données...",
+      });
+
+      await this.removeFromDatabase(gameId);
+
+      console.log(`[GameEngine] ✅ Jeu supprimé de la base de données`);
+
+      // Étape 4: Finalisation
+      sendProgress({
+        id: gameId,
+        stage: "uninstalled",
+        progress: 100,
+        message: "Désinstallation terminée !",
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error(`[GameEngine] ❌ Erreur désinstallation:`, error);
+
+      sendProgress({
+        id: gameId,
+        stage: "failed",
+        progress: 0,
+        error: error.message,
+      });
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 🗑️ Supprime récursivement un dossier avec progression
+   */
+  async deleteDirectory(dirPath, onProgress) {
+    // Compter d'abord tous les fichiers
+    const totalItems = await this.countFilesInDirectory(dirPath);
+    let deletedItems = 0;
+
+    console.log(`[GameEngine] Suppression de ${totalItems} éléments...`);
+
+    const deleteRecursive = async (currentPath) => {
+      const stats = await fs.promises.stat(currentPath);
+
+      if (stats.isDirectory()) {
+        const items = await fs.promises.readdir(currentPath);
+
+        // Supprimer tout le contenu du dossier
+        for (const item of items) {
+          const itemPath = path.join(currentPath, item);
+          await deleteRecursive(itemPath);
+        }
+
+        // Supprimer le dossier vide
+        await fs.promises.rmdir(currentPath);
+        deletedItems++;
+
+        if (onProgress) {
+          onProgress((deletedItems / totalItems) * 100);
+        }
+      } else {
+        // Supprimer le fichier
+        await fs.promises.unlink(currentPath);
+        deletedItems++;
+
+        if (onProgress && deletedItems % 10 === 0) {
+          // Mettre à jour tous les 10 fichiers pour éviter trop d'appels
+          onProgress((deletedItems / totalItems) * 100);
+        }
+      }
+    };
+
+    await deleteRecursive(dirPath);
+
+    // S'assurer que la progression finale est à 100%
+    if (onProgress) {
+      onProgress(100);
+    }
+  }
+
+  /**
+   * 📊 Compte récursivement tous les fichiers et dossiers
+   */
+  async countFilesInDirectory(dirPath) {
+    let count = 1; // Le dossier lui-même
+
+    try {
+      const stats = await fs.promises.stat(dirPath);
+
+      if (stats.isDirectory()) {
+        const items = await fs.promises.readdir(dirPath);
+
+        for (const item of items) {
+          const itemPath = path.join(dirPath, item);
+          count += await this.countFilesInDirectory(itemPath);
+        }
+      }
+
+      return count;
+    } catch (error) {
+      console.warn(`[GameEngine] Erreur comptage ${dirPath}:`, error.message);
+      return count;
+    }
+  }
+
+  /**
+   * 🗄️ Supprime le jeu de la base de données backend
+   */
+  async removeFromDatabase(gameId) {
+    try {
+      const decoded = jwtDecode(this.userToken);
+      const userId = decoded.user.id;
+
+      const response = await fetch(
+        `http://${this.serverAddress}/api/installedGames/removeInstalledGame`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.userToken}`,
+          },
+          body: JSON.stringify({
+            userId,
+            serverGameId: gameId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.message || `HTTP ${response.status}`);
+      }
+
+      console.log(`[GameEngine] ✅ Jeu supprimé de la base de données`);
+      return true;
+    } catch (error) {
+      console.error(
+        `[GameEngine] ❌ Erreur suppression base de données:`,
+        error
+      );
+      // Ne pas faire échouer toute la désinstallation si la suppression DB échoue
+      console.warn(
+        `[GameEngine] ⚠️ La désinstallation continue malgré l'erreur DB`
+      );
+      return false;
+    }
+  }
+
+  // ========================================
+  // MÉTHODES UTILITAIRES
+  // ========================================
+
+  /**
+   * Initialise les métriques pour un téléchargement
    */
   initializeMetrics(gameId) {
     this.metrics.set(gameId, {
       startTime: Date.now(),
-      lastUpdateTime: 0,
-      speedSamples: [],
-      totalBytes: 0,
-      downloadedBytes: 0,
-      instantSpeed: 0,
+      lastUpdateTime: Date.now(),
+      lastBytes: 0,
+      speeds: [],
       avgSpeed: 0,
+      instantSpeed: 0,
       eta: 0,
-      lastProgressUpdate: 0,
-      lastDownloadedBytes: 0,
     });
   }
 
   /**
-   * 📈 Met à jour les métriques de téléchargement
+   * Met à jour les métriques de téléchargement
    */
-  updateMetrics(gameId, downloadedBytes, totalBytes) {
-    const now = Date.now();
+  updateMetrics(gameId, downloadedBytes, totalSize) {
     const metrics = this.metrics.get(gameId);
+    if (!metrics) return;
 
-    metrics.downloadedBytes = downloadedBytes;
-    metrics.totalBytes = totalBytes;
+    const now = Date.now();
+    const timeDelta = (now - metrics.lastUpdateTime) / 1000; // secondes
 
-    if (metrics.lastUpdateTime > 0) {
-      const timeDelta = (now - metrics.lastUpdateTime) / 1000;
-      const bytesDelta = downloadedBytes - metrics.lastDownloadedBytes;
+    if (timeDelta > 0) {
+      const bytesDelta = downloadedBytes - metrics.lastBytes;
+      const instantSpeed = bytesDelta / timeDelta; // bytes/s
 
-      metrics.instantSpeed = timeDelta > 0 ? bytesDelta / timeDelta : 0;
-
-      // Moyenne mobile des vitesses
-      metrics.speedSamples.push(metrics.instantSpeed);
-      if (metrics.speedSamples.length > this.config.speedSamples) {
-        metrics.speedSamples.shift();
+      // Ajouter à l'historique des vitesses
+      metrics.speeds.push(instantSpeed);
+      if (metrics.speeds.length > this.config.speedSamples) {
+        metrics.speeds.shift();
       }
 
-      metrics.avgSpeed =
-        metrics.speedSamples.reduce((a, b) => a + b, 0) /
-        metrics.speedSamples.length;
+      // Calculer la vitesse moyenne
+      const avgSpeed =
+        metrics.speeds.reduce((a, b) => a + b, 0) / metrics.speeds.length;
 
-      // Estimation du temps restant
-      const remainingBytes = totalBytes - downloadedBytes;
-      metrics.eta =
-        metrics.avgSpeed > 0 ? remainingBytes / metrics.avgSpeed : 0;
+      // Calculer l'ETA
+      const remainingBytes = totalSize - downloadedBytes;
+      const eta = avgSpeed > 0 ? remainingBytes / avgSpeed : 0;
+
+      // Mettre à jour les métriques
+      metrics.lastUpdateTime = now;
+      metrics.lastBytes = downloadedBytes;
+      metrics.instantSpeed = instantSpeed;
+      metrics.avgSpeed = avgSpeed;
+      metrics.eta = eta;
     }
-
-    metrics.lastUpdateTime = now;
-    metrics.lastDownloadedBytes = downloadedBytes;
   }
 
   /**
-   * 🕐 Détermine si on doit envoyer une mise à jour de progression
+   * Détermine si on doit envoyer une mise à jour de progression
    */
   shouldSendProgressUpdate(gameId) {
     const metrics = this.metrics.get(gameId);
-    const now = Date.now();
+    if (!metrics) return false;
 
-    return (
-      now - metrics.lastProgressUpdate >= this.config.progressUpdateInterval
-    );
+    const now = Date.now();
+    const timeSinceLastUpdate = now - metrics.lastUpdateTime;
+
+    return timeSinceLastUpdate >= this.config.progressUpdateInterval;
   }
 
   /**
-   * 🧹 Nettoie les ressources d'un téléchargement
+   * Nettoyage des données de téléchargement
    */
   cleanupDownload(gameId) {
     this.activeDownloads.delete(gameId);
     this.metrics.delete(gameId);
-    console.log(
-      `[GameInstallationEngine] 🧹 Nettoyage effectué pour: ${gameId}`
-    );
-  }
-
-  /**
-   * ⏸️ FONCTIONNALITÉS AVANCÉES - Pause un téléchargement
-   * (Future feature - infrastructure prête)
-   */
-  async pauseDownload(gameId) {
-    const download = this.activeDownloads.get(gameId);
-    if (download && download.stage === "downloading") {
-      download.paused = true;
-      console.log(
-        `[GameInstallationEngine] ⏸️ Téléchargement mis en pause: ${gameId}`
-      );
-      return { success: true, message: "Téléchargement mis en pause" };
-    }
-    return {
-      success: false,
-      error: "Aucun téléchargement actif à mettre en pause",
-    };
-  }
-
-  /**
-   * ▶️ Reprend un téléchargement
-   * (Future feature - infrastructure prête)
-   */
-  async resumeDownload(gameId) {
-    const download = this.activeDownloads.get(gameId);
-    if (download && download.paused) {
-      download.paused = false;
-      console.log(
-        `[GameInstallationEngine] ▶️ Téléchargement repris: ${gameId}`
-      );
-      return { success: true, message: "Téléchargement repris" };
-    }
-    return {
-      success: false,
-      error: "Aucun téléchargement en pause à reprendre",
-    };
-  }
-
-  /**
-   * ❌ Annule un téléchargement
-   * (Future feature - infrastructure prête)
-   */
-  async cancelDownload(gameId) {
-    const download = this.activeDownloads.get(gameId);
-    if (download) {
-      // Nettoyer les fichiers
-      try {
-        if (fs.existsSync(download.filePath)) {
-          fs.unlinkSync(download.filePath);
-        }
-      } catch (error) {
-        console.warn(
-          `[GameInstallationEngine] Erreur nettoyage: ${error.message}`
-        );
-      }
-
-      this.cleanupDownload(gameId);
-      console.log(
-        `[GameInstallationEngine] ❌ Téléchargement annulé: ${gameId}`
-      );
-      return { success: true, message: "Téléchargement annulé" };
-    }
-    return { success: false, error: "Aucun téléchargement actif à annuler" };
-  }
-
-  /**
-   * 📊 Obtient les statistiques globales
-   */
-  getStats() {
-    return {
-      activeDownloads: this.activeDownloads.size,
-      totalDownloads: this.activeDownloads.size,
-      downloadPaths: this.downloadPath,
-      serverAddress: this.serverAddress,
-    };
-  }
-
-  /**
-   * 📈 Obtient la progression d'un téléchargement spécifique
-   */
-  getProgress(gameId) {
-    const download = this.activeDownloads.get(gameId);
-    const metrics = this.metrics.get(gameId);
-
-    if (download && metrics) {
-      return {
-        gameId,
-        stage: download.stage,
-        progress:
-          metrics.totalBytes > 0
-            ? (metrics.downloadedBytes / metrics.totalBytes) * 100
-            : 0,
-        speed: metrics.avgSpeed,
-        eta: metrics.eta,
-        elapsedTime: Date.now() - metrics.startTime,
-      };
-    }
-
-    return null;
+    console.log(`[GameEngine] 🧹 Nettoyage effectué pour ${gameId}`);
   }
 }
