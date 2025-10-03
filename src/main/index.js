@@ -390,7 +390,7 @@ ipcMain.handle("isGameRunning", (event, { gameId }) => {
 /**
  * Ouvre le dossier du jeu
  */
-ipcMain.handle("openGameFolder", (event, { gamePath }) => {
+ipcMain.handle("openGameFolder", (event, gamePath) => {
   return gameLauncher.openGameFolder(gamePath);
 });
 
@@ -475,9 +475,7 @@ ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
   }
 });
 
-
 //------------------------------\\
-
 
 // === ARRÊT DE JEU - Utilise GameLauncher ===
 
@@ -497,14 +495,11 @@ ipcMain.handle("forceStopGame", async (event, { gameId }) => {
   return await gameLauncher.stopGame(gameId, true); // Force = true
 });
 
-
 //------------------------------\\
 
 //* Désinstallation
 
 import uninstallWorkerPath from "./uninstallWorker.js?modulePath";
-
-
 
 // === DÉSINSTALLATION DE JEU - Utilise GameEngine via Worker ===
 
