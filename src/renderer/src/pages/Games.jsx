@@ -344,13 +344,7 @@ const Games = () => {
   };
 
   const openGameFolder = async (game) => {
-    const installedData = getInstalledGameData(game._id);
-
-    console.log("=== DEBUG OPEN FOLDER ===");
-    console.log("Game:", game.name);
-    console.log("Installed Data:", installedData);
-    console.log("Path:", installedData?.path);
-
+    const installedData = getInstalledGameData(game._id)
     if (installedData && installedData.path) {
       const result = await gameManager.openGameFolder(installedData.path);
       console.log("Result:", result);
