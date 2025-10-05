@@ -356,10 +356,10 @@ ipcMain.handle("launchGame", async (event, params) => {
       gameId,
       gamePath,
       executableName,
-      // Callback pour les changements d'état
       (statusData) => {
         event.sender.send("gameStatusChanged", statusData);
-      }
+      },
+      store
     );
 
     console.log(`[Main] ✅ Résultat du lancement:`, result);

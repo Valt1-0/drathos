@@ -36,7 +36,6 @@ const Drawer = ({ children }) => {
 
   return (
     <div className="flex h-screen drag-zone">
-      {/* Drawer */}
       <div
         className={`no-drag fixed top-0 left-0 h-full bg-gray-900 text-white transition-all duration-300 ${
           isOpen ? "w-48" : "w-16"

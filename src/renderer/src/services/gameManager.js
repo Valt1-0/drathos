@@ -281,8 +281,6 @@ class GameManager {
 
   /**
    * 🛑 Arrête un jeu en cours
-   * @param {string} gameId - ID du jeu à arrêter
-   * @param {boolean} force - Forcer l'arrêt
    */
   async stopGame(gameId, force = false) {
     try {
@@ -310,7 +308,6 @@ class GameManager {
 
   /**
    * ⚡ Arrêt forcé d'un jeu
-   * @param {string} gameId - ID du jeu à arrêter de force
    */
   async forceStopGame(gameId) {
     try {
@@ -337,10 +334,6 @@ class GameManager {
 
   /**
    * 🗑️ Désinstalle un jeu complètement
-   * @param {string} gameId - ID du jeu à désinstaller
-   * @param {string} gamePath - Chemin du jeu
-   * @param {string} gameName - Nom du jeu
-   * @param {Function} onProgress - Callback optionnel pour la progression
    */
   async uninstallGame(gameId, gamePath, gameName, onProgress = null) {
     try {
@@ -378,8 +371,6 @@ class GameManager {
 
   /**
    * 🔍 Vérifie si un jeu peut être désinstallé
-   * @param {string} gameId - ID du jeu
-   * @param {string} gamePath - Chemin du jeu
    */
   async canUninstallGame(gameId, gamePath) {
     try {

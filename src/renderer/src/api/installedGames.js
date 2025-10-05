@@ -106,3 +106,29 @@ export async function getGameStats(gameId) {
     return null;
   }
 }
+
+export async function getAllGamesStats(gameIds) {
+  try {
+    const statsPromises = gameIds.map((gameId) =>
+      getGameStats(gameId).catch((err) => {
+        console.warn(`Failed to load stats for ${gameId}:`, err);
+        return null;
+      })
+    );
+
+    const results = await Promise.all(statsPromises);
+
+    // Créer un objet { gameId: stats }
+    const statsMap = {};
+    gameIds.forEach((gameId, index) => {
+      if (results[index]) {
+        statsMap[gameId] = results[index];
+      }
+    });
+
+    return statsMap;
+  } catch (error) {
+    console.error("Error fetching all games stats:", error);
+    return {};
+  }
+}

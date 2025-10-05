@@ -22,7 +22,8 @@ export class GameLauncher {
     gameId,
     gamePath,
     executableName,
-    onStatusChange = () => {}
+    onStatusChange = () => {},
+    store = null
   ) {
     try {
       console.log(`[GameLauncher] Lancement du jeu ${gameId}...`);
@@ -47,7 +48,8 @@ export class GameLauncher {
         gameProcess,
         gameId,
         gamePath,
-        executableName
+        executableName,
+        store
       );
       this.activeProcesses.set(gameId, processInfo);
 
@@ -113,9 +115,6 @@ export class GameLauncher {
     return { success: true, executablePath };
   }
 
-  /**
-   * ✅ NOUVEAU: Création centralisée du processus (supprime le doublon spawn)
-   */
   _createGameProcess(executablePath, gamePath) {
     return spawn(executablePath, [], {
       cwd: gamePath,
@@ -125,10 +124,8 @@ export class GameLauncher {
     });
   }
 
-  /**
-   * ✅ NOUVEAU: Création centralisée des infos de processus
-   */
-  _createProcessInfo(gameProcess, gameId, gamePath, executableName) {
+
+  _createProcessInfo(gameProcess, gameId, gamePath, executableName, store) {
     return {
       process: gameProcess,
       pid: gameProcess.pid,
@@ -137,6 +134,7 @@ export class GameLauncher {
       executableName,
       startTime: Date.now(),
       status: "starting",
+      store,
     };
   }
 
@@ -174,7 +172,7 @@ export class GameLauncher {
     });
 
     // Événement de fermeture
-    gameProcess.on("exit", (code, signal) => {
+    gameProcess.on("exit", async (code, signal) => {
       console.log(
         `[GameLauncher] 🛑 Jeu ${processInfo.gameId} fermé (code: ${code}, signal: ${signal})`
       );
@@ -182,6 +180,11 @@ export class GameLauncher {
       const sessionDuration = processInfo.startTime
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
         : 0;
+
+      // ✅ BON
+      if (sessionDuration > 0) {
+        this.sendStatsToBackend(processInfo.gameId);
+      }
 
       this.cleanupProcess(processInfo.gameId);
 
@@ -295,6 +298,29 @@ export class GameLauncher {
     }, 30000); // Mise à jour toutes les 30 secondes
 
     this.sessionTrackers.set(gameId, interval);
+  }
+
+  /**
+   * Envoie un signal au renderer pour sauvegarder les stats
+   */
+  async sendStatsToBackend(gameId) {
+    try {
+      console.log(`[GameLauncher] 📊 Demande sauvegarde stats pour ${gameId}`);
+
+      const { BrowserWindow } = await import("electron");
+      const windows = BrowserWindow.getAllWindows();
+
+      console.log(`[GameLauncher] 🪟 Nombre de fenêtres: ${windows.length}`);
+
+      if (windows.length > 0) {
+        windows[0].webContents.send("save-game-stats", { gameId });
+        console.log(`[GameLauncher] ✅ Signal IPC envoyé pour ${gameId}`);
+      } else {
+        console.warn(`[GameLauncher] ⚠️ Aucune fenêtre disponible`);
+      }
+    } catch (error) {
+      console.error(`[GameLauncher] ❌ Erreur envoi stats:`, error);
+    }
   }
 
   /**

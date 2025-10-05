@@ -53,7 +53,7 @@ const AddGameModal = ({ isOpen, onClose }) => {
         version,
         isPublic,
         selectedGame.id,
-        setUploadProgress, // met à jour la barre de progression
+        setUploadProgress,
       );
 
       alert("Jeu ajouté avec succès !");

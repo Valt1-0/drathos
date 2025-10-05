@@ -11,7 +11,6 @@ const Cards = ({
 }) => {
   return (
     <div className="relative w-44 sm:w-52 h-64 sm:h-72 rounded-2xl overflow-hidden bg-gray-800 group shadow-lg transition-all duration-300 hover:scale-[1.04] hover:shadow-2xl">
-      {/* Game Cover */}
       <img
         src={
           imageSrc ||
@@ -21,14 +20,12 @@ const Cards = ({
         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
       />
 
-      {/* Badge */}
       {badgeType && (
         <div className="absolute top-2 left-2 z-10">
           <Badge type={badgeType} />
         </div>
       )}
 
-      {/* Overlay Gradient + Info */}
       <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
         <h4 className="text-white text-sm sm:text-base font-semibold truncate">
           {name || "The Witcher 3"}

@@ -65,6 +65,15 @@ const api = {
   // Obtenir la taille d'un jeu
   getGameSize: ({ gamePath }) =>
     ipcRenderer.invoke("getGameSize", { gamePath }),
+
+  onSaveGameStats: (callback) => {
+    ipcRenderer.removeAllListeners("save-game-stats");
+
+    ipcRenderer.on("save-game-stats", (event, data) => {
+      console.log("[Preload] 📡 Event save-game-stats reçu:", data);
+      callback(event, data);
+    });
+  },
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

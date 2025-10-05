@@ -3,9 +3,13 @@
 
 import { useState, useEffect } from "react";
 import { getAllServerGames } from "../api/serverGames";
-import { getInstalledGames } from "../api/installedGames";
+import {
+  getInstalledGames,
+  getAllGamesStats,
+  stopGame,
+  launchGame as launchGameAPI,
+} from "../api/installedGames";
 import { useDownload } from "../contexts/downloadContext";
-import { useAuth } from "../contexts/authContext";
 import gameManager from "../services/gameManager";
 import dayjs from "dayjs";
 
@@ -25,7 +29,6 @@ const Games = () => {
   const [uninstalling, setUninstalling] = useState(new Set());
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
-  const { logout } = useAuth();
 
   // === UTILITY FUNCTIONS ===
 
@@ -55,6 +58,32 @@ const Games = () => {
     if (!game || !game.platforms) return ["PC"];
     if (!Array.isArray(game.platforms)) return ["PC"];
     return game.platforms.map(extractPlatformName);
+  };
+
+  const loadGameStats = async () => {
+    try {
+      console.log("[Games] 📊 Chargement des stats...");
+
+      // Récupérer les IDs des jeux installés
+      const gameIds = installedGames
+        .map((g) => g.serverGameId?._id)
+        .filter(Boolean);
+
+      if (gameIds.length === 0) {
+        console.log("[Games] Aucun jeu installé");
+        return;
+      }
+
+      // Charger toutes les stats
+      const stats = await getAllGamesStats(gameIds);
+      setGameStats(stats);
+
+      console.log(stats);
+
+      console.log("[Games] ✅ Stats chargées:", Object.keys(stats).length);
+    } catch (error) {
+      console.error("[Games] ❌ Erreur chargement stats:", error);
+    }
   };
 
   useEffect(() => {
@@ -102,6 +131,54 @@ const Games = () => {
     fetchGames();
   }, []);
 
+  useEffect(() => {
+    if (installedGames.length > 0) {
+      loadGameStats();
+    }
+  }, [installedGames]);
+
+  useEffect(() => {
+    console.log("[Games] 🎧 Installation du listener save-game-stats");
+
+    let isProcessing = false; // ← Flag pour éviter les appels multiples
+
+    const handleSaveStats = async (event, data) => {
+      // ✅ Ignorer si déjà en cours
+      if (isProcessing) {
+        console.log("[Games] ⏭️ Appel ignoré (déjà en cours)");
+        return;
+      }
+
+      isProcessing = true;
+      console.log("[Games] 📊 EVENT REÇU - Sauvegarde stats pour:", data);
+
+      try {
+        const result = await stopGame(data.gameId);
+        console.log("[Games] ✅ API stopGame appelée, résultat:", result);
+
+        // Recharger les stats
+        await loadGameStats();
+        console.log("[Games] ✅ Stats rechargées");
+      } catch (error) {
+        console.error("[Games] ❌ Erreur sauvegarde stats:", error);
+      } finally {
+        // Réinitialiser après 1 seconde
+        setTimeout(() => {
+          isProcessing = false;
+        }, 1000);
+      }
+    };
+
+    if (window.api.onSaveGameStats) {
+      window.api.onSaveGameStats(handleSaveStats);
+      console.log("[Games] ✅ Listener enregistré");
+    }
+
+    return () => {
+      console.log("[Games] 🔌 Nettoyage du listener");
+    };
+  }, []);
+
   // Gestionnaire global de changement de statut des jeux
   useEffect(() => {
     const handleGameStatusChange = (status) => {
@@ -113,21 +190,24 @@ const Games = () => {
           newSet.add(status.gameId);
         } else if (status.status === "stopped" || status.status === "failed") {
           newSet.delete(status.gameId);
+
+          if (status.status === "stopped") {
+            setTimeout(() => loadGameStats(), 1000);
+          }
         }
         return newSet;
       });
 
       // Mettre à jour les stats du jeu
       if (status.sessionDuration) {
-        setGameStats((prev) => {
-          const newStats = new Map(prev);
-          newStats.set(status.gameId, {
-            ...newStats.get(status.gameId),
+        setGameStats((prev) => ({
+          ...prev,
+          [status.gameId]: {
+            ...prev[status.gameId],
             currentSessionDuration: status.sessionDuration,
             lastActivity: Date.now(),
-          });
-          return newStats;
-        });
+          },
+        }));
       }
     };
 
@@ -221,6 +301,8 @@ const Games = () => {
         return;
       }
 
+      setPlayingGames((prev) => new Set([...prev, game._id]));
+
       const result = await gameManager.launchGame(
         game._id,
         installedData.path,
@@ -230,9 +312,19 @@ const Games = () => {
 
       if (!result.success) {
         console.error("Échec du lancement:", result.error);
+        setPlayingGames((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(game._id);
+          return newSet;
+        });
       }
     } catch (error) {
       console.error("Erreur lors du lancement de", game.name, ":", error);
+      setPlayingGames((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(game._id);
+        return newSet;
+      });
     }
   };
 
@@ -344,7 +436,7 @@ const Games = () => {
   };
 
   const openGameFolder = async (game) => {
-    const installedData = getInstalledGameData(game._id)
+    const installedData = getInstalledGameData(game._id);
     if (installedData && installedData.path) {
       const result = await gameManager.openGameFolder(installedData.path);
       console.log("Result:", result);
@@ -419,6 +511,7 @@ const Games = () => {
           {filteredGames.map((game) => {
             const installed = isInstalled(game._id);
             const playing = isGamePlaying(game._id);
+            const stats = gameStats[game._id];
             const uninstalling = isGameUninstalling(game._id);
             const gameGenres = getGenresArray(game);
 
@@ -471,6 +564,12 @@ const Games = () => {
 
                     {installed && (
                       <div className="text-xs text-green-400">Installé</div>
+                    )}
+
+                    {stats && stats.totalPlayTime !== "< 1 minute" && (
+                      <div className="text-xs text-blue-400">
+                        ⏱️ {stats.totalPlayTime}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -597,6 +696,63 @@ const Games = () => {
                           >
                             🗑️ Désinstaller
                           </button>
+
+                          {isInstalled(selectedGame._id) &&
+                            gameStats[selectedGame._id] && (
+                              <div className="mt-6 bg-gray-800 rounded-lg p-6">
+                                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                  📊 Statistiques de jeu
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                  <div className="bg-gray-700 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm mb-1">
+                                      Temps de jeu
+                                    </div>
+                                    <div className="text-white text-2xl font-bold">
+                                      {gameStats[selectedGame._id]
+                                        .totalPlayTime || "0h 0m"}
+                                    </div>
+                                  </div>
+                                  <div className="bg-gray-700 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm mb-1">
+                                      Sessions
+                                    </div>
+                                    <div className="text-white text-2xl font-bold">
+                                      {gameStats[selectedGame._id]
+                                        .totalSessions || 0}
+                                    </div>
+                                  </div>
+                                  <div className="bg-gray-700 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm mb-1">
+                                      Temps moyen
+                                    </div>
+                                    <div className="text-white text-2xl font-bold">
+                                      {gameStats[selectedGame._id]
+                                        .averageSessionTime || "0h 0m"}
+                                    </div>
+                                  </div>
+                                  <div className="bg-gray-700 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm mb-1">
+                                      Dernière session
+                                    </div>
+                                    <div className="text-white text-lg font-bold">
+                                      {gameStats[selectedGame._id]
+                                        .lastPlayedFormatted || "Jamais"}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Badge "En cours" si le jeu est actif */}
+                                {isGamePlaying(selectedGame._id) && (
+                                  <div className="mt-4 bg-green-600 rounded-lg p-3 flex items-center gap-2">
+                                    <span className="animate-pulse">🎮</span>
+                                    <span className="font-semibold">
+                                      Partie en cours...
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         </>
                       );
                     })()}
