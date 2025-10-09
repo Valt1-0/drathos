@@ -36,14 +36,14 @@ const Drawer = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen drag-zone overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* Sidebar */}
       <motion.div
         initial={false}
         animate={{ width: isOpen ? 280 : 80 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="no-drag relative flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-r border-slate-800/50 shadow-2xl"
-        style={{ overflow: 'hidden' }}
+        className="relative flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-r border-slate-800/50 shadow-2xl"
+        style={{ overflow: 'hidden', WebkitAppRegion: 'no-drag' }}
       >
         {/* Decorative gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -52,28 +52,11 @@ const Drawer = ({ children }) => {
         <motion.div
           className="relative z-10 flex items-center border-b border-slate-800/50"
           animate={{
-            justifyContent: isOpen ? "space-between" : "center",
+            justifyContent: isOpen ? "flex-end" : "center",
             padding: isOpen ? "20px" : "16px"
           }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
-          <AnimatePresence mode="wait">
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-3"
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <FaGamepad className="text-white text-sm" />
-                </div>
-                <span className="text-lg font-bold text-white">Drathos</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <motion.button
             onClick={() => setIsOpen(!isOpen)}
             className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center"

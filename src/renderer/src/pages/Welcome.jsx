@@ -669,7 +669,7 @@ const Welcome = () => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 flex flex-col overflow-hidden relative">
+    <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 flex flex-col overflow-hidden relative">
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div

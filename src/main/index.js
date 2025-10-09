@@ -26,21 +26,14 @@ function createWindow() {
     minWidth: 1280,
     minHeight: 800,
     show: false,
-    frames: true,
-    autoHideMenuBar: false,
+    frame: false, // Désactive la barre de titre native
+    autoHideMenuBar: true,
     icon: icon,
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
       nodeIntegrationInWorker: true,
-    },
-
-    titleBarStyle: "",
-    titleBarOverlay: {
-      color: "#2f3241",
-      symbolColor: "#74b1be",
-      height: 20,
     },
   });
 
@@ -78,6 +71,38 @@ app.whenReady().then(() => {
 
   //* IPC test
   //* ipcMain.on("ping", () => console.log("pong"));
+
+  // Gestionnaires pour les contrôles de fenêtre
+  ipcMain.on("window-minimize", () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) window.minimize();
+  });
+
+  ipcMain.on("window-maximize", () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      if (window.isMaximized()) {
+        window.unmaximize();
+      } else {
+        window.maximize();
+      }
+    }
+  });
+
+  ipcMain.on("window-close", () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) window.close();
+  });
+
+  ipcMain.handle("window-is-maximized", () => {
+    const window = BrowserWindow.getFocusedWindow();
+    return window ? window.isMaximized() : false;
+  });
+
+  ipcMain.on("window-toggle-devtools", () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) window.webContents.toggleDevTools();
+  });
 
   createWindow();
 

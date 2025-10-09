@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import { Toaster } from "sonner";
 
@@ -5,6 +6,7 @@ import { AuthProvider, useAuth } from "./contexts/authContext";
 import { DownloadProvider } from "./contexts/downloadContext";
 
 import Drawer from "./components/Drawer";
+import TitleBar from "./components/TitleBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // * Pages
@@ -75,12 +77,40 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Raccourci clavier pour ouvrir le DevTools
+    const handleKeyDown = (e) => {
+      // F12 ou Ctrl+Shift+I
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+        window.api.windowToggleDevTools();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <AuthProvider>
       <DownloadProvider>
         <Router>
-
-          <AppRoutes />
+          <div className="flex flex-col h-screen overflow-hidden">
+            <TitleBar />
+            <div className="flex-1 overflow-hidden">
+              <AppRoutes />
+            </div>
+          </div>
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: '#1e293b',
+                color: '#f1f5f9',
+                border: '1px solid #334155',
+              },
+            }}
+          />
         </Router>
       </DownloadProvider>
     </AuthProvider>

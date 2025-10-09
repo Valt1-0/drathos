@@ -76,6 +76,13 @@ const api = {
 
   saveLocalStats: (data) => ipcRenderer.invoke("save-local-stats", data),
   getLocalStats: (data) => ipcRenderer.invoke("get-local-stats", data),
+
+  // Contrôles de fenêtre
+  windowMinimize: () => ipcRenderer.send("window-minimize"),
+  windowMaximize: () => ipcRenderer.send("window-maximize"),
+  windowClose: () => ipcRenderer.send("window-close"),
+  windowIsMaximized: () => ipcRenderer.invoke("window-is-maximized"),
+  windowToggleDevTools: () => ipcRenderer.send("window-toggle-devtools"),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to
