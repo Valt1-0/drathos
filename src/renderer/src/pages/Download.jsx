@@ -1,8 +1,15 @@
-// src/renderer/src/pages/Download.jsx - Version Beast Mode 🚀
-
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDownload } from "../contexts/downloadContext";
 import EnhancedDownloadProgress from "../components/EnhancedDownloadProgress";
+import {
+  FiDownload,
+  FiCheckCircle,
+  FiXCircle,
+  FiActivity,
+  FiHardDrive,
+  FiZap,
+} from "react-icons/fi";
 
 const Download = () => {
   const { downloads } = useDownload();
@@ -11,7 +18,33 @@ const Download = () => {
     activeDownloads: 0,
     completedCount: 0,
     freeSpace: 0,
+    totalSpace: 0,
+    usedPercent: 0,
   });
+
+  // Charger l'espace disque au montage
+  useEffect(() => {
+    const loadDiskSpace = async () => {
+      try {
+        const diskSpace = await window.api.getDiskSpace();
+        if (diskSpace.success) {
+          setStats((prev) => ({
+            ...prev,
+            freeSpace: diskSpace.freeGB,
+            totalSpace: diskSpace.totalGB,
+            usedPercent: diskSpace.usedPercent,
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading disk space:", error);
+      }
+    };
+
+    loadDiskSpace();
+    // Rafraîchir l'espace disque toutes les 30 secondes
+    const interval = setInterval(loadDiskSpace, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Calcul des statistiques temps réel
   useEffect(() => {
@@ -31,12 +64,12 @@ const Download = () => {
       (d) => d.stage === "completed"
     ).length;
 
-    setStats({
+    setStats((prev) => ({
+      ...prev,
       totalSpeed,
       activeDownloads: activeDownloads.length,
       completedCount,
-      freeSpace: 124, // TODO: Récupérer l'espace libre réel
-    });
+    }));
   }, [downloads]);
 
   // Groupement par statut
@@ -48,190 +81,392 @@ const Download = () => {
   const failedDownloads = downloads.filter((d) => d.stage === "failed");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
+    <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
       {/* Header avec stats */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Téléchargements
-            </h1>
-            <p className="text-gray-400 mt-2">
-              Gestionnaire de téléchargements optimisé
+      <div className="px-6 md:px-16 py-6 pb-12 max-w-7xl mx-auto">
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          {/* Title */}
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+                <FiDownload className="text-white text-xl" />
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+                Downloads
+              </h1>
+            </div>
+            <p className="text-gray-400 text-sm ml-13">
+              Advanced download manager with real-time metrics
             </p>
           </div>
 
-          {/* Stats en temps réel */}
-          <div className="flex gap-6 text-sm">
-            <div className="bg-gray-800/50 px-4 py-2 rounded-lg backdrop-blur-sm border border-gray-700/50">
-              <div className="text-gray-400">Vitesse totale</div>
-              <div className="text-2xl font-bold text-green-400">
-                {stats.totalSpeed.toFixed(1)}{" "}
-                <span className="text-sm">MB/s</span>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 px-4 py-2 rounded-lg backdrop-blur-sm border border-gray-700/50">
-              <div className="text-gray-400">Actifs</div>
-              <div className="text-2xl font-bold text-blue-400">
-                {stats.activeDownloads}
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 px-4 py-2 rounded-lg backdrop-blur-sm border border-gray-700/50">
-              <div className="text-gray-400">Terminés</div>
-              <div className="text-2xl font-bold text-purple-400">
-                {stats.completedCount}
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 px-4 py-2 rounded-lg backdrop-blur-sm border border-gray-700/50">
-              <div className="text-gray-400">Espace libre</div>
-              <div className="text-2xl font-bold text-yellow-400">
-                {stats.freeSpace} <span className="text-sm">GB</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Téléchargements actifs */}
-      {activeDownloads.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            Téléchargements en cours ({activeDownloads.length})
-          </h2>
-
-          <div className="space-y-4">
-            {activeDownloads.map((download) => (
-              <EnhancedDownloadProgress key={download.id} download={download} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Téléchargements terminés */}
-      {completedDownloads.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            Terminés ({completedDownloads.length})
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {completedDownloads.map((download) => (
-              <div
-                key={download.id}
-                className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
-                    <img
-                      src={download.image}
-                      alt="Cover"
-                      className="w-full h-full object-cover"
-                    />
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Total Speed */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+              className="group relative overflow-hidden bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 font-medium">
+                    Total Speed
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 bg-green-500/20 rounded-lg">
+                    <FiZap className="text-green-400 text-lg" />
                   </div>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-white">
+                    {stats.totalSpeed.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-gray-400">MB/s</span>
+                </div>
+                <div className="h-1 bg-gray-700 rounded-full overflow-hidden mt-2">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${Math.min(100, (stats.totalSpeed / 100) * 100)}%`,
+                    }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              </div>
+            </motion.div>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-medium truncate">
-                      {download.name}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-green-400 text-sm">
-                        ✅ Installé
-                      </span>
-                      {download.totalTime && (
-                        <>
-                          <span className="text-gray-500">•</span>
-                          <span className="text-gray-400 text-xs">
-                            {Math.floor(download.totalTime / 1000)}s
+            {/* Active Downloads */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="group relative overflow-hidden bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 font-medium">
+                    Active Downloads
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 rounded-lg">
+                    <FiActivity className="text-blue-400 text-lg" />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-white">
+                    {stats.activeDownloads}
+                  </span>
+                  <span className="text-xs text-gray-400">running</span>
+                </div>
+                {stats.activeDownloads > 0 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                    <span className="text-xs text-blue-400">Processing...</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Completed */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="group relative overflow-hidden bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 font-medium">
+                    Completed
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-lg">
+                    <FiCheckCircle className="text-purple-400 text-lg" />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-white">
+                    {stats.completedCount}
+                  </span>
+                  <span className="text-xs text-gray-400">games</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Free Space */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="group relative overflow-hidden bg-gradient-to-br from-yellow-600/20 to-orange-800/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 font-medium">
+                    Free Space
+                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 bg-yellow-500/20 rounded-lg">
+                    <FiHardDrive className="text-yellow-400 text-lg" />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-2xl font-bold text-white">
+                    {stats.freeSpace > 0 ? stats.freeSpace : "---"}
+                  </span>
+                  <span className="text-xs text-gray-400">GB free</span>
+                </div>
+                {stats.totalSpace > 0 && (
+                  <div className="text-xs text-gray-500 mb-1">
+                    of {stats.totalSpace} GB total
+                  </div>
+                )}
+                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${
+                      stats.usedPercent > 90
+                        ? "bg-gradient-to-r from-red-500 to-red-400"
+                        : stats.usedPercent > 75
+                        ? "bg-gradient-to-r from-orange-500 to-yellow-400"
+                        : "bg-gradient-to-r from-yellow-500 to-green-400"
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${stats.usedPercent || 0}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                  />
+                </div>
+                {stats.usedPercent > 0 && (
+                  <div className="text-xs text-gray-400 mt-1 text-right">
+                    {stats.usedPercent}% used
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Téléchargements actifs */}
+        <AnimatePresence mode="wait">
+          {activeDownloads.length > 0 && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></span>
+                <h2 className="text-xl font-bold text-white">
+                  Active Downloads ({activeDownloads.length})
+                </h2>
+              </div>
+
+              <div className="space-y-4">
+                {activeDownloads.map((download, index) => (
+                  <motion.div
+                    key={download.id}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <EnhancedDownloadProgress download={download} />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Téléchargements terminés */}
+        <AnimatePresence mode="wait">
+          {completedDownloads.length > 0 && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <FiCheckCircle className="text-green-400 text-xl" />
+                <h2 className="text-xl font-bold text-white">
+                  Completed ({completedDownloads.length})
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {completedDownloads.map((download, index) => (
+                  <motion.div
+                    key={download.id}
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="group relative overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 hover:border-green-500/50 rounded-2xl p-4 transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-16 h-16 bg-gray-700 rounded-xl overflow-hidden flex-shrink-0">
+                        <img
+                          src={download.image}
+                          alt="Cover"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <FiCheckCircle className="text-green-400 text-2xl" />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-semibold truncate">
+                          {download.name}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-green-400 text-sm font-medium flex items-center gap-1">
+                            <FiCheckCircle className="text-xs" />
+                            Installed
                           </span>
-                        </>
-                      )}
+                          {download.totalTime && (
+                            <>
+                              <span className="text-gray-500">•</span>
+                              <span className="text-gray-400 text-xs">
+                                {Math.floor(download.totalTime / 1000)}s
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Téléchargements échoués */}
-      {failedDownloads.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-            Échecs ({failedDownloads.length})
-          </h2>
-
-          <div className="space-y-3">
-            {failedDownloads.map((download) => (
-              <div
-                key={download.id}
-                className="bg-red-900/20 border border-red-700/50 rounded-lg p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-700 rounded overflow-hidden">
-                      <img
-                        src={download.image}
-                        alt="Cover"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div>
-                      <h3 className="text-white font-medium">
-                        {download.name}
-                      </h3>
-                      <p className="text-red-300 text-sm">
-                        ❌ {download.error || "Erreur inconnue"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors">
-                    Réessayer
-                  </button>
-                </div>
+        {/* Téléchargements échoués */}
+        <AnimatePresence mode="wait">
+          {failedDownloads.length > 0 && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <FiXCircle className="text-red-400 text-xl" />
+                <h2 className="text-xl font-bold text-white">
+                  Failed ({failedDownloads.length})
+                </h2>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* État vide */}
-      {downloads.length === 0 && (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-4xl">📥</span>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-300 mb-2">
-            Aucun téléchargement
-          </h3>
-          <p className="text-gray-500">Vos téléchargements apparaîtront ici</p>
-        </div>
-      )}
+              <div className="space-y-3">
+                {failedDownloads.map((download, index) => (
+                  <motion.div
+                    key={download.id}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-gradient-to-br from-red-900/20 to-red-800/20 border border-red-700/50 rounded-2xl p-4 backdrop-blur-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-700 rounded-xl overflow-hidden">
+                          <img
+                            src={download.image}
+                            alt="Cover"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
 
-      {/* Footer avec infos */}
-      <div className="mt-auto pt-8 border-t border-gray-700/50 text-sm text-gray-400">
-        <div className="flex justify-between items-center">
-          <div>
-            Les téléchargements continuent en arrière-plan même si vous fermez
-            cette page.
-          </div>
+                        <div>
+                          <h3 className="text-white font-semibold">
+                            {download.name}
+                          </h3>
+                          <p className="text-red-300 text-sm flex items-center gap-1 mt-1">
+                            <FiXCircle className="text-xs" />
+                            {download.error || "Unknown error"}
+                          </p>
+                        </div>
+                      </div>
 
-          <div className="flex items-center gap-4">
-            <span>🚀 Engine optimisé</span>
-            <span>•</span>
-            <span>📊 Métriques temps réel</span>
-            <span>•</span>
-            <span>⚡ Streaming avancé</span>
-          </div>
-        </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-medium transition-colors"
+                      >
+                        Retry
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* État vide */}
+        {downloads.length === 0 && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            className="text-center py-12"
+          >
+            <div className="relative w-24 h-24 mx-auto mb-4">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-full blur-xl"></div>
+              <div className="relative flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border border-gray-700">
+                <FiDownload className="text-4xl text-gray-500" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">
+              No Downloads Yet
+            </h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Your downloads will appear here once you start installing games
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
+            >
+              Browse Games
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* Footer info */}
+        {downloads.length > 0 && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="mt-8 pt-4 border-t border-gray-800"
+          >
+            <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-400">
+              <p>
+                Downloads continue in the background even if you close this page
+              </p>
+
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-2">
+                  <FiZap className="text-blue-400" /> Optimized Engine
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-2">
+                  <FiActivity className="text-green-400" /> Real-time Metrics
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

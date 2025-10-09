@@ -66,6 +66,9 @@ const api = {
   getGameSize: ({ gamePath }) =>
     ipcRenderer.invoke("getGameSize", { gamePath }),
 
+  // Obtenir l'espace disque libre
+  getDiskSpace: () => ipcRenderer.invoke("getDiskSpace"),
+
   onSaveGameStats: (callback) => {
     ipcRenderer.removeAllListeners("save-game-stats");
     ipcRenderer.on("save-game-stats", (event, data) => {

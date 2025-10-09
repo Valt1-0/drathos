@@ -11,6 +11,7 @@ import {
 } from "electron";
 import path, { join } from "path";
 import fs from "fs";
+import { execSync } from "child_process";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/logo2.png?asset";
 
@@ -709,6 +710,83 @@ ipcMain.handle("get-local-stats", async (event, { gameId }) => {
   } catch (error) {
     console.error("[Stats] Erreur lecture locale:", error);
     return null;
+  }
+});
+
+/**
+ * 💾 Obtient l'espace disque libre
+ */
+ipcMain.handle("getDiskSpace", async () => {
+  try {
+    const installPath = store.get("downloadPath");
+    if (!installPath) {
+      return { success: false, error: "Chemin d'installation non configuré" };
+    }
+
+    if (process.platform === "win32") {
+      // Windows: utiliser wmic
+      const driveLetter = installPath.split(":")[0] + ":";
+      const output = execSync(
+        `wmic logicaldisk where "DeviceID='${driveLetter}'" get FreeSpace,Size /value`,
+        { encoding: "utf8" }
+      );
+
+      const freeMatch = output.match(/FreeSpace=(\d+)/);
+      const sizeMatch = output.match(/Size=(\d+)/);
+
+      if (freeMatch && sizeMatch) {
+        const freeBytes = parseInt(freeMatch[1]);
+        const totalBytes = parseInt(sizeMatch[1]);
+
+        return {
+          success: true,
+          freeBytes,
+          totalBytes,
+          freeGB: Math.round((freeBytes / (1024 * 1024 * 1024)) * 10) / 10,
+          totalGB: Math.round((totalBytes / (1024 * 1024 * 1024)) * 10) / 10,
+          usedGB:
+            Math.round(
+              ((totalBytes - freeBytes) / (1024 * 1024 * 1024)) * 10
+            ) / 10,
+          usedPercent: Math.round(
+            ((totalBytes - freeBytes) / totalBytes) * 100
+          ),
+        };
+      }
+    } else {
+      // Linux/Mac: utiliser df
+      const output = execSync(`df -k "${installPath}"`, { encoding: "utf8" });
+      const lines = output.trim().split("\n");
+      if (lines.length > 1) {
+        const parts = lines[1].split(/\s+/);
+        // parts[1] = total, parts[3] = available (en KB)
+        const totalBytes = parseInt(parts[1]) * 1024;
+        const freeBytes = parseInt(parts[3]) * 1024;
+
+        return {
+          success: true,
+          freeBytes,
+          totalBytes,
+          freeGB: Math.round((freeBytes / (1024 * 1024 * 1024)) * 10) / 10,
+          totalGB: Math.round((totalBytes / (1024 * 1024 * 1024)) * 10) / 10,
+          usedGB:
+            Math.round(
+              ((totalBytes - freeBytes) / (1024 * 1024 * 1024)) * 10
+            ) / 10,
+          usedPercent: Math.round(
+            ((totalBytes - freeBytes) / totalBytes) * 100
+          ),
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: "Impossible d'obtenir l'espace disque",
+    };
+  } catch (error) {
+    console.error("[Main] Erreur getDiskSpace:", error);
+    return { success: false, error: error.message };
   }
 });
 
