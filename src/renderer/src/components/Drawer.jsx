@@ -119,19 +119,17 @@ const Drawer = ({ children }) => {
                   )}
 
                   <div className={`flex items-center py-3 transition-all duration-200 ${
-                    isOpen ? "px-4" : "px-2 justify-center"
+                    isOpen ? "px-4" : "justify-center"
                   }`}>
-                    <motion.div
-                      className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+                    <div
+                      className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${
                         isActive
                           ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 text-blue-400"
                           : "bg-slate-800/50 text-slate-400 group-hover:text-blue-400 group-hover:bg-slate-700/50"
-                      }`}
-                      whileHover={{ rotate: [0, -10, 10, 0] }}
-                      transition={{ duration: 0.4 }}
+                      } transition-all duration-200`}
                     >
                       <Icon className="text-lg" />
-                    </motion.div>
+                    </div>
 
                     <AnimatePresence>
                       {isOpen && (
