@@ -124,7 +124,6 @@ export class GameLauncher {
     });
   }
 
-
   _createProcessInfo(gameProcess, gameId, gamePath, executableName, store) {
     return {
       process: gameProcess,
@@ -181,13 +180,7 @@ export class GameLauncher {
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
         : 0;
 
-      // ✅ BON
-      if (sessionDuration > 0) {
-        this.sendStatsToBackend(processInfo.gameId);
-      }
-
-      this.cleanupProcess(processInfo.gameId);
-
+      // 1️⃣ Mettre à jour l'UI immédiatement (changement de statut)
       onStatusChange({
         gameId: processInfo.gameId,
         status: "stopped",
@@ -195,6 +188,15 @@ export class GameLauncher {
         signal,
         sessionDuration,
       });
+
+      // 2️⃣ Nettoyer les ressources
+      this.cleanupProcess(processInfo.gameId);
+
+      // 3️⃣ Envoyer les stats au renderer pour sauvegarde (en arrière-plan)
+      if (sessionDuration > 0) {
+        console.log(`[GameLauncher] 📊 Envoi des stats pour sauvegarde (${sessionDuration}s)`);
+        this.sendStatsToBackend(processInfo.gameId);
+      }
     });
 
     // ✅ Capture centralisée des logs (plus de duplication)
@@ -305,21 +307,25 @@ export class GameLauncher {
    */
   async sendStatsToBackend(gameId) {
     try {
-      console.log(`[GameLauncher] 📊 Demande sauvegarde stats pour ${gameId}`);
+      const processInfo = this.activeProcesses.get(gameId);
+      const sessionDuration = processInfo?.startTime
+        ? Math.floor((Date.now() - processInfo.startTime) / 1000)
+        : 0;
 
       const { BrowserWindow } = await import("electron");
       const windows = BrowserWindow.getAllWindows();
 
-      console.log(`[GameLauncher] 🪟 Nombre de fenêtres: ${windows.length}`);
-
       if (windows.length > 0) {
-        windows[0].webContents.send("save-game-stats", { gameId });
-        console.log(`[GameLauncher] ✅ Signal IPC envoyé pour ${gameId}`);
-      } else {
-        console.warn(`[GameLauncher] ⚠️ Aucune fenêtre disponible`);
+        windows[0].webContents.send("save-game-stats", {
+          gameId,
+          sessionData: {
+            startTime: processInfo?.startTime || Date.now(),
+            duration: sessionDuration,
+          },
+        });
       }
     } catch (error) {
-      console.error(`[GameLauncher] ❌ Erreur envoi stats:`, error);
+      console.error(`[GameLauncher] Erreur envoi stats:`, error);
     }
   }
 

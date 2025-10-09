@@ -643,6 +643,50 @@ ipcMain.handle("getGameSize", async (event, { gamePath }) => {
   }
 });
 
+
+// === STATISTIQUES LOCALES ===
+/**
+ * Sauvegarde les statistiques de jeu localement
+ */
+ipcMain.handle("save-local-stats", async (event, { gameId, sessionData }) => {
+  try {
+    const allStats = store.get("gameStats", {});
+
+    if (!allStats[gameId]) {
+      allStats[gameId] = {
+        totalPlayTime: 0,
+        totalSessions: 0,
+        lastPlayed: null,
+        firstLaunched: Date.now(),
+      };
+    }
+
+    allStats[gameId].totalPlayTime += sessionData.duration;
+    allStats[gameId].totalSessions += 1;
+    allStats[gameId].lastPlayed = Date.now();
+
+    store.set("gameStats", allStats);
+
+    return { success: true, stats: allStats[gameId] };
+  } catch (error) {
+    console.error("[Stats] Erreur sauvegarde locale:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Récupère les statistiques de jeu localement
+ */
+ipcMain.handle("get-local-stats", async (event, { gameId }) => {
+  try {
+    const allStats = store.get("gameStats", {});
+    return allStats[gameId] || null;
+  } catch (error) {
+    console.error("[Stats] Erreur lecture locale:", error);
+    return null;
+  }
+});
+
 // === FONCTION UTILITAIRE ===
 
 /**

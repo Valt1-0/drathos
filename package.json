@@ -38,7 +38,7 @@
     "electron": "^37.1.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^3.1.0",
-    "framer-motion": "^12.22.0",
+    "framer-motion": "^12.23.22",
     "postcss": "^8.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

@@ -12,7 +12,7 @@ export const getAllServerGames = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Erreur lors de la récupération des jeux :", error.message);
+    console.debug("[API] Server games unavailable (offline mode)");
     return null;
   }
 };

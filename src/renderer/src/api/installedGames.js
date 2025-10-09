@@ -6,7 +6,9 @@ export async function getInstalledGames() {
 
   if (!token) {
     console.error("No token found in store!");
-    return [];
+    // Essayer de charger depuis le cache local même sans token
+    const cachedGames = await window.store.get("installedGamesCache");
+    return cachedGames || [];
   }
 
   try {
@@ -23,9 +25,26 @@ export async function getInstalledGames() {
       throw new Error("Failed to fetch installed games");
     }
 
-    return await response.json();
+    const games = await response.json();
+
+    // Mettre à jour le cache local pour le mode hors ligne
+    await window.store.set("installedGamesCache", games);
+    console.debug(`[API] ${games.length} installed game(s) fetched and cached`);
+
+    return games;
   } catch (error) {
-    console.error("Error fetching installed games:", error);
+    // Mode hors ligne : utiliser le cache sans afficher d'erreur
+    console.debug("[API] Server unavailable, loading from cache");
+
+    // Fallback vers le cache local en cas d'erreur réseau
+    const cachedGames = await window.store.get("installedGamesCache");
+
+    if (cachedGames && cachedGames.length > 0) {
+      console.debug(`[API] ${cachedGames.length} game(s) loaded from cache`);
+      return cachedGames;
+    }
+
+    console.debug("[API] No games in cache");
     return [];
   }
 }
@@ -82,53 +101,17 @@ export async function stopGame(gameId) {
   }
 }
 
-export async function getGameStats(gameId) {
-  const serverAddress = await window.store.get("serverAddress");
-  const token = await window.store.get("userToken");
-
+/**
+ * Met à jour le cache local des jeux installés
+ * Utilisé après installation/désinstallation pour maintenir la cohérence hors ligne
+ */
+export async function updateInstalledGamesCache(games) {
   try {
-    const response = await fetch(
-      `http://${serverAddress}/api/installedGames/stats/${gameId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch game stats");
-    }
-
-    return await response.json();
+    await window.store.set("installedGamesCache", games);
+    console.log(`[Cache] Mise à jour du cache: ${games.length} jeu(x)`);
+    return true;
   } catch (error) {
-    console.error("Error fetching game stats:", error);
-    return null;
-  }
-}
-
-export async function getAllGamesStats(gameIds) {
-  try {
-    const statsPromises = gameIds.map((gameId) =>
-      getGameStats(gameId).catch((err) => {
-        console.warn(`Failed to load stats for ${gameId}:`, err);
-        return null;
-      })
-    );
-
-    const results = await Promise.all(statsPromises);
-
-    // Créer un objet { gameId: stats }
-    const statsMap = {};
-    gameIds.forEach((gameId, index) => {
-      if (results[index]) {
-        statsMap[gameId] = results[index];
-      }
-    });
-
-    return statsMap;
-  } catch (error) {
-    console.error("Error fetching all games stats:", error);
-    return {};
+    console.error("Erreur lors de la mise à jour du cache:", error);
+    return false;
   }
 }

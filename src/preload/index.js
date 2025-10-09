@@ -68,12 +68,14 @@ const api = {
 
   onSaveGameStats: (callback) => {
     ipcRenderer.removeAllListeners("save-game-stats");
-
     ipcRenderer.on("save-game-stats", (event, data) => {
       console.log("[Preload] 📡 Event save-game-stats reçu:", data);
       callback(event, data);
     });
   },
+
+  saveLocalStats: (data) => ipcRenderer.invoke("save-local-stats", data),
+  getLocalStats: (data) => ipcRenderer.invoke("get-local-stats", data),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

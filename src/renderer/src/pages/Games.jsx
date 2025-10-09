@@ -1,14 +1,20 @@
 // src/renderer/src/pages/Games.jsx - Interface Steam-like 🎮
 // Fixed: 401 error handling + Object rendering issues
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getAllServerGames } from "../api/serverGames";
 import {
   getInstalledGames,
-  getAllGamesStats,
   stopGame,
   launchGame as launchGameAPI,
+  updateInstalledGamesCache,
 } from "../api/installedGames";
+import {
+  getMergedStats,
+  syncStatsToServer,
+  formatStats as formatStatsAPI,
+  saveLocalStats,
+} from "../api/gameStats";
 import { useDownload } from "../contexts/downloadContext";
 import gameManager from "../services/gameManager";
 import dayjs from "dayjs";
@@ -37,7 +43,7 @@ const Games = () => {
 
   // États pour le tracking des jeux
   const [playingGames, setPlayingGames] = useState(new Set());
-  const [gameStats, setGameStats] = useState(new Map());
+  const [gameStats, setGameStats] = useState({});
   const [uninstalling, setUninstalling] = useState(new Set());
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
@@ -72,56 +78,45 @@ const Games = () => {
     return game.platforms.map(extractPlatformName);
   };
 
-  const loadGameStats = async () => {
-    try {
-      console.log("[Games] 📊 Chargement des stats...");
+  const loadGameStats = useCallback(async () => {
+    console.log("[Games] 🔄 Loading stats for all installed games...");
+    const gameIds = installedGames
+      .map((g) => g.serverGameId?._id)
+      .filter(Boolean);
+    const stats = {};
 
-      // Récupérer les IDs des jeux installés
-      const gameIds = installedGames
-        .map((g) => g.serverGameId?._id)
-        .filter(Boolean);
-
-      if (gameIds.length === 0) {
-        console.log("[Games] Aucun jeu installé");
-        return;
+    for (const gameId of gameIds) {
+      // Utiliser l'API centralisée pour charger et merger les stats
+      const mergedStats = await getMergedStats(gameId);
+      if (mergedStats) {
+        stats[gameId] = formatStatsAPI(mergedStats);
       }
-
-      // Charger toutes les stats
-      const stats = await getAllGamesStats(gameIds);
-      setGameStats(stats);
-
-      console.log(stats);
-
-      console.log("[Games] ✅ Stats chargées:", Object.keys(stats).length);
-    } catch (error) {
-      console.error("[Games] ❌ Erreur chargement stats:", error);
     }
-  };
+
+    console.log("[Games] ✅ Stats loaded:", stats);
+    setGameStats(stats);
+  }, [installedGames]);
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
         // Fetch server games
         const allGames = await getAllServerGames();
-        setGames(allGames || []);
 
         // Try to fetch installed games, but don't fail if unauthorized
-        try {
-          const installed = await getInstalledGames();
-          setInstalledGames(installed || []);
-        } catch (installError) {
-          console.warn("Could not fetch installed games:", installError);
-          // Check if it's a 401 error
-          if (
-            installError.message?.includes("401") ||
-            installError.message?.includes("Unauthorized")
-          ) {
-            console.error("Authentication expired. Please log in again.");
-            // Optionally redirect to login or show a message
-            // logout(); // Uncomment if you want to force logout on 401
-          }
-          setInstalledGames([]);
+        const installed = await getInstalledGames();
+        setInstalledGames(installed || []);
+
+        // Mode hors ligne : si aucun jeu serveur, extraire les jeux depuis les installed
+        let finalGames = allGames || [];
+        if ((!finalGames || finalGames.length === 0) && installed && installed.length > 0) {
+          // Extraire les données serverGameId de chaque jeu installé
+          finalGames = installed
+            .filter(g => g.serverGameId) // S'assurer que serverGameId existe
+            .map(g => g.serverGameId);
         }
+
+        setGames(finalGames);
 
         // Initialiser l'état des jeux en cours
         const activeGames = await gameManager.getActiveGames();
@@ -129,12 +124,12 @@ const Games = () => {
         setPlayingGames(playingSet);
 
         // Sélectionner le premier jeu par défaut
-        if (allGames && allGames.length > 0) {
-          setSelectedGame(allGames[0]);
+        if (finalGames && finalGames.length > 0) {
+          setSelectedGame(finalGames[0]);
         }
       } catch (err) {
-        console.error("Erreur lors du chargement des jeux :", err);
-        setError("Erreur lors du chargement des jeux.");
+        console.debug("[Games] Error loading games:", err.message);
+        setError("Unable to load games. Please check your connection.");
       } finally {
         setLoading(false);
       }
@@ -149,53 +144,71 @@ const Games = () => {
     }
   }, [installedGames]);
 
+  // Utiliser useRef pour persister le flag entre les renders
+  const isProcessingStats = useRef(false);
+
   useEffect(() => {
-    console.log("[Games] 🎧 Installation du listener save-game-stats");
-
-    let isProcessing = false; // ← Flag pour éviter les appels multiples
-
     const handleSaveStats = async (event, data) => {
-      // ✅ Ignorer si déjà en cours
-      if (isProcessing) {
-        console.log("[Games] ⏭️ Appel ignoré (déjà en cours)");
+      if (isProcessingStats.current) {
+        console.debug("[Games] Stats update already in progress, skipping...");
         return;
       }
 
-      isProcessing = true;
-      console.log("[Games] 📊 EVENT REÇU - Sauvegarde stats pour:", data);
+      isProcessingStats.current = true;
+      console.log("[Games] 📊 Starting stats save process for", data.gameId);
 
       try {
-        const result = await stopGame(data.gameId);
-        console.log("[Games] ✅ API stopGame appelée, résultat:", result);
+        // 1️⃣ Toujours sauvegarder localement d'abord
+        const saveResult = await saveLocalStats(data.gameId, data.sessionData);
+        console.log("[Games] ✅ Local stats saved:", saveResult);
 
-        // Recharger les stats
+        // 2️⃣ Essayer de synchroniser avec le serveur (envoyer les stats locales complètes)
+        try {
+          if (saveResult.success && saveResult.stats) {
+            // Récupérer les stats locales complètes après la sauvegarde
+            const localStats = await window.api.getLocalStats({ gameId: data.gameId });
+
+            // Envoyer au backend pour sync (via l'API centralisée)
+            await syncStatsToServer(data.gameId, localStats, data.sessionData.duration);
+            console.log("[Games] ✅ Stats synced to server");
+          } else {
+            // Fallback : appeler l'ancienne méthode stopGame
+            await stopGame(data.gameId);
+          }
+        } catch (error) {
+          console.debug("[Games] Offline mode - stats saved locally only");
+        }
+
+        // 3️⃣ Petit délai pour s'assurer que toutes les opérations sont terminées
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // 4️⃣ Recharger les stats avec merge automatique
         await loadGameStats();
-        console.log("[Games] ✅ Stats rechargées");
+        console.log("[Games] ✅ Stats reloaded successfully");
+        console.log("[Games] 📈 Current gameStats:", gameStats);
       } catch (error) {
-        console.error("[Games] ❌ Erreur sauvegarde stats:", error);
+        console.error("[Games] ❌ Erreur lors de la sauvegarde des stats:", error);
       } finally {
-        // Réinitialiser après 1 seconde
+        // Augmentation du délai de protection à 2 secondes
         setTimeout(() => {
-          isProcessing = false;
-        }, 1000);
+          isProcessingStats.current = false;
+          console.log("[Games] 🔓 Stats processing lock released");
+        }, 2000);
       }
     };
 
     if (window.api.onSaveGameStats) {
       window.api.onSaveGameStats(handleSaveStats);
-      console.log("[Games] ✅ Listener enregistré");
     }
 
     return () => {
-      console.log("[Games] 🔌 Nettoyage du listener");
+      // Cleanup listener
     };
-  }, []);
+  }, [loadGameStats]);
 
   // Gestionnaire global de changement de statut des jeux
   useEffect(() => {
     const handleGameStatusChange = (status) => {
-      console.log("[Games] Changement de statut:", status);
-
       setPlayingGames((prev) => {
         const newSet = new Set(prev);
         if (status.status === "running") {
@@ -203,9 +216,8 @@ const Games = () => {
         } else if (status.status === "stopped" || status.status === "failed") {
           newSet.delete(status.gameId);
 
-          if (status.status === "stopped") {
-            setTimeout(() => loadGameStats(), 1000);
-          }
+          // Note: Le rechargement des stats est géré par save-game-stats, pas ici
+          // pour éviter les race conditions et les doubles rechargements
         }
         return newSet;
       });
@@ -225,12 +237,14 @@ const Games = () => {
 
     // Gestionnaire de progression de désinstallation
     const handleUninstallProgress = (progress) => {
-      console.log("[Games] Progression désinstallation:", progress);
-
       if (progress.stage === "uninstalled") {
         // Recharger la liste des jeux installés
         getInstalledGames()
-          .then(setInstalledGames)
+          .then(async (installed) => {
+            setInstalledGames(installed);
+            // Mettre à jour le cache après désinstallation
+            await updateInstalledGamesCache(installed);
+          })
           .catch((err) => {
             console.warn("Could not refresh installed games:", err);
           });
@@ -313,13 +327,18 @@ const Games = () => {
         return;
       }
 
-      // 1️⃣ Démarrer la session en base de données
-      await launchGameAPI(game._id);
+      // 1️⃣ Essayer de démarrer la session en base de données (mode en ligne)
+      // Si le serveur n'est pas disponible, continuer quand même en mode hors ligne
+      try {
+        await launchGameAPI(game._id);
+      } catch (error) {
+        // Mode hors ligne - continuer sans bloquer
+      }
 
       // 2️⃣ Mettre à jour l'interface
       setPlayingGames((prev) => new Set([...prev, game._id]));
 
-      // 3️⃣ Lancer le processus du jeu
+      // 3️⃣ Lancer le processus du jeu (fonctionne hors ligne)
       const result = await gameManager.launchGame(
         game._id,
         installedData.path,
@@ -392,13 +411,16 @@ const Games = () => {
         });
 
         if (data.stage === "completed" || data.stage === "failed") {
-          setTimeout(() => {
+          setTimeout(async () => {
             removeDownload(downloadId);
-            getInstalledGames()
-              .then(setInstalledGames)
-              .catch((err) => {
-                console.warn("Could not refresh installed games:", err);
-              });
+            try {
+              const installed = await getInstalledGames();
+              setInstalledGames(installed);
+              // Mettre à jour le cache après installation
+              await updateInstalledGamesCache(installed);
+            } catch (err) {
+              console.warn("Could not refresh installed games:", err);
+            }
           }, 2000);
         }
       }

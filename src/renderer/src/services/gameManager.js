@@ -16,7 +16,11 @@ class GameManager {
   setupEventListeners() {
     // Écouter les changements de statut des jeux
     window.api.onGameStatusChanged((status) => {
+      console.log(`[GameManager] 📡 Event reçu: ${status.gameId} - ${status.status}`);
+
+      // Appeler les listeners pour ce gameId spécifique
       const listeners = this.statusListeners.get(status.gameId) || [];
+      console.log(`[GameManager] Listeners spécifiques pour ${status.gameId}: ${listeners.length}`);
       listeners.forEach((callback) => {
         try {
           callback(status);
@@ -24,16 +28,38 @@ class GameManager {
           console.error("Erreur dans le callback de statut:", error);
         }
       });
+
+      // Appeler aussi les listeners globaux (wildcard "*")
+      const globalListeners = this.statusListeners.get("*") || [];
+      console.log(`[GameManager] Listeners globaux (*): ${globalListeners.length}`);
+      globalListeners.forEach((callback) => {
+        try {
+          callback(status);
+        } catch (error) {
+          console.error("Erreur dans le callback de statut global:", error);
+        }
+      });
     });
 
     // NOUVEAU - Écouter les progressions de désinstallation
     window.api.onUninstallProgress((progress) => {
+      // Appeler les listeners pour ce gameId spécifique
       const listeners = this.uninstallListeners.get(progress.id) || [];
       listeners.forEach((callback) => {
         try {
           callback(progress);
         } catch (error) {
           console.error("Erreur dans le callback de désinstallation:", error);
+        }
+      });
+
+      // Appeler aussi les listeners globaux (wildcard "*")
+      const globalListeners = this.uninstallListeners.get("*") || [];
+      globalListeners.forEach((callback) => {
+        try {
+          callback(progress);
+        } catch (error) {
+          console.error("Erreur dans le callback de désinstallation global:", error);
         }
       });
     });
