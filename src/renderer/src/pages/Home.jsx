@@ -9,18 +9,20 @@ import {
   FaTrophy,
   FaFire,
   FaPlay,
-  FaStar
+  FaStar,
+  FaPlus
 } from "react-icons/fa";
-import RecentGames from "../components/RecentGames";
 import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { getMergedStats, formatStats as formatStatsAPI } from "../api/gameStats";
+import AddGameModal from "../components/AddGameModal";
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [stats, setStats] = useState(null);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAddGameModal, setShowAddGameModal] = useState(false);
 
   // Get featured games (first 5 games from the list)
   const featuredGames = games.slice(0, 5);
@@ -139,7 +141,7 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
+    <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
       {/* Featured Games Carousel Hero Section */}
       {featuredGames.length > 0 ? (
         <div className="relative w-full h-[60vh] md:h-[65vh] lg:h-[70vh] overflow-hidden">
@@ -278,58 +280,75 @@ const Home = () => {
       )}
 
       {/* Stats Section */}
-      {stats && stats.totalGames > 0 && (
-        <div className="px-6 md:px-16 py-12 max-w-7xl mx-auto">
+      <div className="px-6 md:px-16 py-12 max-w-7xl mx-auto">
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          {stats && stats.totalGames > 0 ? (
+            <>
+              {/* Total Play Time */}
+              <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-2xl p-6 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-blue-500/30 rounded-xl">
+                    <FaClock className="text-3xl text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400 font-medium">Total Play Time</p>
+                    <p className="text-3xl font-bold text-white">{stats.totalPlayTime}h</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Games */}
+              <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-6 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-purple-500/30 rounded-xl">
+                    <FaGamepad className="text-3xl text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400 font-medium">Games Played</p>
+                    <p className="text-3xl font-bold text-white">{stats.totalGames}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Achievements */}
+              <div className="bg-gradient-to-br from-yellow-600/20 to-orange-800/20 backdrop-blur-sm border border-yellow-500/30 rounded-2xl p-6 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-yellow-500/30 rounded-xl">
+                    <FaTrophy className="text-3xl text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400 font-medium">Gaming Streak</p>
+                    <p className="text-3xl font-bold text-white">
+                      <FaFire className="inline text-orange-500 mr-2" />
+                      {stats.totalGames} days
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {/* Add Game Button Card */}
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddGameModal(true)}
+            className="bg-gradient-to-br from-green-600/20 to-emerald-800/20 backdrop-blur-sm border border-green-500/30 rounded-2xl p-6 hover:border-green-400/50 transition-all duration-300 cursor-pointer h-full flex items-center justify-center"
           >
-            {/* Total Play Time */}
-            <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-2xl p-6 hover:scale-105 transition-transform duration-300">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-blue-500/30 rounded-xl">
-                  <FaClock className="text-3xl text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 font-medium">Total Play Time</p>
-                  <p className="text-3xl font-bold text-white">{stats.totalPlayTime}h</p>
-                </div>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="p-4 bg-green-500/30 rounded-xl">
+                <FaPlus className="text-3xl text-green-400" />
               </div>
-            </div>
-
-            {/* Total Games */}
-            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-6 hover:scale-105 transition-transform duration-300">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-purple-500/30 rounded-xl">
-                  <FaGamepad className="text-3xl text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 font-medium">Games Played</p>
-                  <p className="text-3xl font-bold text-white">{stats.totalGames}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Achievements */}
-            <div className="bg-gradient-to-br from-yellow-600/20 to-orange-800/20 backdrop-blur-sm border border-yellow-500/30 rounded-2xl p-6 hover:scale-105 transition-transform duration-300">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-yellow-500/30 rounded-xl">
-                  <FaTrophy className="text-3xl text-yellow-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 font-medium">Gaming Streak</p>
-                  <p className="text-3xl font-bold text-white">
-                    <FaFire className="inline text-orange-500 mr-2" />
-                    {stats.totalGames} days
-                  </p>
-                </div>
-              </div>
+              <p className="text-xl font-bold text-white">Add Game</p>
             </div>
           </motion.div>
-        </div>
-      )}
+        </motion.div>
+      </div>
 
       {/* Continue Playing Section */}
       {stats && stats.recentGames && stats.recentGames.length > 0 && (
@@ -395,9 +414,6 @@ const Home = () => {
         </section>
       )}
 
-      {/* Recently Added Games */}
-      <RecentGames />
-
       {/* Quick Actions Footer */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
@@ -423,6 +439,12 @@ const Home = () => {
           </Link>
         </div>
       </motion.div>
+
+      {/* Add Game Modal */}
+      <AddGameModal
+        isOpen={showAddGameModal}
+        onClose={() => setShowAddGameModal(false)}
+      />
     </div>
   );
 };

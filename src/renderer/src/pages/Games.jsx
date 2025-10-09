@@ -1038,21 +1038,6 @@ const Games = () => {
                         "Aucune description disponible."}
                     </p>
                   </div>
-
-                  {/* Captures d'écran (placeholder) */}
-                  <div>
-                    <h2 className="text-xl font-bold mb-3">Captures d'écran</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div
-                          key={i}
-                          className="aspect-video bg-gray-700 rounded-lg flex items-center justify-center"
-                        >
-                          <span className="text-gray-500">Image {i}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Sidebar droite - Infos détaillées */}
