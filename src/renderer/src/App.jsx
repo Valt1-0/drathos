@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 
 import { AuthProvider, useAuth } from "./contexts/authContext";
 import { DownloadProvider } from "./contexts/downloadContext";
+import { ConnectionProvider } from "./contexts/connectionContext";
 
 import Drawer from "./components/Drawer";
 import TitleBar from "./components/TitleBar";
@@ -93,26 +94,28 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <DownloadProvider>
-        <Router>
-          <div className="flex flex-col h-screen overflow-hidden">
-            <TitleBar />
-            <div className="flex-1 overflow-hidden">
-              <AppRoutes />
+      <ConnectionProvider>
+        <DownloadProvider>
+          <Router>
+            <div className="flex flex-col h-screen overflow-hidden">
+              <TitleBar />
+              <div className="flex-1 overflow-hidden">
+                <AppRoutes />
+              </div>
             </div>
-          </div>
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: '#1e293b',
-                color: '#f1f5f9',
-                border: '1px solid #334155',
-              },
-            }}
-          />
-        </Router>
-      </DownloadProvider>
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: '#1e293b',
+                  color: '#f1f5f9',
+                  border: '1px solid #334155',
+                },
+              }}
+            />
+          </Router>
+        </DownloadProvider>
+      </ConnectionProvider>
     </AuthProvider>
   );
 }

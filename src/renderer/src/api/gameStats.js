@@ -1,5 +1,16 @@
 // drathos/src/renderer/src/api/gameStats.js
 
+// Variable pour stocker le callback de mise à jour de connexion
+let connectionCallback = null;
+
+/**
+ * Enregistre un callback pour notifier les changements de connexion
+ * @param {Function} callback - Fonction à appeler avec (isOnline: boolean)
+ */
+export function setConnectionCallback(callback) {
+  connectionCallback = callback;
+}
+
 /**
  * Vérifie si le serveur est accessible (health check)
  * @returns {Promise<boolean>} true si le serveur est online, false sinon
@@ -50,8 +61,14 @@ export async function getGameStats(gameId) {
       throw new Error("Failed to fetch game stats");
     }
 
+    // ✅ Requête réussie = serveur online
+    if (connectionCallback) connectionCallback(true);
+
     return await response.json();
   } catch (error) {
+    // ❌ Requête échouée = serveur offline
+    if (connectionCallback) connectionCallback(false);
+
     // Mode hors ligne : throw silencieusement pour utiliser le fallback local
     console.debug(`[API] Stats for ${gameId} unavailable (offline mode)`);
     throw error;
@@ -92,10 +109,16 @@ export async function syncStatsToServer(gameId, localStats, sessionDuration) {
       throw new Error("Failed to sync stats");
     }
 
+    // ✅ Requête réussie = serveur online
+    if (connectionCallback) connectionCallback(true);
+
     const result = await response.json();
     console.debug("[API] Stats synced to server");
     return result;
   } catch (error) {
+    // ❌ Requête échouée = serveur offline
+    if (connectionCallback) connectionCallback(false);
+
     console.debug("[API] Sync failed, stats kept locally");
     throw error;
   }

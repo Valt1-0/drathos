@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
 import { FaGamepad } from "react-icons/fa6";
+import ConnectionIndicator from "./ConnectionIndicator";
 
 const TitleBar = () => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -31,6 +32,11 @@ const TitleBar = () => {
       {/* Logo et titre - zone draggable */}
       <div className="flex items-center gap-2 px-4 flex-1 h-full">
         <span className="text-xs font-semibold text-slate-300">Drathos</span>
+      </div>
+
+      {/* Indicateur de connexion */}
+      <div className="mr-2" style={{ WebkitAppRegion: 'no-drag' }}>
+        <ConnectionIndicator />
       </div>
 
       {/* Boutons de contrôle */}
