@@ -1,6 +1,33 @@
 // drathos/src/renderer/src/api/gameStats.js
 
 /**
+ * Vérifie si le serveur est accessible (health check)
+ * @returns {Promise<boolean>} true si le serveur est online, false sinon
+ */
+export async function isServerOnline() {
+  try {
+    const serverAddress = await window.store.get("serverAddress");
+    if (!serverAddress) return false;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+    const response = await fetch(`http://${serverAddress}/api/server/health`, {
+      signal: controller.signal,
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+    });
+
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    console.debug("[API] Server offline or unreachable:", error.message);
+    return false;
+  }
+}
+
+/**
  * Récupère les statistiques d'un jeu depuis le serveur
  * @param {string} gameId - ID du jeu
  * @returns {Promise<Object>} Statistiques du jeu

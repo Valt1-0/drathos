@@ -15,6 +15,7 @@ import {
   formatStats as formatStatsAPI,
   saveLocalStats,
 } from "../api/gameStats";
+import syncQueue from "../utils/syncQueue";
 import { useDownload } from "../contexts/downloadContext";
 import gameManager from "../services/gameManager";
 import dayjs from "dayjs";
@@ -176,7 +177,14 @@ const Games = () => {
             await stopGame(data.gameId);
           }
         } catch (error) {
-          console.debug("[Games] Offline mode - stats saved locally only");
+          console.debug("[Games] 📴 Server offline - stats saved locally");
+
+          // 🔄 Ajouter à la queue de retry pour synchronisation ultérieure
+          const localStats = await window.api.getLocalStats({ gameId: data.gameId });
+          if (localStats) {
+            await syncQueue.enqueue(data.gameId, localStats, data.sessionData.duration);
+            console.log("[Games] ➕ Stats ajoutées à la queue de sync");
+          }
         }
 
         // 3️⃣ Petit délai pour s'assurer que toutes les opérations sont terminées
