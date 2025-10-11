@@ -16,8 +16,10 @@ import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { getMergedStats, formatStats as formatStatsAPI } from "../api/gameStats";
 import AddGameModal from "../components/AddGameModal";
+import { useAuth } from "../contexts/authContext";
 
 const Home = () => {
+  const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [stats, setStats] = useState(null);
   const [games, setGames] = useState([]);
@@ -324,20 +326,22 @@ const Home = () => {
             </>
           ) : null}
 
-          {/* Add Game Button Card */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddGameModal(true)}
-            className="bg-gradient-to-br from-green-600/20 to-emerald-800/20 backdrop-blur-sm border border-green-500/30 rounded-2xl p-6 hover:border-green-400/50 transition-all duration-300 cursor-pointer h-full flex items-center justify-center"
-          >
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="p-4 bg-green-500/30 rounded-xl">
-                <FaPlus className="text-3xl text-green-400" />
+          {/* Add Game Button Card - Admin Only */}
+          {user?.role === 'admin' && (
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAddGameModal(true)}
+              className="bg-gradient-to-br from-green-600/20 to-emerald-800/20 backdrop-blur-sm border border-green-500/30 rounded-2xl p-6 hover:border-green-400/50 transition-all duration-300 cursor-pointer h-full flex items-center justify-center"
+            >
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="p-4 bg-green-500/30 rounded-xl">
+                  <FaPlus className="text-3xl text-green-400" />
+                </div>
+                <p className="text-xl font-bold text-white">Add Game</p>
               </div>
-              <p className="text-xl font-bold text-white">Add Game</p>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { searchGamesFromIGDB } from "../api/igdb";
 import { addGameToServer } from "../api/serverGames";
+import { useAuth } from "../contexts/authContext";
 import {
   FiSearch,
   FiX,
@@ -14,6 +15,7 @@ import {
 } from "react-icons/fi";
 
 const AddGameModal = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,11 @@ const AddGameModal = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
+
+  // Security check: Only admins can add games
+  if (user?.role !== 'admin') {
+    return null;
+  }
 
   return (
     <AnimatePresence>
