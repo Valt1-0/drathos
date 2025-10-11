@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDownload } from "../contexts/downloadContext";
 import EnhancedDownloadProgress from "../components/EnhancedDownloadProgress";
@@ -9,6 +10,7 @@ import {
   FiActivity,
   FiHardDrive,
   FiZap,
+  FiSettings,
 } from "react-icons/fi";
 
 const Download = () => {
@@ -105,31 +107,31 @@ const Download = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Total Speed */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
+              className="group relative overflow-hidden bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-6 hover:scale-105 transition-transform duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400 font-medium">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-400 font-medium">
                     Total Speed
                   </span>
-                  <div className="flex items-center justify-center w-8 h-8 bg-green-500/20 rounded-lg">
-                    <FiZap className="text-green-400 text-lg" />
+                  <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-xl">
+                    <FiZap className="text-green-400 text-xl" />
                   </div>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-3xl font-bold text-white">
                     {stats.totalSpeed.toFixed(1)}
                   </span>
-                  <span className="text-xs text-gray-400">MB/s</span>
+                  <span className="text-sm text-gray-400">MB/s</span>
                 </div>
-                <div className="h-1 bg-gray-700 rounded-full overflow-hidden mt-2">
+                <div className="h-2 bg-gray-700 rounded-full overflow-hidden mt-3">
                   <motion.div
                     className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
                     initial={{ width: 0 }}
@@ -142,109 +144,72 @@ const Download = () => {
               </div>
             </motion.div>
 
-            {/* Active Downloads */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400 font-medium">
-                    Active Downloads
-                  </span>
-                  <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 rounded-lg">
-                    <FiActivity className="text-blue-400 text-lg" />
-                  </div>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-white">
-                    {stats.activeDownloads}
-                  </span>
-                  <span className="text-xs text-gray-400">running</span>
-                </div>
-                {stats.activeDownloads > 0 && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
-                    <span className="text-xs text-blue-400">Processing...</span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Completed */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400 font-medium">
-                    Completed
-                  </span>
-                  <div className="flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-lg">
-                    <FiCheckCircle className="text-purple-400 text-lg" />
-                  </div>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-white">
-                    {stats.completedCount}
-                  </span>
-                  <span className="text-xs text-gray-400">games</span>
-                </div>
-              </div>
-            </motion.div>
-
             {/* Free Space */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-yellow-600/20 to-orange-800/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 hover:scale-105 transition-transform duration-300"
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="group relative overflow-hidden bg-gradient-to-br from-yellow-600/20 to-orange-800/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-6 hover:scale-105 transition-transform duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400 font-medium">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-400 font-medium">
                     Free Space
                   </span>
-                  <div className="flex items-center justify-center w-8 h-8 bg-yellow-500/20 rounded-lg">
-                    <FiHardDrive className="text-yellow-400 text-lg" />
+                  <div className="flex items-center justify-center w-10 h-10 bg-yellow-500/20 rounded-xl">
+                    <FiHardDrive className="text-yellow-400 text-xl" />
                   </div>
                 </div>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-2xl font-bold text-white">
-                    {stats.freeSpace > 0 ? stats.freeSpace : "---"}
-                  </span>
-                  <span className="text-xs text-gray-400">GB free</span>
-                </div>
-                {stats.totalSpace > 0 && (
-                  <div className="text-xs text-gray-500 mb-1">
-                    of {stats.totalSpace} GB total
-                  </div>
-                )}
-                <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
-                  <motion.div
-                    className={`h-full rounded-full ${
-                      stats.usedPercent > 90
-                        ? "bg-gradient-to-r from-red-500 to-red-400"
-                        : stats.usedPercent > 75
-                        ? "bg-gradient-to-r from-orange-500 to-yellow-400"
-                        : "bg-gradient-to-r from-yellow-500 to-green-400"
-                    }`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${stats.usedPercent || 0}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                  />
-                </div>
-                {stats.usedPercent > 0 && (
-                  <div className="text-xs text-gray-400 mt-1 text-right">
-                    {stats.usedPercent}% used
+
+                {stats.freeSpace > 0 ? (
+                  <>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-bold text-white">
+                        {stats.freeSpace}
+                      </span>
+                      <span className="text-sm text-gray-400">GB free</span>
+                    </div>
+                    {stats.totalSpace > 0 && (
+                      <div className="text-sm text-gray-500 mb-2">
+                        of {stats.totalSpace} GB total
+                      </div>
+                    )}
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full rounded-full ${
+                          stats.usedPercent > 90
+                            ? "bg-gradient-to-r from-red-500 to-red-400"
+                            : stats.usedPercent > 75
+                            ? "bg-gradient-to-r from-orange-500 to-yellow-400"
+                            : "bg-gradient-to-r from-yellow-500 to-green-400"
+                        }`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stats.usedPercent || 0}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                      />
+                    </div>
+                    {stats.usedPercent > 0 && (
+                      <div className="text-sm text-gray-400 mt-2 text-right">
+                        {stats.usedPercent}% used
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      Aucun emplacement de téléchargement sélectionné
+                    </p>
+                    <Link to="/settings">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-yellow-500/30"
+                      >
+                        <FiSettings className="text-lg" />
+                        <span>Configurer</span>
+                      </motion.button>
+                    </Link>
                   </div>
                 )}
               </div>
