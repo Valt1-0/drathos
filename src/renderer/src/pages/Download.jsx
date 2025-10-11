@@ -429,16 +429,9 @@ const Download = () => {
             <h3 className="text-xl font-bold text-white mb-2">
               No Downloads Yet
             </h3>
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-gray-400 text-sm">
               Your downloads will appear here once you start installing games
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
-            >
-              Browse Games
-            </motion.button>
           </motion.div>
         )}
 

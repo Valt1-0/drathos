@@ -265,16 +265,7 @@ const Home = () => {
           <div className="text-center">
             <div className="text-6xl mb-4">🎮</div>
             <h2 className="text-3xl font-bold text-white mb-2">No Games Available</h2>
-            <p className="text-gray-400 mb-6">Start by adding games to your library</p>
-            <Link to="/games">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
-              >
-                Browse Games
-              </motion.button>
-            </Link>
+            <p className="text-gray-400">Start by adding games to your library</p>
           </div>
         </div>
       )}
