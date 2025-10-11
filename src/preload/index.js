@@ -1,7 +1,6 @@
 // drathos/src/preload/index.js
 
 import { contextBridge, ipcRenderer } from "electron";
-import { electronAPI } from "@electron-toolkit/preload";
 
 // Custom APIs for renderer
 const api = {
@@ -93,7 +92,6 @@ const api = {
 // just add to the DOM global.
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld("electron", electronAPI);
     contextBridge.exposeInMainWorld("api", api);
     contextBridge.exposeInMainWorld("store", {
       get: (key) => ipcRenderer.invoke("store-get", key),
@@ -102,17 +100,16 @@ if (process.contextIsolated) {
       clear: () => ipcRenderer.invoke("store-clear"),
     });
 
-    console.log("[Preload] APIs exposées avec succès");
-    console.log("[Preload] Nouvelles APIs:", [
-      "getBestExecutable",
-      "detectExecutables",
-      "openGameFolder",
+    console.log("[Preload] ✅ APIs exposées avec succès (sandbox mode)");
+    console.log("[Preload] APIs disponibles:", [
+      "window.api (game management)",
+      "window.store (local storage)",
     ]);
   } catch (error) {
-    console.error("Erreur lors de l'exposition des APIs:", error);
+    console.error("❌ Erreur lors de l'exposition des APIs:", error);
   }
 } else {
-  window.electron = electronAPI;
+  // Fallback si contextIsolation est désactivé
   window.api = api;
   window.store = {
     get: (key) => ipcRenderer.invoke("store-get", key),
@@ -120,4 +117,5 @@ if (process.contextIsolated) {
     delete: (key) => ipcRenderer.invoke("store-delete", key),
     clear: () => ipcRenderer.invoke("store-clear"),
   };
+  console.log("[Preload] ⚠️ APIs exposées sans contextIsolation");
 }

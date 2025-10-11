@@ -33,8 +33,10 @@ function createWindow() {
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      sandbox: false,
-      nodeIntegrationInWorker: true,
+      sandbox: true,                // ✅ Sécurisé
+      contextIsolation: true,       // ✅ Obligatoire pour la sécurité
+      nodeIntegration: false,       // ✅ Désactiver Node dans le renderer
+      nodeIntegrationInWorker: false, // ✅ Pas nécessaire pour vos Worker Threads
     },
   });
 
