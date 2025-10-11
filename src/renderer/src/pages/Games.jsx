@@ -891,7 +891,8 @@ const Games = () => {
 
                           {/* Statistics Section */}
                           {isInstalled(selectedGame._id) &&
-                            gameStats[selectedGame._id] && (
+                            gameStats[selectedGame._id] &&
+                            gameStats[selectedGame._id].totalSessions > 0 && (
                               <div className="mt-8">
                                 <div className="flex items-center gap-3 mb-6">
                                   <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
