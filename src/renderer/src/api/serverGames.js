@@ -1,7 +1,9 @@
+import { fetchWithConnectionTracking } from "../utils/apiUtils";
+
 export const getAllServerGames = async () => {
   try {
     const serverAddress = await window.store.get("serverAddress");
-    const response = await fetch(
+    const response = await fetchWithConnectionTracking(
       `http://${serverAddress}/api/serverGame/getAllGames`,
     );
     if (!response.ok) {

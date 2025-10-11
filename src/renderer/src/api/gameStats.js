@@ -1,42 +1,7 @@
 // drathos/src/renderer/src/api/gameStats.js
 
-// Variable pour stocker le callback de mise à jour de connexion
-let connectionCallback = null;
+import { fetchWithConnectionTracking } from "../utils/apiUtils";
 
-/**
- * Enregistre un callback pour notifier les changements de connexion
- * @param {Function} callback - Fonction à appeler avec (isOnline: boolean)
- */
-export function setConnectionCallback(callback) {
-  connectionCallback = callback;
-}
-
-/**
- * Vérifie si le serveur est accessible (health check)
- * @returns {Promise<boolean>} true si le serveur est online, false sinon
- */
-export async function isServerOnline() {
-  try {
-    const serverAddress = await window.store.get("serverAddress");
-    if (!serverAddress) return false;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
-
-    const response = await fetch(`http://${serverAddress}/api/server/health`, {
-      signal: controller.signal,
-      headers: {
-        "Cache-Control": "no-cache",
-      },
-    });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch (error) {
-    console.debug("[API] Server offline or unreachable:", error.message);
-    return false;
-  }
-}
 
 /**
  * Récupère les statistiques d'un jeu depuis le serveur
@@ -47,32 +12,20 @@ export async function getGameStats(gameId) {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
 
-  try {
-    const response = await fetch(
-      `http://${serverAddress}/api/installedGames/stats/${gameId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch game stats");
+  const response = await fetchWithConnectionTracking(
+    `http://${serverAddress}/api/installedGames/stats/${gameId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     }
+  );
 
-    // ✅ Requête réussie = serveur online
-    if (connectionCallback) connectionCallback(true);
-
-    return await response.json();
-  } catch (error) {
-    // ❌ Requête échouée = serveur offline
-    if (connectionCallback) connectionCallback(false);
-
-    // Mode hors ligne : throw silencieusement pour utiliser le fallback local
-    console.debug(`[API] Stats for ${gameId} unavailable (offline mode)`);
-    throw error;
+  if (!response.ok) {
+    throw new Error("Failed to fetch game stats");
   }
+
+  return await response.json();
 }
 
 /**
@@ -83,45 +36,32 @@ export async function getGameStats(gameId) {
  * @returns {Promise<Object>} Résultat de la synchronisation
  */
 export async function syncStatsToServer(gameId, localStats, sessionDuration) {
-  try {
-    const serverAddress = await window.store.get("serverAddress");
-    const token = await window.store.get("userToken");
+  const serverAddress = await window.store.get("serverAddress");
+  const token = await window.store.get("userToken");
 
-    const response = await fetch(
-      `http://${serverAddress}/api/installedGames/sync-stats/${gameId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          totalPlayTime: localStats.totalPlayTime,
-          totalSessions: localStats.totalSessions,
-          lastPlayed: localStats.lastPlayed,
-          firstLaunched: localStats.firstLaunched,
-          sessionDuration: sessionDuration,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to sync stats");
+  const response = await fetchWithConnectionTracking(
+    `http://${serverAddress}/api/installedGames/sync-stats/${gameId}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        totalPlayTime: localStats.totalPlayTime,
+        totalSessions: localStats.totalSessions,
+        lastPlayed: localStats.lastPlayed,
+        firstLaunched: localStats.firstLaunched,
+        sessionDuration: sessionDuration,
+      }),
     }
+  );
 
-    // ✅ Requête réussie = serveur online
-    if (connectionCallback) connectionCallback(true);
-
-    const result = await response.json();
-    console.debug("[API] Stats synced to server");
-    return result;
-  } catch (error) {
-    // ❌ Requête échouée = serveur offline
-    if (connectionCallback) connectionCallback(false);
-
-    console.debug("[API] Sync failed, stats kept locally");
-    throw error;
+  if (!response.ok) {
+    throw new Error("Failed to sync stats");
   }
+
+  return await response.json();
 }
 
 /**

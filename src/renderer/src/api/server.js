@@ -1,6 +1,8 @@
+import { fetchWithConnectionTracking } from "../utils/apiUtils";
+
 export const checkServerStatus = async (serverAddress) => {
   try {
-    const response = await fetch(`http://${serverAddress}/api/server/status`);
+    const response = await fetchWithConnectionTracking(`http://${serverAddress}/api/server/status`);
     if (response.ok) {
       return { online: true };
     }

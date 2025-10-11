@@ -1,5 +1,7 @@
 // drathos/src/renderer/src/api/installedGames.js
 
+import { fetchWithConnectionTracking } from "../utils/apiUtils";
+
 export async function getInstalledGames() {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
@@ -12,7 +14,7 @@ export async function getInstalledGames() {
   }
 
   try {
-    const response = await fetch(
+    const response = await fetchWithConnectionTracking(
       `http://${serverAddress}/api/installedGames/getInstalledGames`,
       {
         headers: {
@@ -54,7 +56,7 @@ export async function launchGame(gameId) {
   const token = await window.store.get("userToken");
 
   try {
-    const response = await fetch(
+    const response = await fetchWithConnectionTracking(
       `http://${serverAddress}/api/installedGames/launch/${gameId}`,
       {
         method: "POST",
@@ -80,7 +82,7 @@ export async function stopGame(gameId) {
   const token = await window.store.get("userToken");
 
   try {
-    const response = await fetch(
+    const response = await fetchWithConnectionTracking(
       `http://${serverAddress}/api/installedGames/stop/${gameId}`,
       {
         method: "POST",

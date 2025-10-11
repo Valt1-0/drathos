@@ -1,6 +1,6 @@
 // drathos/src/renderer/src/utils/syncQueue.js
 
-import { syncStatsToServer, isServerOnline } from "../api/gameStats.js";
+import { syncStatsToServer } from "../api/gameStats.js";
 
 /**
  * Gestionnaire de queue pour les syncs ratées
@@ -117,15 +117,6 @@ class SyncQueue {
     this.isProcessing = true;
 
     try {
-      // Vérifier si le serveur est accessible
-      const serverOnline = await isServerOnline();
-
-      if (!serverOnline) {
-        console.log("[SyncQueue] ⏭️ Serveur offline, skip pour le moment");
-        this.isProcessing = false;
-        return;
-      }
-
       console.log(`[SyncQueue] 🔄 Traitement de ${this.queue.length} sync(s)...`);
 
       // Copie de la queue pour itération sécurisée
