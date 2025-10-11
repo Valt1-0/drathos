@@ -6,7 +6,7 @@ export default function ConnectionIndicator() {
   const { isOnline } = useConnection();
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800/50 border border-gray-700/50">
+    <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 border border-gray-700/50">
       <div className="relative flex items-center justify-center">
         {isOnline ? (
           <>
