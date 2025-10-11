@@ -240,8 +240,10 @@ const EnhancedDownloadProgress = ({ download }) => {
             <FiDownload className="text-xs" />
             <span className="font-medium">
               {download.sizeDownloaded
-                ? `${download.sizeDownloaded.toFixed(2)} GB`
-                : "0.00 GB"}
+                ? download.sizeDownloaded >= 1024
+                  ? `${(download.sizeDownloaded / 1024).toFixed(2)} GB`
+                  : `${download.sizeDownloaded.toFixed(0)} MB`
+                : "0 MB"}
             </span>
           </div>
 
@@ -254,7 +256,9 @@ const EnhancedDownloadProgress = ({ download }) => {
           <div className="flex items-center gap-2 text-gray-400">
             <span className="font-medium">
               {download.totalSize
-                ? `${download.totalSize.toFixed(2)} GB`
+                ? download.totalSize >= 1024
+                  ? `${(download.totalSize / 1024).toFixed(2)} GB`
+                  : `${download.totalSize.toFixed(0)} MB`
                 : "Calculating..."}
             </span>
           </div>

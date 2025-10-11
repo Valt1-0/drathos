@@ -192,8 +192,8 @@ export class GameEngine {
             id: gameId,
             stage: "downloading",
             progress: Math.round((downloadedBytes / totalSize) * 100),
-            sizeDownloaded: downloadedBytes / (1024 * 1024 * 1024), // GB
-            totalSize: totalSize / (1024 * 1024 * 1024), // GB
+            sizeDownloaded: downloadedBytes / (1024 * 1024), // MB
+            totalSize: totalSize / (1024 * 1024), // MB
             speed: metrics.avgSpeed / (1024 * 1024), // MB/s
             instantSpeed: metrics.instantSpeed / (1024 * 1024), // MB/s
             eta: metrics.eta,
