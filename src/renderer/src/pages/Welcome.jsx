@@ -461,92 +461,28 @@ const Welcome = () => {
                 </motion.h2>
               </div>
 
-              {/* Advanced Animated Toggle Switch */}
-              <div className="relative group">
-                {/* Outer glow effect */}
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-1.5 border border-slate-700/50 shadow-lg">
-                  <div className="relative flex gap-1">
-                    {/* Sliding Background with gradient */}
-                    <motion.div
-                      className="absolute inset-y-1.5 w-[calc(50%-0.125rem)] rounded-lg shadow-xl"
-                      animate={{
-                        x: authMode === "login" ? 0 : "calc(100% + 0.25rem)"
-                      }}
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-700 to-slate-800 rounded-lg" />
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg" />
-                      <div className="absolute inset-0 border border-slate-600/50 rounded-lg" />
-                      {/* Inner glow */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-lg blur-sm"
-                        animate={{ opacity: [0.3, 0.5, 0.3] }}
-                        transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-                      />
-                    </motion.div>
-
-                    {/* Login Button */}
-                    <motion.button
-                      onClick={() => setAuthMode("login")}
-                      className="relative z-10 px-10 py-3 rounded-lg transition-all duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <span className={`text-base font-semibold transition-all duration-300 ${
-                        authMode === "login"
-                          ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
-                          : "text-slate-500"
-                      }`}>
-                        Connexion
-                      </span>
-                      {authMode === "login" && (
-                        <motion.div
-                          className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"
-                          layoutId="activeUnderline"
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                      )}
-                    </motion.button>
-
-                    {/* Register Button */}
-                    <motion.button
-                      onClick={() => setAuthMode("register")}
-                      className="relative z-10 px-10 py-3 rounded-lg transition-all duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <span className={`text-base font-semibold transition-all duration-300 ${
-                        authMode === "register"
-                          ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
-                          : "text-slate-500"
-                      }`}>
-                        Inscription
-                      </span>
-                      {authMode === "register" && (
-                        <motion.div
-                          className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-transparent via-purple-400 to-transparent"
-                          layoutId="activeUnderline"
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        />
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
-
-                {/* Bottom description text */}
-                <motion.p
-                  className="text-center text-sm text-slate-400 mt-3"
-                  key={authMode + "desc"}
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
+              {/* Simple Toggle Switch */}
+              <div className="bg-slate-800/50 rounded-lg p-1 inline-flex border border-slate-700/50">
+                <button
+                  onClick={() => setAuthMode("login")}
+                  className={`px-8 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    authMode === "login"
+                      ? "bg-slate-700 text-white"
+                      : "text-slate-400 hover:text-slate-300"
+                  }`}
                 >
-                  {authMode === "login"
-                    ? "Accédez à votre bibliothèque de jeux"
-                    : "Créez votre compte pour commencer"}
-                </motion.p>
+                  Connexion
+                </button>
+                <button
+                  onClick={() => setAuthMode("register")}
+                  className={`px-8 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    authMode === "register"
+                      ? "bg-slate-700 text-white"
+                      : "text-slate-400 hover:text-slate-300"
+                  }`}
+                >
+                  Inscription
+                </button>
               </div>
             </motion.div>
 
