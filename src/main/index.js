@@ -33,9 +33,9 @@ function createWindow() {
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
-      sandbox: true,                // ✅ Sécurisé
-      contextIsolation: true,       // ✅ Obligatoire pour la sécurité
-      nodeIntegration: false,       // ✅ Désactiver Node dans le renderer
+      sandbox: true, // ✅ Sécurisé
+      contextIsolation: true, // ✅ Obligatoire pour la sécurité
+      nodeIntegration: false, // ✅ Désactiver Node dans le renderer
       nodeIntegrationInWorker: false, // ✅ Pas nécessaire pour vos Worker Threads
     },
   });
@@ -56,6 +56,8 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
+
+  return mainWindow;
 }
 
 // This method will be called when Electron has finished
@@ -107,19 +109,35 @@ app.whenReady().then(() => {
     if (window) window.webContents.toggleDevTools();
   });
 
-  createWindow();
+  const mainWindow = createWindow();
 
-  // Create a tray icon
-  let tray = null;
-  tray = new Tray(icon);
-  const contextMenu = Menu.buildFromTemplate([
-    { label: "Item1", type: "radio" },
-    { label: "Item2", type: "radio" },
-    { label: "Item3", type: "radio", checked: true },
-    { label: "Item4", type: "radio" },
-  ]);
+  // Tray icon setup
+  const tray = new Tray(icon);
   tray.setToolTip("Drathos");
-  tray.setContextMenu(contextMenu);
+
+  const trayMenu = Menu.buildFromTemplate([
+    {
+      label: "Ouvrir Drathos",
+      click: () => {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
+      },
+    },
+    { type: "separator" },
+    {
+      label: "Quitter",
+      click: () => app.quit(),
+    },
+  ]);
+
+  tray.setContextMenu(trayMenu);
+
+  tray.on("click", () => {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
@@ -671,7 +689,6 @@ ipcMain.handle("getGameSize", async (event, { gamePath }) => {
   }
 });
 
-
 // === STATISTIQUES LOCALES ===
 /**
  * Sauvegarde les statistiques de jeu localement
@@ -747,9 +764,8 @@ ipcMain.handle("getDiskSpace", async () => {
           freeGB: Math.round((freeBytes / (1024 * 1024 * 1024)) * 10) / 10,
           totalGB: Math.round((totalBytes / (1024 * 1024 * 1024)) * 10) / 10,
           usedGB:
-            Math.round(
-              ((totalBytes - freeBytes) / (1024 * 1024 * 1024)) * 10
-            ) / 10,
+            Math.round(((totalBytes - freeBytes) / (1024 * 1024 * 1024)) * 10) /
+            10,
           usedPercent: Math.round(
             ((totalBytes - freeBytes) / totalBytes) * 100
           ),
@@ -772,9 +788,8 @@ ipcMain.handle("getDiskSpace", async () => {
           freeGB: Math.round((freeBytes / (1024 * 1024 * 1024)) * 10) / 10,
           totalGB: Math.round((totalBytes / (1024 * 1024 * 1024)) * 10) / 10,
           usedGB:
-            Math.round(
-              ((totalBytes - freeBytes) / (1024 * 1024 * 1024)) * 10
-            ) / 10,
+            Math.round(((totalBytes - freeBytes) / (1024 * 1024 * 1024)) * 10) /
+            10,
           usedPercent: Math.round(
             ((totalBytes - freeBytes) / totalBytes) * 100
           ),
