@@ -426,7 +426,7 @@ const Welcome = () => {
         return (
           <motion.div
             key="step3"
-            className="h-full flex flex-col justify-center gap-3 max-w-3xl mx-auto w-full px-4"
+            className="h-full flex flex-col justify-center gap-4 max-w-3xl mx-auto w-full px-4"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
@@ -434,22 +434,120 @@ const Welcome = () => {
           >
             {/* Header */}
             <motion.div
-              className="flex items-center justify-center gap-2 mb-2"
+              className="flex flex-col items-center gap-6 mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <motion.div
-                className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg"
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.6, type: "spring" }}
-              >
-                <FiUser className="text-white text-lg" />
-              </motion.div>
-              <h2 className="text-2xl font-bold text-white">
-                {authMode === "login" ? "Connexion" : "Inscription"}
-              </h2>
+              {/* Icon with animated title */}
+              <div className="flex items-center gap-3">
+                <motion.div
+                  className="relative flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 0.6, type: "spring" }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl blur-md opacity-50" />
+                  <FiUser className="relative z-10 text-white text-2xl" />
+                </motion.div>
+                <motion.h2
+                  className="text-3xl font-bold text-white"
+                  key={authMode}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {authMode === "login" ? "Connexion" : "Inscription"}
+                </motion.h2>
+              </div>
+
+              {/* Advanced Animated Toggle Switch */}
+              <div className="relative group">
+                {/* Outer glow effect */}
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-1.5 border border-slate-700/50 shadow-lg">
+                  <div className="relative flex gap-1">
+                    {/* Sliding Background with gradient */}
+                    <motion.div
+                      className="absolute inset-y-1.5 w-[calc(50%-0.125rem)] rounded-lg shadow-xl"
+                      animate={{
+                        x: authMode === "login" ? 0 : "calc(100% + 0.25rem)"
+                      }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-700 to-slate-800 rounded-lg" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg" />
+                      <div className="absolute inset-0 border border-slate-600/50 rounded-lg" />
+                      {/* Inner glow */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-lg blur-sm"
+                        animate={{ opacity: [0.3, 0.5, 0.3] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                      />
+                    </motion.div>
+
+                    {/* Login Button */}
+                    <motion.button
+                      onClick={() => setAuthMode("login")}
+                      className="relative z-10 px-10 py-3 rounded-lg transition-all duration-200"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <span className={`text-base font-semibold transition-all duration-300 ${
+                        authMode === "login"
+                          ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                          : "text-slate-500"
+                      }`}>
+                        Connexion
+                      </span>
+                      {authMode === "login" && (
+                        <motion.div
+                          className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"
+                          layoutId="activeUnderline"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                    </motion.button>
+
+                    {/* Register Button */}
+                    <motion.button
+                      onClick={() => setAuthMode("register")}
+                      className="relative z-10 px-10 py-3 rounded-lg transition-all duration-200"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <span className={`text-base font-semibold transition-all duration-300 ${
+                        authMode === "register"
+                          ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                          : "text-slate-500"
+                      }`}>
+                        Inscription
+                      </span>
+                      {authMode === "register" && (
+                        <motion.div
+                          className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-transparent via-purple-400 to-transparent"
+                          layoutId="activeUnderline"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Bottom description text */}
+                <motion.p
+                  className="text-center text-sm text-slate-400 mt-3"
+                  key={authMode + "desc"}
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {authMode === "login"
+                    ? "Accédez à votre bibliothèque de jeux"
+                    : "Créez votre compte pour commencer"}
+                </motion.p>
+              </div>
             </motion.div>
 
             {/* Error Message */}
@@ -475,188 +573,160 @@ const Welcome = () => {
               )}
             </AnimatePresence>
 
-            {/* Username Input Card */}
-            <motion.div
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <label className="text-sm text-slate-400 font-medium mb-2 block">
-                  Nom d'utilisateur
-                </label>
-                <input
-                  type="text"
-                  placeholder="Entrez votre nom d'utilisateur"
-                  className="w-full p-3 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                />
-              </div>
-            </motion.div>
-
-            {/* Password Input Card */}
-            <motion.div
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <label className="text-sm text-slate-400 font-medium mb-2 block">
-                  Mot de passe
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Entrez votre mot de passe"
-                    className="w-full p-3 pr-12 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                  />
-                  <motion.div
-                    className="absolute text-slate-400 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-400 transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    {showPassword ? <FaEyeSlash className="text-lg" /> : <FaEye className="text-lg" />}
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Confirm Password Input Card (Register only) */}
+            {/* Form Container with smooth transitions */}
             <AnimatePresence mode="wait">
-              {authMode === "register" && (
+              <motion.div
+                key={authMode}
+                className="space-y-3"
+                initial={{ opacity: 0, x: authMode === "login" ? -30 : 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: authMode === "login" ? 30 : -30 }}
+                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              >
+                {/* Username Input Card */}
                 <motion.div
                   className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300"
-                  initial={{ opacity: 0, scaleY: 0, originY: 0 }}
-                  animate={{
-                    opacity: 1,
-                    scaleY: 1,
-                    transition: {
-                      opacity: { duration: 0.3 },
-                      scaleY: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
-                    }
-                  }}
-                  exit={{
-                    opacity: 0,
-                    scaleY: 0,
-                    transition: {
-                      opacity: { duration: 0.2 },
-                      scaleY: { duration: 0.3, ease: [0.4, 0, 1, 1] }
-                    }
-                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                  layout
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <motion.div
-                    className="relative z-10"
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{
-                      y: 0,
-                      opacity: 1,
-                      transition: { delay: 0.2, duration: 0.3 }
-                    }}
-                  >
+                  <div className="relative z-10">
                     <label className="text-sm text-slate-400 font-medium mb-2 block">
-                      Confirmer le mot de passe
+                      Nom d'utilisateur
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Entrez votre nom d'utilisateur"
+                      className="w-full p-3 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
+                      value={formData.username}
+                      onChange={(e) =>
+                        setFormData({ ...formData, username: e.target.value })
+                      }
+                    />
+                  </div>
+                </motion.div>
+
+                {/* Password Input Card */}
+                <motion.div
+                  className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                  layout
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative z-10">
+                    <label className="text-sm text-slate-400 font-medium mb-2 block">
+                      Mot de passe
                     </label>
                     <div className="relative">
                       <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirmez votre mot de passe"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Entrez votre mot de passe"
                         className="w-full p-3 pr-12 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
-                        value={formData.confirmPassword}
+                        value={formData.password}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            confirmPassword: e.target.value,
-                          })
+                          setFormData({ ...formData, password: e.target.value })
                         }
                       />
                       <motion.div
                         className="absolute text-slate-400 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-400 transition-colors"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() => setShowPassword(!showPassword)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        {showConfirmPassword ? <FaEyeSlash className="text-lg" /> : <FaEye className="text-lg" />}
+                        {showPassword ? <FaEyeSlash className="text-lg" /> : <FaEye className="text-lg" />}
                       </motion.div>
                     </div>
-                  </motion.div>
+                  </div>
                 </motion.div>
-              )}
-            </AnimatePresence>
 
-            {/* Submit Button */}
-            <motion.button
-              onClick={handleAuth}
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 w-full"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: authMode === "register" ? 0.5 : 0.4 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10 flex items-center justify-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 bg-purple-500/20 rounded-lg group-hover:bg-purple-500/30 transition-all duration-300">
-                  <FiUser className="text-purple-400 text-lg" />
-                </div>
-                <div className="text-left">
-                  <div className="text-base font-bold text-white">
-                    {authMode === "login" ? "Se connecter" : "S'inscrire"}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {authMode === "login" ? "Accéder à votre compte" : "Créer un nouveau compte"}
-                  </div>
-                </div>
-              </div>
-            </motion.button>
+                {/* Confirm Password Input Card (Register only) */}
+                {authMode === "register" && (
+                  <motion.div
+                    className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300"
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.3 }}
+                    layout
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="relative z-10">
+                      <label className="text-sm text-slate-400 font-medium mb-2 block">
+                        Confirmer le mot de passe
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirmez votre mot de passe"
+                          className="w-full p-3 pr-12 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
+                          value={formData.confirmPassword}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              confirmPassword: e.target.value,
+                            })
+                          }
+                        />
+                        <motion.div
+                          className="absolute text-slate-400 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-400 transition-colors"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          {showConfirmPassword ? <FaEyeSlash className="text-lg" /> : <FaEye className="text-lg" />}
+                        </motion.div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            </AnimatePresence>
 
             {/* Navigation Buttons */}
             <motion.div
-              className="grid grid-cols-2 gap-3"
+              className="grid grid-cols-2 gap-3 mt-2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: authMode === "register" ? 0.6 : 0.5 }}
+              transition={{ duration: 0.5, delay: authMode === "register" ? 0.5 : 0.4 }}
             >
               <motion.button
                 onClick={() => setCurrentStep(2)}
-                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300"
+                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300"
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative z-10 flex items-center justify-center gap-2">
                   <motion.div
-                    className="flex items-center justify-center w-8 h-8 bg-slate-500/20 rounded-lg"
+                    className="flex items-center justify-center w-9 h-9 bg-slate-500/20 rounded-lg"
                     whileHover={{ x: -3 }}
                   >
-                    <FiArrowLeft className="text-slate-400 text-base" />
+                    <FiArrowLeft className="text-slate-400 text-lg" />
                   </motion.div>
                   <div className="text-base font-bold text-white">Retour</div>
                 </div>
               </motion.button>
 
               <motion.button
-                onClick={() =>
-                  setAuthMode(authMode === "login" ? "register" : "login")
-                }
-                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
+                onClick={handleAuth}
+                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative z-10 flex items-center justify-center">
+                <div className="relative z-10 flex items-center justify-center gap-2">
                   <div className="text-base font-bold text-white">
-                    {authMode === "login" ? "Créer un compte" : "Connexion"}
+                    {authMode === "login" ? "Se connecter" : "S'inscrire"}
                   </div>
+                  <motion.div
+                    className="flex items-center justify-center w-9 h-9 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-all duration-300"
+                    whileHover={{ x: 3 }}
+                  >
+                    <FiArrowRight className="text-blue-400 text-lg" />
+                  </motion.div>
                 </div>
               </motion.button>
             </motion.div>
