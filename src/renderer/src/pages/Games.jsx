@@ -16,7 +16,9 @@ import {
   saveLocalStats,
 } from "../api/gameStats";
 import syncQueue from "../utils/syncQueue";
+import uninstallQueue from "../utils/uninstallQueue";
 import { useDownload } from "../contexts/downloadContext";
+import { useConnection } from "../contexts/connectionContext";
 import gameManager from "../services/gameManager";
 import dayjs from "dayjs";
 import {
@@ -30,6 +32,7 @@ import {
   FiTrash2,
   FiSquare,
   FiZap,
+  FiSearch,
 } from "react-icons/fi";
 
 const Games = () => {
@@ -46,8 +49,10 @@ const Games = () => {
   const [playingGames, setPlayingGames] = useState(new Set());
   const [gameStats, setGameStats] = useState({});
   const [uninstalling, setUninstalling] = useState(new Set());
+  const [pendingUninstalls, setPendingUninstalls] = useState(new Set());
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
+  const { isOnline } = useConnection();
 
   // === UTILITY FUNCTIONS ===
 
@@ -144,6 +149,86 @@ const Games = () => {
       loadGameStats();
     }
   }, [installedGames]);
+
+  // Écouter les changements de la queue de désinstallation
+  useEffect(() => {
+    const handleQueueChange = (queueItems) => {
+      // Mettre à jour l'état des jeux en attente
+      const pendingIds = new Set(queueItems.map((item) => item.gameId));
+      setPendingUninstalls(pendingIds);
+    };
+
+    const listenerId = uninstallQueue.addListener(handleQueueChange);
+
+    // Charger l'état initial
+    const initialQueue = uninstallQueue.getAll();
+    handleQueueChange(initialQueue);
+
+    return () => {
+      uninstallQueue.removeListener(listenerId);
+    };
+  }, []);
+
+  // ✅ Traiter automatiquement la queue quand le serveur revient online
+  useEffect(() => {
+    const processUninstallQueue = async () => {
+      if (!isOnline) return;
+
+      const queue = uninstallQueue.getAll();
+      if (queue.length === 0) return;
+
+      console.log(`[Games] 🔄 Serveur online - Traitement de ${queue.length} désinstallation(s) en attente`);
+
+      for (const item of queue) {
+        try {
+          console.log(`[Games] 🗑️ Désinstallation de ${item.gameName}...`);
+
+          // Marquer comme "en cours de désinstallation" dans l'UI
+          setUninstalling((prev) => new Set([...prev, item.gameId]));
+
+          // Exécuter la vraie désinstallation
+          const result = await gameManager.uninstallGame(
+            item.gameId,
+            item.gamePath,
+            item.gameName
+          );
+
+          if (result.success) {
+            // Retirer de la queue
+            await uninstallQueue.dequeue(item.gameId);
+            console.log(`[Games] ✅ ${item.gameName} désinstallé avec succès`);
+          } else {
+            console.error(`[Games] ❌ Échec désinstallation ${item.gameName}:`, result.error);
+          }
+
+          // Retirer du set "uninstalling"
+          setUninstalling((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(item.gameId);
+            return newSet;
+          });
+        } catch (error) {
+          console.error(`[Games] ❌ Erreur désinstallation ${item.gameName}:`, error);
+          setUninstalling((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(item.gameId);
+            return newSet;
+          });
+        }
+      }
+
+      // Recharger la liste des jeux installés après traitement de la queue
+      try {
+        const installed = await getInstalledGames();
+        setInstalledGames(installed);
+        await updateInstalledGamesCache(installed);
+      } catch (err) {
+        console.warn("[Games] Erreur refresh installed games:", err);
+      }
+    };
+
+    processUninstallQueue();
+  }, [isOnline]);
 
   // Utiliser useRef pour persister le flag entre les renders
   const isProcessingStats = useRef(false);
@@ -243,14 +328,13 @@ const Games = () => {
       }
     };
 
-    // Gestionnaire de progression de désinstallation
-    const handleUninstallProgress = (progress) => {
+    // Gestionnaire de progression de désinstallation (simplifié)
+    const handleUninstallProgress = async (progress) => {
       if (progress.stage === "uninstalled") {
         // Recharger la liste des jeux installés
         getInstalledGames()
           .then(async (installed) => {
             setInstalledGames(installed);
-            // Mettre à jour le cache après désinstallation
             await updateInstalledGamesCache(installed);
           })
           .catch((err) => {
@@ -305,6 +389,7 @@ const Games = () => {
 
   const isGamePlaying = (gameId) => playingGames.has(gameId);
   const isGameUninstalling = (gameId) => uninstalling.has(gameId);
+  const isPendingUninstall = (gameId) => pendingUninstalls.has(gameId);
 
   // Filtrer les jeux
   const filteredGames = games.filter((game) => {
@@ -329,6 +414,14 @@ const Games = () => {
 
   const handleLaunchGame = async (game) => {
     try {
+      // 🚫 Bloquer le lancement si le jeu est en attente de synchronisation de désinstallation
+      if (isPendingUninstall(game._id)) {
+        alert(
+          `❌ Impossible de lancer "${game.name}".\n\nCe jeu a été désinstallé mais la synchronisation avec le serveur est en attente.\n\nVeuillez vous reconnecter au serveur pour terminer la synchronisation.`
+        );
+        return;
+      }
+
       const installedData = getInstalledGameData(game._id);
       if (!installedData) {
         console.error("Données d'installation non trouvées pour", game.name);
@@ -455,6 +548,21 @@ const Games = () => {
       return;
     }
 
+    // ✅ NOUVELLE LOGIQUE : Vérifier si le serveur est offline AVANT de désinstaller
+    if (!isOnline) {
+      console.log(`[Games] 📴 Serveur offline - Ajout de ${game.name} à la queue`);
+
+      // Ajouter à la queue SANS supprimer les fichiers
+      await uninstallQueue.enqueue(game._id, game.name, installedData.path);
+
+      alert(
+        `⚠️ Serveur non disponible\n\n"${game.name}" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.\n\n🚫 Le jeu est maintenant bloqué et ne peut pas être lancé.`
+      );
+
+      return;
+    }
+
+    // Serveur online : désinstaller normalement
     try {
       setUninstalling((prev) => new Set([...prev, game._id]));
 
@@ -522,28 +630,30 @@ const Games = () => {
   return (
     <div className="h-full flex bg-gray-900 text-white">
       {/* === SIDEBAR GAUCHE - Liste des jeux === */}
-      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+      <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
         {/* Header avec recherche */}
-        <div className="p-4 border-b border-gray-700">
-          <h1 className="text-xl font-bold mb-3 text-blue-400">Bibliothèque</h1>
+        <div className="p-4 space-y-3">
+          <h1 className="text-xl font-bold text-white">
+            Bibliothèque
+          </h1>
 
           {/* Barre de recherche */}
-          <div className="relative mb-3">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
             <input
               type="text"
               placeholder="Rechercher un jeu..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-700 text-white pl-3 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-800 text-white text-sm pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 transition-all placeholder-gray-500"
             />
-            <div className="absolute right-3 top-2.5 text-gray-400">🔍</div>
           </div>
 
           {/* Filtre par genre */}
           <select
             value={selectedGenre}
             onChange={(e) => setSelectedGenre(e.target.value)}
-            className="w-full bg-gray-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-gray-800 text-white text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 transition-all"
           >
             {allGenres.map((genre, index) => (
               <option key={`${genre}-${index}`} value={genre}>
@@ -554,36 +664,28 @@ const Games = () => {
         </div>
 
         {/* Liste des jeux */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-2 py-2">
           {filteredGames.map((game) => {
             const installed = isInstalled(game._id);
             const playing = isGamePlaying(game._id);
             const stats = gameStats[game._id];
             const uninstalling = isGameUninstalling(game._id);
+            const pending = isPendingUninstall(game._id);
             const gameGenres = getGenresArray(game);
 
             return (
               <div
                 key={game._id}
                 onClick={() => setSelectedGame(game)}
-                className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
+                className={`group relative cursor-pointer transition-all duration-200 rounded-lg mb-2 p-3 ${
                   selectedGame?._id === game._id
-                    ? "bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/60"
-                    : "bg-gradient-to-br from-gray-800/80 to-gray-900/80 hover:border-gray-600/60"
-                } p-4 mb-3 border border-gray-700/40`}
+                    ? "bg-blue-600/20 border border-blue-500/50"
+                    : "bg-gray-800/40 border border-transparent hover:bg-gray-800/60 hover:border-gray-700"
+                }`}
               >
-                {/* Effet de survol */}
-                <div
-                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                    selectedGame?._id === game._id
-                      ? "bg-gradient-to-br from-blue-400/15 to-purple-400/15"
-                      : "bg-gradient-to-br from-gray-600/15 to-gray-700/15"
-                  }`}
-                />
-
-                <div className="relative z-10 flex items-center gap-4">
-                  {/* Miniature avec design moderne */}
-                  <div className="w-14 h-14 bg-gray-700/60 rounded-xl flex-shrink-0 overflow-hidden border border-gray-600/40">
+                <div className="flex items-center gap-3">
+                  {/* Miniature */}
+                  <div className="relative w-12 h-12 bg-gray-700 rounded-md flex-shrink-0 overflow-hidden">
                     <img
                       src={game.coverUrl}
                       alt={game.name}
@@ -592,68 +694,70 @@ const Games = () => {
                         e.target.style.display = "none";
                       }}
                     />
+                    {/* Badge de statut sur l'image */}
+                    {playing && (
+                      <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    )}
                   </div>
 
                   {/* Infos du jeu */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3
-                        className={`font-bold truncate text-lg ${
-                          installed ? "text-white" : "text-gray-200"
-                        }`}
-                      >
-                        {game.name}
-                      </h3>
+                    <h3 className="font-semibold truncate text-sm text-white mb-1">
+                      {game.name}
+                    </h3>
 
-                      {/* Indicateurs de statut avec design moderne */}
-                      <div className="flex items-center gap-2">
-                        {playing && (
-                          <div className="flex items-center justify-center w-6 h-6 bg-emerald-500/25 rounded-lg">
-                            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                          </div>
-                        )}
-                        {uninstalling && (
-                          <div className="flex items-center justify-center w-6 h-6 bg-amber-500/25 rounded-lg">
-                            <span className="text-amber-400 text-xs">🗑️</span>
-                          </div>
-                        )}
-                        {installed && !playing && !uninstalling && (
-                          <div className="flex items-center justify-center w-6 h-6 bg-emerald-500/25 rounded-lg">
-                            <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Genres avec design moderne */}
-                    <div className="text-sm text-gray-400 mb-2 truncate">
-                      {gameGenres.slice(0, 2).join(" • ") || "Aucun genre"}
-                    </div>
-
-                    {/* Statistiques avec design moderne */}
-                    <div className="flex items-center gap-3 text-xs">
+                    {/* Stats et badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {installed && (
-                        <span className="px-2 py-1 bg-emerald-500/25 text-emerald-300 rounded-lg font-medium">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
+                          <span className="w-1 h-1 bg-green-400 rounded-full"></span>
                           Installé
                         </span>
                       )}
 
-                      {stats && stats.totalPlayTime !== "< 1 minute" && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/25 text-blue-300 rounded-lg">
-                          <FiClock className="text-xs" />
-                          <span className="font-medium">
-                            {stats.totalPlayTime}
-                          </span>
-                        </div>
+                      {uninstalling && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">
+                          <FiTrash2 className="w-2.5 h-2.5" />
+                          Suppression
+                        </span>
                       )}
 
-                      {stats && stats.totalSessions > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/25 text-purple-300 rounded-lg">
-                          <FiTarget className="text-xs" />
-                          <span className="font-medium">
-                            {stats.totalSessions}
-                          </span>
-                        </div>
+                      {pending && !uninstalling && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">
+                          <svg
+                            className="w-2.5 h-2.5 animate-spin"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Sync en attente
+                        </span>
+                      )}
+
+                      {stats && stats.totalPlayTime !== "< 1 minute" && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                          <FiClock className="w-2.5 h-2.5" />
+                          {stats.totalPlayTime}
+                        </span>
+                      )}
+
+                      {!stats && !installed && gameGenres.length > 0 && (
+                        <span className="text-gray-500 text-xs truncate">
+                          {gameGenres[0]}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -664,10 +768,10 @@ const Games = () => {
         </div>
 
         {/* Footer avec statistiques */}
-        <div className="p-4 border-t border-gray-700 text-sm text-gray-400">
-          <div className="flex justify-between">
-            <span>{games.length} jeux</span>
-            <span>{installedGames.length} installés</span>
+        <div className="p-4 border-t border-gray-800">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">{games.length} jeux</span>
+            <span className="text-green-400 font-medium">{installedGames.length} installés</span>
           </div>
         </div>
       </div>
@@ -720,6 +824,50 @@ const Games = () => {
                       const installed = isInstalled(selectedGame._id);
                       const playing = isGamePlaying(selectedGame._id);
                       const uninstalling = isGameUninstalling(selectedGame._id);
+                      const pending = isPendingUninstall(selectedGame._id);
+
+                      // Jeu en attente de synchronisation
+                      if (pending && !uninstalling) {
+                        return (
+                          <div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-yellow-500/50 md:col-span-2 lg:col-span-4">
+                            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent" />
+                            <div className="relative z-10 text-center">
+                              <div className="flex items-center justify-center w-16 h-16 bg-yellow-500/20 rounded-xl mx-auto mb-4">
+                                <svg
+                                  className="w-8 h-8 text-yellow-400 animate-spin"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                              </div>
+                              <div className="text-xl font-bold text-white mb-2">
+                                Synchronisation en attente
+                              </div>
+                              <div className="text-sm text-slate-400 mb-3">
+                                Ce jeu a été désinstallé mais attend la
+                                synchronisation avec le serveur.
+                              </div>
+                              <div className="text-xs text-yellow-400">
+                                🚫 Le jeu ne peut pas être lancé jusqu'à ce que la
+                                synchronisation soit terminée.
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
 
                       if (uninstalling) {
                         return (
