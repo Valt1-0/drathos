@@ -1,7 +1,7 @@
 // drathos/src/renderer/src/utils/uninstallQueue.js
 
 /**
- * Gestionnaire de queue simple pour les désinstallations en attente
+ * Queue simple pour les désinstallations en attente
  * Stocke les requêtes qui seront exécutées quand le serveur revient online
  */
 class UninstallQueue {
@@ -18,7 +18,7 @@ class UninstallQueue {
       const savedQueue = await window.store.get("uninstallQueue");
       if (savedQueue && Array.isArray(savedQueue)) {
         this.queue = savedQueue;
-        console.log(`[UninstallQueue] ${this.queue.length} désinstallation(s) en attente`);
+        console.log(`[UninstallQueue] ${this.queue.length} désinstallation(s) en attente chargée(s)`);
         this.notifyListeners();
       }
     } catch (error) {
@@ -43,7 +43,6 @@ class UninstallQueue {
    * Ajoute une désinstallation à la queue (sans supprimer les fichiers)
    */
   async enqueue(gameId, gameName, gamePath) {
-    // Vérifier si le jeu n'est pas déjà dans la queue
     const existing = this.queue.find((item) => item.gameId === gameId);
     if (existing) {
       console.log(`[UninstallQueue] ${gameName} est déjà en queue`);

@@ -153,14 +153,11 @@ const Games = () => {
   // Écouter les changements de la queue de désinstallation
   useEffect(() => {
     const handleQueueChange = (queueItems) => {
-      // Mettre à jour l'état des jeux en attente
       const pendingIds = new Set(queueItems.map((item) => item.gameId));
       setPendingUninstalls(pendingIds);
     };
 
     const listenerId = uninstallQueue.addListener(handleQueueChange);
-
-    // Charger l'état initial
     const initialQueue = uninstallQueue.getAll();
     handleQueueChange(initialQueue);
 
@@ -169,7 +166,7 @@ const Games = () => {
     };
   }, []);
 
-  // ✅ Traiter automatiquement la queue quand le serveur revient online
+  // Traiter automatiquement la queue quand le serveur revient online
   useEffect(() => {
     const processUninstallQueue = async () => {
       if (!isOnline) return;
@@ -177,16 +174,13 @@ const Games = () => {
       const queue = uninstallQueue.getAll();
       if (queue.length === 0) return;
 
-      console.log(`[Games] 🔄 Serveur online - Traitement de ${queue.length} désinstallation(s) en attente`);
+      console.log(`[Games] 🔄 Serveur online - Traitement de ${queue.length} désinstallation(s)`);
 
       for (const item of queue) {
         try {
           console.log(`[Games] 🗑️ Désinstallation de ${item.gameName}...`);
-
-          // Marquer comme "en cours de désinstallation" dans l'UI
           setUninstalling((prev) => new Set([...prev, item.gameId]));
 
-          // Exécuter la vraie désinstallation
           const result = await gameManager.uninstallGame(
             item.gameId,
             item.gamePath,
@@ -194,21 +188,19 @@ const Games = () => {
           );
 
           if (result.success) {
-            // Retirer de la queue
             await uninstallQueue.dequeue(item.gameId);
-            console.log(`[Games] ✅ ${item.gameName} désinstallé avec succès`);
+            console.log(`[Games] ✅ ${item.gameName} désinstallé`);
           } else {
-            console.error(`[Games] ❌ Échec désinstallation ${item.gameName}:`, result.error);
+            console.error(`[Games] ❌ Échec ${item.gameName}:`, result.error);
           }
 
-          // Retirer du set "uninstalling"
           setUninstalling((prev) => {
             const newSet = new Set(prev);
             newSet.delete(item.gameId);
             return newSet;
           });
         } catch (error) {
-          console.error(`[Games] ❌ Erreur désinstallation ${item.gameName}:`, error);
+          console.error(`[Games] ❌ Erreur ${item.gameName}:`, error);
           setUninstalling((prev) => {
             const newSet = new Set(prev);
             newSet.delete(item.gameId);
@@ -217,13 +209,12 @@ const Games = () => {
         }
       }
 
-      // Recharger la liste des jeux installés après traitement de la queue
       try {
         const installed = await getInstalledGames();
         setInstalledGames(installed);
         await updateInstalledGamesCache(installed);
       } catch (err) {
-        console.warn("[Games] Erreur refresh installed games:", err);
+        console.warn("[Games] Erreur refresh:", err);
       }
     };
 
@@ -328,13 +319,30 @@ const Games = () => {
       }
     };
 
-    // Gestionnaire de progression de désinstallation (simplifié)
+    // Gestionnaire de progression de désinstallation
     const handleUninstallProgress = async (progress) => {
       if (progress.stage === "uninstalled") {
+        // Si mode offline/pendingSync, ajouter à la queue
+        if (progress.pendingSync || progress.offlineMode) {
+          const installedData = installedGames.find(
+            (g) => g.serverGameId?._id === progress.id
+          );
+          if (installedData) {
+            await uninstallQueue.enqueue(
+              progress.id,
+              installedData.serverGameId?.name || "Unknown Game"
+            );
+            console.log(
+              `[Games] 📴 Jeu ${progress.id} ajouté à la queue de désinstallation`
+            );
+          }
+        }
+
         // Recharger la liste des jeux installés
         getInstalledGames()
           .then(async (installed) => {
             setInstalledGames(installed);
+            // Mettre à jour le cache après désinstallation
             await updateInstalledGamesCache(installed);
           })
           .catch((err) => {
@@ -548,21 +556,17 @@ const Games = () => {
       return;
     }
 
-    // ✅ NOUVELLE LOGIQUE : Vérifier si le serveur est offline AVANT de désinstaller
+    // CHECK IF SERVER IS OFFLINE FIRST
     if (!isOnline) {
       console.log(`[Games] 📴 Serveur offline - Ajout de ${game.name} à la queue`);
-
-      // Ajouter à la queue SANS supprimer les fichiers
       await uninstallQueue.enqueue(game._id, game.name, installedData.path);
-
       alert(
-        `⚠️ Serveur non disponible\n\n"${game.name}" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.\n\n🚫 Le jeu est maintenant bloqué et ne peut pas être lancé.`
+        `⚠️ Serveur non disponible\n\n"${game.name}" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.\n\n🚫 Le jeu est maintenant bloqué.`
       );
-
       return;
     }
 
-    // Serveur online : désinstaller normalement
+    // If online, proceed with normal uninstall
     try {
       setUninstalling((prev) => new Set([...prev, game._id]));
 
@@ -630,7 +634,7 @@ const Games = () => {
   return (
     <div className="h-full flex bg-gray-900 text-white">
       {/* === SIDEBAR GAUCHE - Liste des jeux === */}
-      <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+      <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col">
         {/* Header avec recherche */}
         <div className="p-4 space-y-3">
           <h1 className="text-xl font-bold text-white">
