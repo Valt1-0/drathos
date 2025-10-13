@@ -4,8 +4,8 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import unzipper from "unzipper";
 import { jwtDecode } from "jwt-decode";
+import { extractionEngine } from "./extractionEngine.js";
 
 export class GameEngine {
   constructor() {
@@ -134,10 +134,13 @@ export class GameEngine {
    */
   async downloadGameFile(serverGame) {
     const gameId = serverGame._id;
+
+    // Detect archive extension from zipFileName
+    const originalExtension = path.extname(serverGame.zipFileName).toLowerCase();
     const fileName = `${serverGame.name.replace(
       /[^a-zA-Z0-9]/g,
       "_"
-    )}_${gameId}.zip`;
+    )}_${gameId}${originalExtension || ".zip"}`;
     const filePath = path.join(this.downloadPath, fileName);
 
     console.log(`[GameEngine] 📥 Téléchargement: ${fileName}`);
@@ -203,7 +206,26 @@ export class GameEngine {
       }
 
       fileStream.end();
+
+      // Wait for the stream to finish writing
+      await new Promise((resolve, reject) => {
+        fileStream.on("finish", resolve);
+        fileStream.on("error", reject);
+      });
+
       console.log(`[GameEngine] ✅ Téléchargement terminé: ${fileName}`);
+
+      // Verify downloaded file integrity
+      const downloadedSize = fs.statSync(filePath).size;
+      if (totalSize > 0 && downloadedSize !== totalSize) {
+        throw new Error(
+          `Fichier incomplet: ${downloadedSize} octets reçus sur ${totalSize} attendus`
+        );
+      }
+
+      console.log(
+        `[GameEngine] ✅ Fichier vérifié: ${(downloadedSize / (1024 * 1024)).toFixed(2)} MB`
+      );
 
       return filePath;
     } catch (error) {
@@ -243,187 +265,39 @@ export class GameEngine {
       message: "Analyse de l'archive...",
     });
 
-    const fileExtension = path.extname(filePath).toLowerCase();
+    const fileExtension = extractionEngine.getFileExtension(filePath);
+
+    console.log(`[GameEngine] 🔍 Detected format: ${fileExtension}`);
 
     try {
-      if (fileExtension === ".zip") {
-        return await this.extractZipWithProgress(filePath, extractPath, gameId);
-      } else if (fileExtension === ".7z") {
-        return await this.createManualExtractionInstructions(
+      // Use the unified extraction engine
+      if (extractionEngine.isSupported(fileExtension)) {
+        return await extractionEngine.extract(
           filePath,
           extractPath,
-          gameId,
-          serverGame
+          (progress, extractedFiles, totalFiles, currentFile) => {
+            this.sendProgress({
+              id: gameId,
+              stage: "extracting",
+              progress: progress,
+              extractedFiles: extractedFiles,
+              totalFiles: totalFiles,
+              currentFile: currentFile,
+              message: `Extraction: ${extractedFiles}/${totalFiles} fichiers`,
+            });
+          }
         );
       } else {
-        throw new Error(`Format non supporté: ${fileExtension}`);
-      }
-    } catch (error) {
-      // Si l'extraction échoue, créer des instructions manuelles
-      if (
-        error.message.includes(
-          "end of central directory record signature not found"
-        ) ||
-        error.message.includes(
-          "invalid central directory file header signature"
-        )
-      ) {
-        return await this.createManualExtractionInstructions(
-          filePath,
-          extractPath,
-          gameId,
-          serverGame
+        throw new Error(
+          `Format non supporté: ${fileExtension}. Formats supportés: ${extractionEngine.getSupportedFormats().join(", ")}`
         );
       }
-
+    } catch (error) {
+      console.error(`[GameEngine] ❌ Extraction failed:`, error.message);
       throw new Error(`Erreur d'extraction: ${error.message}`);
     }
   }
 
-  /**
-   * 📂 Extraction ZIP avec progression fichier par fichier
-   */
-  async extractZipWithProgress(filePath, extractPath, gameId) {
-    console.log(`[GameEngine] 📂 Extraction ZIP avec progression: ${filePath}`);
-
-    // Ouvrir l'archive pour analyser son contenu
-    const directory = await unzipper.Open.file(filePath);
-    const totalFiles = directory.files.length;
-    let extractedCount = 0;
-
-    console.log(`[GameEngine] 📊 Archive contient ${totalFiles} fichiers`);
-
-    this.sendProgress({
-      id: gameId,
-      stage: "extracting",
-      progress: 0,
-      extractedFiles: 0,
-      totalFiles: totalFiles,
-      message: `Extraction de ${totalFiles} fichiers...`,
-    });
-
-    // Extraire chaque fichier individuellement pour avoir la progression
-    for (const entry of directory.files) {
-      const outputPath = path.join(extractPath, entry.path);
-
-      try {
-        if (entry.type === "Directory") {
-          // Créer le dossier
-          await fs.promises.mkdir(outputPath, { recursive: true });
-        } else {
-          // Créer le dossier parent si nécessaire
-          await fs.promises.mkdir(path.dirname(outputPath), {
-            recursive: true,
-          });
-
-          // Extraire le fichier
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(
-                new Error(`Timeout lors de l'extraction de ${entry.path}`)
-              );
-            }, 30000); // 30 secondes de timeout par fichier
-
-            entry
-              .stream()
-              .pipe(fs.createWriteStream(outputPath))
-              .on("finish", () => {
-                clearTimeout(timeout);
-                resolve();
-              })
-              .on("error", (error) => {
-                clearTimeout(timeout);
-                reject(error);
-              });
-          });
-        }
-
-        extractedCount++;
-        const progress = Math.round((extractedCount / totalFiles) * 100);
-
-        // Envoyer la progression toutes les 10 fichiers ou à chaque 5%
-        if (
-          extractedCount % 10 === 0 ||
-          progress % 5 === 0 ||
-          extractedCount === totalFiles
-        ) {
-          this.sendProgress({
-            id: gameId,
-            stage: "extracting",
-            progress: progress,
-            extractedFiles: extractedCount,
-            totalFiles: totalFiles,
-            currentFile: entry.path,
-            message: `Extraction: ${extractedCount}/${totalFiles} fichiers`,
-          });
-        }
-      } catch (error) {
-        console.warn(
-          `[GameEngine] ⚠️ Erreur extraction fichier ${entry.path}:`,
-          error.message
-        );
-        // Continuer avec les autres fichiers même si un fichier échoue
-        extractedCount++;
-      }
-    }
-
-    console.log(
-      `[GameEngine] ✅ Extraction ZIP terminée: ${extractedCount}/${totalFiles} fichiers`
-    );
-
-    this.sendProgress({
-      id: gameId,
-      stage: "extracting",
-      progress: 100,
-      extractedFiles: extractedCount,
-      totalFiles: totalFiles,
-      message: "Extraction terminée !",
-    });
-
-    return extractPath;
-  }
-
-  /**
-   * 📋 Créer des instructions pour extraction manuelle (cas des .7z)
-   */
-  async createManualExtractionInstructions(
-    filePath,
-    extractPath,
-    gameId,
-    serverGame
-  ) {
-    console.log(
-      `[GameEngine] ⚠️ Extraction manuelle requise pour: ${serverGame.name}`
-    );
-
-    const instructionsPath = path.join(extractPath, "EXTRACTION_MANUELLE.txt");
-    const instructions = `
-🎮 EXTRACTION MANUELLE REQUISE - ${serverGame.name}
-
-Le fichier téléchargé nécessite une extraction manuelle avec 7-Zip.
-
-Fichier à extraire : ${filePath}
-Dossier de destination : ${extractPath}
-
-ÉTAPES :
-1. Installez 7-Zip depuis https://7-zip.org/
-2. Clic droit sur le fichier → "7-Zip" → "Extract Here"
-3. Le jeu sera automatiquement détecté
-
-Le jeu apparaîtra dans votre bibliothèque une fois extrait.
-`;
-
-    await fs.promises.writeFile(instructionsPath, instructions);
-
-    this.sendProgress({
-      id: gameId,
-      stage: "completed",
-      progress: 100,
-      message: "⚠️ Extraction manuelle requise",
-    });
-
-    return extractPath;
-  }
 
   /**
    * ✅ ÉTAPE 3: Finalisation et enregistrement
