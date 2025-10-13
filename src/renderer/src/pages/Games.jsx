@@ -22,6 +22,7 @@ import { useDownload } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import gameManager from "../services/gameManager";
 import UninstallModal from "../components/UninstallModal";
+import InstallPathModal from "../components/InstallPathModal";
 import dayjs from "dayjs";
 import {
   FiBarChart2,
@@ -57,6 +58,10 @@ const Games = () => {
   // État pour la modal de désinstallation
   const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
   const [gameToUninstall, setGameToUninstall] = useState(null);
+
+  // État pour la modal de sélection du chemin d'installation
+  const [installPathModalOpen, setInstallPathModalOpen] = useState(false);
+  const [gameToInstall, setGameToInstall] = useState(null);
 
   // État pour l'animation du bouton d'installation
   const [isInstalling, setIsInstalling] = useState(false);
@@ -506,6 +511,29 @@ const Games = () => {
   };
 
   const handleInstallGame = async (game) => {
+    // Vérifier si le chemin d'installation existe
+    const downloadPath = await window.store.get("downloadPath");
+
+    if (!downloadPath) {
+      // Ouvrir la modal pour sélectionner le chemin
+      setGameToInstall(game);
+      setInstallPathModalOpen(true);
+      return;
+    }
+
+    // Si le chemin existe, continuer l'installation
+    await startGameInstallation(game);
+  };
+
+  const handleInstallPathConfirm = async (selectedPath) => {
+    // Le chemin a déjà été sauvegardé dans InstallPathModal
+    if (gameToInstall) {
+      await startGameInstallation(gameToInstall);
+      setGameToInstall(null);
+    }
+  };
+
+  const startGameInstallation = async (game) => {
     // Activer l'animation
     setIsInstalling(true);
 
@@ -1345,6 +1373,17 @@ const Games = () => {
         onConfirm={confirmUninstall}
         game={gameToUninstall}
         gameSize={gameToUninstall?._id === selectedGame?._id ? gameSize : null}
+      />
+
+      {/* Modal de sélection du chemin d'installation */}
+      <InstallPathModal
+        isOpen={installPathModalOpen}
+        onClose={() => {
+          setInstallPathModalOpen(false);
+          setGameToInstall(null);
+        }}
+        onConfirm={handleInstallPathConfirm}
+        gameName={gameToInstall?.name}
       />
     </div>
   );
