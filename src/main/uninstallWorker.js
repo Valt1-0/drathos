@@ -28,17 +28,12 @@ async function runUninstallation() {
       console.log(
         `[UninstallWorker] ✅ Désinstallation réussie: ${workerData.gameId}`
       );
-      parentPort.postMessage({
-        stage: "Completed",
-        progress: 100,
-        message: "Désinstallation terminée !",
-      });
     } else {
       console.error(
         `[UninstallWorker] ❌ Désinstallation échouée: ${result.error}`
       );
       parentPort.postMessage({
-        stage: "Failed",
+        stage: "failed",
         progress: 0,
         error: result.error,
       });
@@ -47,7 +42,7 @@ async function runUninstallation() {
     console.error("[UninstallWorker] 💥 Erreur critique:", error);
 
     parentPort.postMessage({
-      stage: "Failed",
+      stage: "failed",
       progress: 0,
       error: error.message || "Erreur inconnue lors de la désinstallation",
     });

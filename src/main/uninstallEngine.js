@@ -125,7 +125,7 @@ export class UninstallEngine {
       sendProgress({
         id: gameId,
         stage: "uninstalling",
-        progress: 85,
+        progress: 90,
         message: "Nettoyage de la base de données...",
       });
 

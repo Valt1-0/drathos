@@ -579,29 +579,64 @@ ipcMain.handle(
       // Écouter les messages de progression
       worker.on("message", (data) => {
         console.log(
-          `[Main] 🗑️ Progression désinstallation ${gameName}:`,
-          data.stage,
-          `${data.progress}%`
+          `[Main] 🗑️ Désinstallation ${gameName}: ${data.stage} (${data.progress}%)`
         );
 
-        // Envoyer la progression au renderer
+        // Gérer la fin de la désinstallation
+        if (data.stage === "uninstalled") {
+          console.log(`[Main] ✅ Désinstallation terminée: ${gameName}`);
+
+          // 🧹 Nettoyage du cache local
+          try {
+            // 1. Supprimer les statistiques du jeu
+            const allStats = store.get("gameStats", {});
+            if (allStats[gameId]) {
+              delete allStats[gameId];
+              store.set("gameStats", allStats);
+              console.log(`[Main] 🧹 Statistics supprimées pour: ${gameId}`);
+            }
+
+            // 2. Mettre à jour le cache des jeux installés
+            const installedCache = store.get("installedGamesCache", []);
+            const updatedCache = installedCache.filter(
+              (game) => game.serverGameId?._id !== gameId
+            );
+            store.set("installedGamesCache", updatedCache);
+            console.log(
+              `[Main] 🧹 Cache mis à jour: ${installedCache.length} -> ${updatedCache.length} jeu(x)`
+            );
+          } catch (cleanupError) {
+            console.error(`[Main] ⚠️ Erreur nettoyage cache:`, cleanupError);
+          }
+
+          // Notifier le renderer après le nettoyage
+          event.sender.send("uninstallProgress", {
+            id: gameId,
+            ...data,
+          });
+
+          resolve({ success: true });
+          return;
+        }
+
+        // Gérer les échecs
+        if (data.stage === "failed") {
+          console.error(
+            `[Main] ❌ Désinstallation échouée: ${gameName} - ${data.error}`
+          );
+          event.sender.send("uninstallProgress", {
+            id: gameId,
+            ...data,
+          });
+          reject(new Error(data.error));
+          return;
+        }
+
+        // Envoyer la progression pour tous les autres stages
         event.sender.send("uninstallProgress", {
           id: gameId,
           ...data,
         });
-
-        // Gérer les états finaux
-        if (data.stage === "Completed") {
-          console.log(`[Main] ✅ Désinstallation terminée: ${gameName}`);
-          resolve({ success: true });
-        }
-
-        if (data.stage === "Failed") {
-          console.error(
-            `[Main] ❌ Désinstallation échouée: ${gameName} - ${data.error}`
-          );
-          reject(new Error(data.error));
-        }
       });
 
       // Gérer les erreurs du worker
