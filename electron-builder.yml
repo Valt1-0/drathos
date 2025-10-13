@@ -10,6 +10,8 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
 asarUnpack:
   - resources/**
+  - node_modules/7zip-bin/**/*
+  - node_modules/node-7z/**/*
 win:
   executableName: drathos
 nsis:
