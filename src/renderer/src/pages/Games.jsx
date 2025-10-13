@@ -20,6 +20,7 @@ import syncQueue from "../utils/syncQueue";
 import uninstallQueue from "../utils/uninstallQueue";
 import { useDownload } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
+import { checkServerStatus } from "../api/server";
 import gameManager from "../services/gameManager";
 import UninstallModal from "../components/UninstallModal";
 import InstallPathModal from "../components/InstallPathModal";
@@ -602,8 +603,16 @@ const Games = () => {
     const installedData = getInstalledGameData(game._id);
     if (!installedData) return;
 
-    // CHECK IF SERVER IS OFFLINE FIRST
-    if (!isOnline) {
+    // 🔍 FORCE RE-CHECK SERVER STATUS BEFORE UNINSTALL
+    console.log(`[Games] 🔍 Vérification du statut serveur avant désinstallation...`);
+    const serverAddress = await window.store.get("serverAddress");
+    const serverStatus = await checkServerStatus(serverAddress);
+    const isServerOnline = serverStatus.online;
+
+    console.log(`[Games] Statut serveur: ${isServerOnline ? "✅ Online" : "📴 Offline"}`);
+
+    // CHECK IF SERVER IS OFFLINE
+    if (!isServerOnline) {
       console.log(`[Games] 📴 Serveur offline - Ajout de ${game.name} à la queue`);
       await uninstallQueue.enqueue(game._id, game.name, installedData.path);
       alert(
@@ -797,7 +806,7 @@ const Games = () => {
                         </span>
                       )}
 
-                      {stats && stats.totalPlayTime !== "< 1 minute" && (
+                      {stats && stats.totalPlayTime && stats.totalPlayTime !== "< 1 minute" && !stats.totalPlayTime.includes("NaN") && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
                           <FiClock className="w-2.5 h-2.5" />
                           {stats.totalPlayTime}

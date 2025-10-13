@@ -187,9 +187,15 @@ export function formatStats(stats) {
  * @private
  */
 function formatPlayTime(seconds) {
-  if (!seconds || seconds < 60) return "< 1 minute";
+  // Validation stricte : vérifier que seconds est un nombre valide
+  if (!seconds || isNaN(seconds) || seconds < 60) return "< 1 minute";
+
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
+
+  // Double-check pour éviter NaN dans l'affichage
+  if (isNaN(hours) || isNaN(minutes)) return "< 1 minute";
+
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
