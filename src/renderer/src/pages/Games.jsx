@@ -2,6 +2,7 @@
 // Fixed: 401 error handling + Object rendering issues
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router";
 import { getAllServerGames } from "../api/serverGames";
 import {
   getInstalledGames,
@@ -20,6 +21,7 @@ import uninstallQueue from "../utils/uninstallQueue";
 import { useDownload } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import gameManager from "../services/gameManager";
+import UninstallModal from "../components/UninstallModal";
 import dayjs from "dayjs";
 import {
   FiBarChart2,
@@ -36,6 +38,7 @@ import {
 } from "react-icons/fi";
 
 const Games = () => {
+  const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [installedGames, setInstalledGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
@@ -50,6 +53,13 @@ const Games = () => {
   const [gameStats, setGameStats] = useState({});
   const [uninstalling, setUninstalling] = useState(new Set());
   const [pendingUninstalls, setPendingUninstalls] = useState(new Set());
+
+  // État pour la modal de désinstallation
+  const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
+  const [gameToUninstall, setGameToUninstall] = useState(null);
+
+  // État pour l'animation du bouton d'installation
+  const [isInstalling, setIsInstalling] = useState(false);
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
   const { isOnline } = useConnection();
@@ -496,6 +506,9 @@ const Games = () => {
   };
 
   const handleInstallGame = async (game) => {
+    // Activer l'animation
+    setIsInstalling(true);
+
     const downloadId = `${game._id}-${Date.now()}`;
     addDownload({
       id: downloadId,
@@ -535,26 +548,31 @@ const Games = () => {
       }
     });
 
-    try {
-      await window.api.installGame(game);
-    } catch (error) {
+    // Rediriger IMMÉDIATEMENT vers Downloads après 800ms (ne pas attendre l'installation)
+    setTimeout(() => {
+      setIsInstalling(false);
+      navigate("/download");
+    }, 800);
+
+    // Lancer l'installation en arrière-plan (sans await)
+    window.api.installGame(game).catch((error) => {
       console.error("Erreur lors de l'installation:", error);
       removeDownload(downloadId);
-    }
+    });
   };
 
-  const handleUninstallGame = async (game) => {
+  const handleUninstallGame = (game) => {
+    // Ouvrir la modal de confirmation
+    setGameToUninstall(game);
+    setUninstallModalOpen(true);
+  };
+
+  const confirmUninstall = async () => {
+    if (!gameToUninstall) return;
+
+    const game = gameToUninstall;
     const installedData = getInstalledGameData(game._id);
     if (!installedData) return;
-
-    // Confirmer la désinstallation
-    if (
-      !confirm(
-        `Êtes-vous sûr de vouloir désinstaller "${game.name}" ?\n\nCette action est irréversible.`
-      )
-    ) {
-      return;
-    }
 
     // CHECK IF SERVER IS OFFLINE FIRST
     if (!isOnline) {
@@ -634,7 +652,7 @@ const Games = () => {
   return (
     <div className="h-full flex bg-gray-900 text-white">
       {/* === SIDEBAR GAUCHE - Liste des jeux === */}
-      <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col">
+      <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
         {/* Header avec recherche */}
         <div className="p-4 space-y-3">
           <h1 className="text-xl font-bold text-white">
@@ -896,31 +914,43 @@ const Games = () => {
                         return (
                           <button
                             onClick={() => handleInstallGame(selectedGame)}
-                            className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 md:col-span-2 lg:col-span-4"
+                            disabled={isInstalling}
+                            className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border transition-all duration-300 md:col-span-2 lg:col-span-4 ${
+                              isInstalling
+                                ? "border-blue-500/70 scale-95"
+                                : "border-slate-700/50 hover:border-blue-500/50 hover:scale-[1.02]"
+                            }`}
                           >
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent transition-opacity duration-300 ${
+                              isInstalling ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            }`} />
                             <div className="relative z-10 text-center">
                               <div className="flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-xl mx-auto mb-4">
-                                <svg
-                                  className="w-8 h-8 text-blue-400"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                                  />
-                                </svg>
+                                {isInstalling ? (
+                                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent"></div>
+                                ) : (
+                                  <svg
+                                    className="w-8 h-8 text-blue-400 group-hover:animate-bounce"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                                    />
+                                  </svg>
+                                )}
                               </div>
                               <div className="text-xl font-bold text-white mb-2">
-                                Installer le jeu
+                                {isInstalling ? "Démarrage..." : "Installer le jeu"}
                               </div>
                               <div className="text-sm text-slate-400">
-                                Télécharger et installer ({selectedGame.sizeMB}{" "}
-                                MB)
+                                {isInstalling
+                                  ? "Redirection vers la page de téléchargements"
+                                  : `Télécharger et installer (${selectedGame.sizeMB} MB)`}
                               </div>
                             </div>
                           </button>
@@ -1304,6 +1334,18 @@ const Games = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de désinstallation */}
+      <UninstallModal
+        isOpen={uninstallModalOpen}
+        onClose={() => {
+          setUninstallModalOpen(false);
+          setGameToUninstall(null);
+        }}
+        onConfirm={confirmUninstall}
+        game={gameToUninstall}
+        gameSize={gameToUninstall?._id === selectedGame?._id ? gameSize : null}
+      />
     </div>
   );
 };
