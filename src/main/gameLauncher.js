@@ -189,14 +189,14 @@ export class GameLauncher {
         sessionDuration,
       });
 
-      // 2️⃣ Nettoyer les ressources
-      this.cleanupProcess(processInfo.gameId);
-
-      // 3️⃣ Envoyer les stats au renderer pour sauvegarde (en arrière-plan)
+      // 2️⃣ Envoyer les stats au renderer AVANT le cleanup (important !)
       if (sessionDuration > 0) {
         console.log(`[GameLauncher] 📊 Envoi des stats pour sauvegarde (${sessionDuration}s)`);
         this.sendStatsToBackend(processInfo.gameId);
       }
+
+      // 3️⃣ Nettoyer les ressources APRÈS l'envoi des stats
+      this.cleanupProcess(processInfo.gameId);
     });
 
     // ✅ Capture centralisée des logs (plus de duplication)
@@ -308,7 +308,13 @@ export class GameLauncher {
   async sendStatsToBackend(gameId) {
     try {
       const processInfo = this.activeProcesses.get(gameId);
-      const sessionDuration = processInfo?.startTime
+
+      if (!processInfo) {
+        console.error(`[GameLauncher] ProcessInfo non trouvé pour ${gameId}`);
+        return;
+      }
+
+      const sessionDuration = processInfo.startTime
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
         : 0;
 
@@ -319,7 +325,7 @@ export class GameLauncher {
         windows[0].webContents.send("save-game-stats", {
           gameId,
           sessionData: {
-            startTime: processInfo?.startTime || Date.now(),
+            startTime: processInfo.startTime,
             duration: sessionDuration,
           },
         });

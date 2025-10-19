@@ -281,35 +281,38 @@ const Games = () => {
       }
 
       isProcessingStats.current = true;
-      console.log("[Games] 📊 Starting stats save process for", data.gameId);
+
+      // Formater la durée de session pour l'affichage
+      const duration = data.sessionData.duration;
+      const hours = Math.floor(duration / 3600);
+      const minutes = Math.floor((duration % 3600) / 60);
+      const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
       try {
         // 1️⃣ Toujours sauvegarder localement d'abord
         const saveResult = await saveLocalStats(data.gameId, data.sessionData);
-        console.log("[Games] ✅ Local stats saved:", saveResult);
 
         // 2️⃣ Essayer de synchroniser avec le serveur (envoyer les stats locales complètes)
         try {
           if (saveResult.success && saveResult.stats) {
-            // Récupérer les stats locales complètes après la sauvegarde
-            const localStats = await window.api.getLocalStats({ gameId: data.gameId });
-
             // Envoyer au backend pour sync (via l'API centralisée)
-            await syncStatsToServer(data.gameId, localStats, data.sessionData.duration);
-            console.log("[Games] ✅ Stats synced to server");
+            await syncStatsToServer(data.gameId, saveResult.stats, data.sessionData.duration);
+
           } else {
             // Fallback : appeler l'ancienne méthode stopGame
             await stopGame(data.gameId);
           }
         } catch (error) {
-          console.debug("[Games] 📴 Server offline - stats saved locally");
-
           // 🔄 Ajouter à la queue de retry pour synchronisation ultérieure
-          const localStats = await window.api.getLocalStats({ gameId: data.gameId });
-          if (localStats) {
-            await syncQueue.enqueue(data.gameId, localStats, data.sessionData.duration);
-            console.log("[Games] ➕ Stats ajoutées à la queue de sync");
+          if (saveResult.success && saveResult.stats) {
+            await syncQueue.enqueue(data.gameId, saveResult.stats, data.sessionData.duration);
           }
+
+          // Notification de sauvegarde locale uniquement
+          toast.info("Statistiques sauvegardées localement", {
+            description: `Session de ${durationStr} sera synchronisée lors de la prochaine connexion`,
+            duration: 4000,
+          });
         }
 
         // 3️⃣ Petit délai pour s'assurer que toutes les opérations sont terminées
@@ -317,15 +320,18 @@ const Games = () => {
 
         // 4️⃣ Recharger les stats avec merge automatique
         await loadGameStats();
-        console.log("[Games] ✅ Stats reloaded successfully");
-        console.log("[Games] 📈 Current gameStats:", gameStats);
       } catch (error) {
         console.error("[Games] ❌ Erreur lors de la sauvegarde des stats:", error);
+
+        // Notification d'erreur
+        toast.error("Erreur de sauvegarde des statistiques", {
+          description: "Impossible d'enregistrer les données de la session",
+          duration: 5000,
+        });
       } finally {
         // Augmentation du délai de protection à 2 secondes
         setTimeout(() => {
           isProcessingStats.current = false;
-          console.log("[Games] 🔓 Stats processing lock released");
         }, 2000);
       }
     };
