@@ -28,6 +28,7 @@ export const addGameToServer = async (
 ) => {
   try {
     const serverAddress = await window.store.get("serverAddress");
+    const token = await window.store.get("userToken");
     const url = `http://${serverAddress}/api/serverGame/addGame`;
 
     return new Promise((resolve, reject) => {
@@ -39,6 +40,7 @@ export const addGameToServer = async (
       formData.append("igdbId", igdbId);
 
       xhr.open("POST", url, true);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
       // Suivi de la progression si onProgress est fourni
       if (onProgress && xhr.upload) {
@@ -72,5 +74,38 @@ export const addGameToServer = async (
   } catch (error) {
     console.error("Erreur lors de l'ajout du jeu :", error.message);
     return null;
+  }
+};
+
+/**
+ * Supprime un jeu du serveur (Admin uniquement)
+ * @param {string} gameId - ID du jeu à supprimer
+ * @returns {Promise<Object>} Résultat de la suppression
+ */
+export const deleteServerGame = async (gameId) => {
+  try {
+    const serverAddress = await window.store.get("serverAddress");
+    const token = await window.store.get("userToken");
+
+    const response = await fetchWithConnectionTracking(
+      `http://${serverAddress}/api/serverGame/deleteGame/${gameId}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error deleting game:", error.message);
+    throw error;
   }
 };
