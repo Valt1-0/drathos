@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { getAllServerGames } from "../api/serverGames";
+import { getAllServerGames, deleteServerGame } from "../api/serverGames";
 import {
   getInstalledGames,
   stopGame,
@@ -20,10 +20,13 @@ import syncQueue from "../utils/syncQueue";
 import uninstallQueue from "../utils/uninstallQueue";
 import { useDownload } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
+import { useAuth } from "../contexts/authContext";
 import { checkServerStatus } from "../api/server";
 import gameManager from "../services/gameManager";
 import UninstallModal from "../components/UninstallModal";
 import InstallPathModal from "../components/InstallPathModal";
+import DeleteGameModal from "../components/DeleteGameModal";
+import ConfirmationModal from "../components/ConfirmationModal";
 import dayjs from "dayjs";
 import {
   FiBarChart2,
@@ -37,6 +40,7 @@ import {
   FiSquare,
   FiZap,
   FiSearch,
+  FiWifiOff,
 } from "react-icons/fi";
 
 const Games = () => {
@@ -67,8 +71,31 @@ const Games = () => {
   // État pour l'animation du bouton d'installation
   const [isInstalling, setIsInstalling] = useState(false);
 
+  // États pour la suppression de jeux serveur (admin only)
+  const [deleteGameModalOpen, setDeleteGameModalOpen] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState(null);
+  const [deleteGameLoading, setDeleteGameLoading] = useState(false);
+  const [deleteGameResult, setDeleteGameResult] = useState(null);
+
+  // États pour la modal de confirmation générique
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [confirmationData, setConfirmationData] = useState({
+    title: "",
+    message: "",
+    confirmText: "Confirmer",
+    cancelText: "Annuler",
+    confirmColor: "blue",
+    icon: null,
+    showLockInfo: false,
+    onConfirm: null,
+    loading: false,
+    error: null,
+    success: false,
+  });
+
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
   const { isOnline } = useConnection();
+  const { user } = useAuth();
 
   // === UTILITY FUNCTIONS ===
 
@@ -615,9 +642,26 @@ const Games = () => {
     if (!isServerOnline) {
       console.log(`[Games] 📴 Serveur offline - Ajout de ${game.name} à la queue`);
       await uninstallQueue.enqueue(game._id, game.name, installedData.path);
-      alert(
-        `⚠️ Serveur non disponible\n\n"${game.name}" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.\n\n🚫 Le jeu est maintenant bloqué.`
-      );
+
+      // Fermer la modal de désinstallation
+      setUninstallModalOpen(false);
+      setGameToUninstall(null);
+
+      // Ouvrir la modal de confirmation avec le message
+      setConfirmationData({
+        title: "Serveur non disponible",
+        message: `"${game.name}" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.`,
+        confirmText: "Compris",
+        cancelText: "",
+        confirmColor: "yellow",
+        icon: FiWifiOff,
+        showLockInfo: true,
+        onConfirm: closeConfirmationModal,
+        loading: false,
+        error: null,
+        success: false,
+      });
+      setConfirmationModalOpen(true);
       return;
     }
 
@@ -657,6 +701,71 @@ const Games = () => {
     } else {
       alert("Pas de chemin trouvé pour ce jeu");
     }
+  };
+
+  const openDeleteGameModal = (game) => {
+    // Vérifier les permissions
+    if (!user || user.role !== "admin") {
+      alert("❌ Accès refusé - Admin uniquement");
+      return;
+    }
+
+    // Vérifier qu'il n'y a pas d'installation active
+    if (isInstalled(game._id)) {
+      alert("❌ Impossible - Le jeu est installé. Désinstallez-le d'abord.");
+      return;
+    }
+
+    setGameToDelete(game);
+    setDeleteGameResult(null);
+    setDeleteGameModalOpen(true);
+  };
+
+  const confirmDeleteGame = async () => {
+    if (!gameToDelete) return;
+
+    setDeleteGameLoading(true);
+
+    try {
+      const response = await deleteServerGame(gameToDelete._id);
+
+      // Play success sound
+      const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj==");
+      audio.play().catch(() => {});
+
+      setDeleteGameResult({
+        success: true,
+        cleanup: response.cleanup,
+        audit: response.audit,
+      });
+
+      // Recharger la liste après 2s
+      setTimeout(async () => {
+        const updatedGames = await getAllServerGames();
+        setGames(updatedGames || []);
+
+        if (selectedGame?._id === gameToDelete._id) {
+          setSelectedGame(updatedGames && updatedGames.length > 0 ? updatedGames[0] : null);
+        }
+      }, 2000);
+    } catch (error) {
+      setDeleteGameResult({
+        error: error.message || "Erreur inconnue",
+        details: error.response?.data?.message || "",
+      });
+    } finally {
+      setDeleteGameLoading(false);
+    }
+  };
+
+  const closeDeleteGameModal = () => {
+    setDeleteGameModalOpen(false);
+    setGameToDelete(null);
+    setDeleteGameResult(null);
+  };
+
+  const closeConfirmationModal = () => {
+    setConfirmationModalOpen(false);
   };
 
   if (loading) {
@@ -949,48 +1058,73 @@ const Games = () => {
 
                       if (!installed) {
                         return (
-                          <button
-                            onClick={() => handleInstallGame(selectedGame)}
-                            disabled={isInstalling}
-                            className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border transition-all duration-300 md:col-span-2 lg:col-span-4 ${
-                              isInstalling
-                                ? "border-blue-500/70 scale-95"
-                                : "border-slate-700/50 hover:border-blue-500/50 hover:scale-[1.02]"
-                            }`}
-                          >
-                            <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent transition-opacity duration-300 ${
-                              isInstalling ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                            }`} />
-                            <div className="relative z-10 text-center">
-                              <div className="flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-xl mx-auto mb-4">
-                                {isInstalling ? (
-                                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent"></div>
-                                ) : (
-                                  <svg
-                                    className="w-8 h-8 text-blue-400 group-hover:animate-bounce"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                                    />
-                                  </svg>
-                                )}
+                          <>
+                            <button
+                              onClick={() => handleInstallGame(selectedGame)}
+                              disabled={isInstalling}
+                              className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border transition-all duration-300 ${
+                                user?.role === "admin" ? "md:col-span-2 lg:col-span-3" : "md:col-span-2 lg:col-span-4"
+                              } ${
+                                isInstalling
+                                  ? "border-blue-500/70 scale-95"
+                                  : "border-slate-700/50 hover:border-blue-500/50 hover:scale-[1.02]"
+                              }`}
+                            >
+                              <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent transition-opacity duration-300 ${
+                                isInstalling ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                              }`} />
+                              <div className="relative z-10 text-center">
+                                <div className="flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-xl mx-auto mb-4">
+                                  {isInstalling ? (
+                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent"></div>
+                                  ) : (
+                                    <svg
+                                      className="w-8 h-8 text-blue-400 group-hover:animate-bounce"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                                      />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="text-xl font-bold text-white mb-2">
+                                  {isInstalling ? "Démarrage..." : "Installer le jeu"}
+                                </div>
+                                <div className="text-sm text-slate-400">
+                                  {isInstalling
+                                    ? "Redirection vers la page de téléchargements"
+                                    : `Télécharger et installer (${selectedGame.sizeMB} MB)`}
+                                </div>
                               </div>
-                              <div className="text-xl font-bold text-white mb-2">
-                                {isInstalling ? "Démarrage..." : "Installer le jeu"}
-                              </div>
-                              <div className="text-sm text-slate-400">
-                                {isInstalling
-                                  ? "Redirection vers la page de téléchargements"
-                                  : `Télécharger et installer (${selectedGame.sizeMB} MB)`}
-                              </div>
-                            </div>
-                          </button>
+                            </button>
+
+                            {/* Admin: Delete Server Game Button */}
+                            {user?.role === "admin" && (
+                              <button
+                                onClick={() => openDeleteGameModal(selectedGame)}
+                                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300"
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                <div className="relative z-10 text-center">
+                                  <div className="flex items-center justify-center w-16 h-16 bg-red-500/20 rounded-xl mx-auto mb-4">
+                                    <FiTrash2 className="text-red-400 text-3xl" />
+                                  </div>
+                                  <div className="text-xl font-bold text-white mb-2">
+                                    Supprimer du serveur
+                                  </div>
+                                  <div className="text-sm text-slate-400">
+                                    Admin uniquement
+                                  </div>
+                                </div>
+                              </button>
+                            )}
+                          </>
                         );
                       }
 
@@ -1393,6 +1527,35 @@ const Games = () => {
         }}
         onConfirm={handleInstallPathConfirm}
         gameName={gameToInstall?.name}
+      />
+
+      {/* Modal de suppression de jeu serveur */}
+      <DeleteGameModal
+        isOpen={deleteGameModalOpen}
+        onClose={closeDeleteGameModal}
+        onConfirm={confirmDeleteGame}
+        game={gameToDelete}
+        loading={deleteGameLoading}
+        result={deleteGameResult}
+      />
+
+      {/* Modal de confirmation générique */}
+      <ConfirmationModal
+        isOpen={confirmationModalOpen}
+        onClose={closeConfirmationModal}
+        onConfirm={
+          confirmationData.onConfirm ? () => confirmationData.onConfirm() : closeConfirmationModal
+        }
+        title={confirmationData.title}
+        message={confirmationData.message}
+        confirmText={confirmationData.confirmText}
+        cancelText={confirmationData.cancelText}
+        confirmColor={confirmationData.confirmColor}
+        icon={confirmationData.icon}
+        showLockInfo={confirmationData.showLockInfo}
+        loading={confirmationData.loading}
+        error={confirmationData.error}
+        success={confirmationData.success}
       />
     </div>
   );
