@@ -27,6 +27,7 @@ import UninstallModal from "../components/UninstallModal";
 import InstallPathModal from "../components/InstallPathModal";
 import DeleteGameModal from "../components/DeleteGameModal";
 import ConfirmationModal from "../components/ConfirmationModal";
+import AddGameModal from "../components/AddGameModal";
 import dayjs from "dayjs";
 import {
   FiBarChart2,
@@ -41,6 +42,7 @@ import {
   FiZap,
   FiSearch,
   FiWifiOff,
+  FiPlus,
 } from "react-icons/fi";
 
 const Games = () => {
@@ -92,6 +94,9 @@ const Games = () => {
     error: null,
     success: false,
   });
+
+  // États pour la modal d'ajout de jeu (admin only)
+  const [addGameModalOpen, setAddGameModalOpen] = useState(false);
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
   const { isOnline } = useConnection();
@@ -768,6 +773,16 @@ const Games = () => {
     setConfirmationModalOpen(false);
   };
 
+  const handleAddGameSuccess = async () => {
+    // Recharger la liste des jeux après l'ajout
+    try {
+      const updatedGames = await getAllServerGames();
+      setGames(updatedGames || []);
+    } catch (error) {
+      console.error("Erreur lors du rechargement des jeux:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-900">
@@ -935,8 +950,19 @@ const Games = () => {
           })}
         </div>
 
-        {/* Footer avec statistiques */}
-        <div className="p-4 border-t border-gray-800">
+        {/* Footer avec statistiques et bouton admin */}
+        <div className="p-4 border-t border-gray-800 space-y-3">
+          {/* Bouton Ajouter un jeu (Admin uniquement) */}
+          {user?.role === "admin" && (
+            <button
+              onClick={() => setAddGameModalOpen(true)}
+              className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/50 flex items-center justify-center gap-2"
+            >
+              <FiPlus className="text-lg" />
+              Ajouter un jeu
+            </button>
+          )}
+
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">{games.length} jeux</span>
             <span className="text-green-400 font-medium">{installedGames.length} installés</span>
@@ -1556,6 +1582,13 @@ const Games = () => {
         loading={confirmationData.loading}
         error={confirmationData.error}
         success={confirmationData.success}
+      />
+
+      {/* Modal d'ajout de jeu (admin only) */}
+      <AddGameModal
+        isOpen={addGameModalOpen}
+        onClose={() => setAddGameModalOpen(false)}
+        onSuccess={handleAddGameSuccess}
       />
     </div>
   );
