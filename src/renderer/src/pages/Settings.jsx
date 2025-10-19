@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   FiSettings,
   FiUser,
@@ -9,12 +10,12 @@ import {
   FiFolder,
   FiCheck,
 } from "react-icons/fi";
+import { useAuth } from "../contexts/authContext";
 
 const SettingsPage = () => {
   const [theme, setTheme] = useState("dark");
   const [downloadPath, setDownloadPath] = useState("");
-  const [username, setUsername] = useState("JohnDoe");
-  const [savedNotification, setSavedNotification] = useState(false);
+  const { user } = useAuth();
 
   // Change le thème (clair/sombre)
   const handleThemeChange = () => {
@@ -29,22 +30,26 @@ const SettingsPage = () => {
       if (newPath) {
         setDownloadPath(newPath);
         window.store.set("downloadPath", newPath);
-        showSavedNotification();
       }
     } catch (error) {
       console.error("Error selecting/creating folder:", error);
+      toast.error("Erreur", {
+        description: "Impossible de sélectionner le dossier",
+      });
     }
-  };
-
-  const showSavedNotification = () => {
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
   };
 
   // Sauvegarder les paramètres
   const handleSaveSettings = () => {
-    window.store.set("username", username);
-    showSavedNotification();
+    try {
+      toast.success("Paramètres sauvegardés", {
+        description: "Vos modifications ont été enregistrées avec succès",
+      });
+    } catch (error) {
+      toast.error("Erreur de sauvegarde", {
+        description: "Impossible de sauvegarder les paramètres",
+      });
+    }
   };
 
   useEffect(() => {
@@ -82,19 +87,6 @@ const SettingsPage = () => {
             </p>
           </div>
 
-          {/* Notification de sauvegarde */}
-          {savedNotification && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mb-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4 flex items-center gap-3"
-            >
-              <FiCheck className="text-white text-xl" />
-              <span className="font-medium">Paramètres sauvegardés avec succès !</span>
-            </motion.div>
-          )}
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Section Compte */}
             <motion.div
@@ -119,7 +111,7 @@ const SettingsPage = () => {
                     </span>
                     <input
                       type="text"
-                      value={username}
+                      value={user.username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                       placeholder="Votre nom d'utilisateur"
@@ -171,7 +163,9 @@ const SettingsPage = () => {
                           </>
                         )}
                       </span>
-                      <span className="text-sm text-gray-400">Cliquer pour changer</span>
+                      <span className="text-sm text-gray-400">
+                        Cliquer pour changer
+                      </span>
                     </button>
                   </label>
                 </div>
@@ -191,7 +185,9 @@ const SettingsPage = () => {
                   <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-lg">
                     <FiDownload className="text-green-400 text-xl" />
                   </div>
-                  <h3 className="text-xl font-bold text-white">Téléchargements</h3>
+                  <h3 className="text-xl font-bold text-white">
+                    Téléchargements
+                  </h3>
                 </div>
 
                 <div className="space-y-3">

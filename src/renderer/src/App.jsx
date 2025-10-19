@@ -104,13 +104,23 @@ export default function App() {
               </div>
             </div>
             <Toaster
-              position="bottom-right"
+              position="top-right"
+              expand={true}
+              richColors
+              closeButton
               toastOptions={{
+                duration: 4000,
                 style: {
-                  background: '#1e293b',
+                  background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
                   color: '#f1f5f9',
-                  border: '1px solid #334155',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
                 },
+                className: 'sonner-toast',
+                descriptionClassName: 'sonner-description',
               }}
             />
           </Router>

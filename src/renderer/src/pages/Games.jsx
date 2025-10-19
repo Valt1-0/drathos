@@ -29,6 +29,7 @@ import DeleteGameModal from "../components/DeleteGameModal";
 import ConfirmationModal from "../components/ConfirmationModal";
 import AddGameModal from "../components/AddGameModal";
 import dayjs from "dayjs";
+import { toast } from "sonner";
 import {
   FiBarChart2,
   FiClock,
@@ -505,6 +506,9 @@ const Games = () => {
 
       if (!result.success) {
         console.error("Échec du lancement:", result.error);
+        toast.error("Échec du lancement", {
+          description: `Impossible de lancer "${game.name}". Vérifiez que le jeu est correctement installé.`,
+        });
         setPlayingGames((prev) => {
           const newSet = new Set(prev);
           newSet.delete(game._id);
@@ -513,6 +517,9 @@ const Games = () => {
       }
     } catch (error) {
       console.error("Erreur lors du lancement de", game.name, ":", error);
+      toast.error("Erreur de lancement", {
+        description: `Une erreur est survenue lors du lancement de "${game.name}"`,
+      });
       setPlayingGames((prev) => {
         const newSet = new Set(prev);
         newSet.delete(game._id);
@@ -682,14 +689,27 @@ const Games = () => {
 
       if (!result.success) {
         console.error("Échec de la désinstallation:", result.error);
+        toast.error("Désinstallation échouée", {
+          description: `Impossible de désinstaller "${game.name}". ${result.error || ''}`,
+          duration: 5000,
+        });
         setUninstalling((prev) => {
           const newSet = new Set(prev);
           newSet.delete(game._id);
           return newSet;
         });
+      } else {
+        toast.success("Désinstallation réussie", {
+          description: `"${game.name}" a été désinstallé avec succès`,
+          duration: 4000,
+        });
       }
     } catch (error) {
       console.error("Erreur lors de la désinstallation:", error);
+      toast.error("Erreur de désinstallation", {
+        description: `Une erreur est survenue lors de la désinstallation de "${game.name}"`,
+        duration: 5000,
+      });
       setUninstalling((prev) => {
         const newSet = new Set(prev);
         newSet.delete(game._id);
