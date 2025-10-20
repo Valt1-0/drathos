@@ -25,6 +25,7 @@ export const addGameToServer = async (
   isPublic,
   igdbId,
   onProgress = null,
+  executableName = null,
 ) => {
   try {
     const serverAddress = await window.store.get("serverAddress");
@@ -38,6 +39,9 @@ export const addGameToServer = async (
       formData.append("version", version);
       formData.append("isPublic", isPublic);
       formData.append("igdbId", igdbId);
+      if (executableName) {
+        formData.append("executableName", executableName);
+      }
 
       xhr.open("POST", url, true);
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);

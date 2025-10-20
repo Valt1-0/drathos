@@ -14,7 +14,15 @@ import {
   FiUnlock,
   FiAlertTriangle,
   FiCheckCircle,
+  FiCpu,
 } from "react-icons/fi";
+import { FaWindows, FaLinux, FaApple } from "react-icons/fa";
+
+const PLATFORM_CONFIG = {
+  windows: { icon: FaWindows, color: 'text-blue-400', label: 'Windows' },
+  linux: { icon: FaLinux, color: 'text-yellow-400', label: 'Linux' },
+  mac: { icon: FaApple, color: 'text-gray-400', label: 'Mac' }
+};
 
 const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -24,6 +32,9 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const [selectedGame, setSelectedGame] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [version, setVersion] = useState("1.0.0");
+  const [executableName, setExecutableName] = useState("");
+  const [availableExecutables, setAvailableExecutables] = useState([]);
+  const [isLoadingExecutables, setIsLoadingExecutables] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadState, setUploadState] = useState("idle"); // idle, uploading, success, error
@@ -58,6 +69,32 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
     setQuery(game.name);
   };
 
+  const handleSelectArchive = async () => {
+    setIsLoadingExecutables(true);
+    setAvailableExecutables([]);
+
+    try {
+      const result = await window.api.selectAndScanArchive();
+      if (result.canceled || !result.success) return;
+
+      setZipFile({ name: result.fileName, path: result.filePath });
+      setAvailableExecutables(result.executables || []);
+
+      // Auto-sélection du meilleur exécutable
+      const windowsExecs = result.executables?.filter(e => e.platform === 'windows') || [];
+      if (windowsExecs.length === 1) {
+        setExecutableName(windowsExecs[0].path);
+      } else if (result.executables?.length === 1) {
+        setExecutableName(result.executables[0].path);
+      }
+    } catch (error) {
+      console.error("[AddGameModal] Erreur scan archive:", error);
+      setAvailableExecutables([]);
+    } finally {
+      setIsLoadingExecutables(false);
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedGame || !zipFile) {
       setErrorMessage("Veuillez sélectionner un jeu et un fichier");
@@ -69,25 +106,33 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
       setUploadState("uploading");
       setErrorMessage("");
 
+      let fileToUpload = zipFile;
+
+      // Convertir le path en File object si nécessaire
+      if (zipFile.path && !zipFile.size) {
+        const fileData = await window.api.readArchiveFile(zipFile.path);
+        if (!fileData.success) throw new Error(fileData.error);
+
+        const blob = new Blob([fileData.buffer], { type: 'application/octet-stream' });
+        fileToUpload = new File([blob], zipFile.name, { type: 'application/octet-stream' });
+      }
+
       await addGameToServer(
-        zipFile,
+        fileToUpload,
         version,
         isPublic,
         selectedGame.id,
         setUploadProgress,
+        executableName || null
       );
 
       setUploadState("success");
-
-      // Attendre 2 secondes avant de fermer et notifier le parent
       setTimeout(() => {
-        if (onSuccess) {
-          onSuccess();
-        }
+        onSuccess?.();
         handleClose();
       }, 2000);
     } catch (err) {
-      console.error("Erreur d'upload :", err);
+      console.error("[AddGameModal] Erreur upload:", err);
       setErrorMessage(err.message || "Erreur lors de l'ajout du jeu");
       setUploadState("error");
       setUploadProgress(0);
@@ -95,14 +140,16 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    if (uploadState === "uploading") {
-      return; // Ne pas fermer pendant l'upload
-    }
+    if (uploadState === "uploading") return;
 
+    // Reset tous les états
     setUploadProgress(0);
     setSelectedGame(null);
     setZipFile(null);
     setVersion("1.0.0");
+    setExecutableName("");
+    setAvailableExecutables([]);
+    setIsLoadingExecutables(false);
     setQuery("");
     setSuggestions([]);
     setUploadState("idle");
@@ -372,30 +419,33 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           Fichier du jeu
                         </label>
                         <div className="relative">
-                          <input
-                            type="file"
-                            accept=".zip,.7z,.rar,.tar,.gz"
-                            onChange={(e) => setZipFile(e.target.files[0])}
-                            className="hidden"
-                            id="file-upload"
-                          />
-                          <label
-                            htmlFor="file-upload"
-                            className={`flex items-center justify-center gap-3 w-full p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-300 group ${
+                          <button
+                            type="button"
+                            onClick={handleSelectArchive}
+                            disabled={isLoadingExecutables}
+                            className={`flex items-center justify-center gap-3 w-full p-4 rounded-xl border-2 border-dashed transition-all duration-300 group ${
                               zipFile
                                 ? "bg-green-500/10 border-green-500/50"
                                 : "bg-slate-800/50 border-slate-700 hover:border-blue-500"
-                            }`}
+                            } ${isLoadingExecutables ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
                           >
-                            <FiUpload className={`text-xl transition-colors ${
-                              zipFile ? "text-green-400" : "text-slate-400 group-hover:text-blue-400"
-                            }`} />
+                            {isLoadingExecutables ? (
+                              <FiLoader className="text-xl text-blue-400 animate-spin" />
+                            ) : (
+                              <FiUpload className={`text-xl transition-colors ${
+                                zipFile ? "text-green-400" : "text-slate-400 group-hover:text-blue-400"
+                              }`} />
+                            )}
                             <span className={`transition-colors ${
                               zipFile ? "text-white" : "text-slate-400 group-hover:text-white"
                             }`}>
-                              {zipFile ? zipFile.name : "Choisir un fichier (.zip, .7z, .rar, .tar, .gz)"}
+                              {isLoadingExecutables
+                                ? "Analyse en cours..."
+                                : zipFile
+                                  ? zipFile.name
+                                  : "Choisir un fichier (.zip, .7z, .rar, .tar, .gz)"}
                             </span>
-                          </label>
+                          </button>
                         </div>
                       </div>
 
@@ -412,6 +462,104 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           placeholder="1.0.0"
                           className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
                         />
+                      </div>
+
+                      {/* Executable Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                          <FiCpu />
+                          Exécutable à lancer (optionnel)
+                        </label>
+
+
+                        {/* Executables Found - Liste groupée */}
+                        {!isLoadingExecutables && availableExecutables.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-green-400 flex items-center gap-1">
+                                <FiCheck className="text-sm" />
+                                {availableExecutables.length} exécutable(s) trouvé(s)
+                              </p>
+                              {executableName && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExecutableName("")}
+                                  className="text-xs text-slate-400 hover:text-white transition-colors"
+                                >
+                                  Effacer la sélection
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-slate-800 rounded-xl">
+                              {Object.entries(PLATFORM_CONFIG).map(([platform, config]) => {
+                                const execs = availableExecutables.filter(e => e.platform === platform);
+                                if (execs.length === 0) return null;
+
+                                const { icon: Icon, color, label } = config;
+
+                                return (
+                                  <div key={platform} className="space-y-1">
+                                    <div className={`flex items-center gap-2 px-2 py-1 ${color} text-xs font-semibold`}>
+                                      <Icon className="text-sm" />
+                                      {label} ({execs.length})
+                                    </div>
+                                    {execs.map((exe, index) => (
+                                      <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => setExecutableName(exe.path)}
+                                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                                          executableName === exe.path
+                                            ? 'bg-blue-500/20 border-2 border-blue-500'
+                                            : 'bg-slate-800/50 border border-slate-700 hover:border-slate-600 hover:bg-slate-800'
+                                        }`}
+                                      >
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-medium text-white text-sm truncate">{exe.name}</div>
+                                            <div className="text-xs text-slate-400 mt-1 break-all">{exe.path}</div>
+                                          </div>
+                                          {executableName === exe.path && (
+                                            <FiCheck className="text-blue-400 flex-shrink-0 mt-1" />
+                                          )}
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* No Executables Found or No File - Manual Input */}
+                        {!isLoadingExecutables && zipFile && availableExecutables.length === 0 && (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={executableName}
+                              onChange={(e) => setExecutableName(e.target.value)}
+                              placeholder="ex: game.exe ou bin/server.exe"
+                              className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white placeholder-slate-500"
+                            />
+                            <p className="text-xs text-amber-400 flex items-center gap-1">
+                              <FiAlertTriangle className="text-sm" />
+                              Aucun exécutable trouvé automatiquement
+                            </p>
+                          </div>
+                        )}
+
+                        {/* No File Selected Yet */}
+                        {!zipFile && (
+                          <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-500 text-sm">
+                            Sélectionnez d'abord un fichier pour détecter les exécutables
+                          </div>
+                        )}
+
+                        <p className="text-xs text-slate-400 mt-2">
+                          Si vide, le jeu détectera automatiquement l'exécutable au lancement
+                        </p>
                       </div>
 
                       {/* Public/Private Toggle */}

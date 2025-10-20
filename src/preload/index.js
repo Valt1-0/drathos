@@ -36,6 +36,12 @@ const api = {
     ipcRenderer.invoke("listGameDirectory", gamePath),
   // Ouvrir le dossier d'un jeu
   openGameFolder: (gamePath) => ipcRenderer.invoke("openGameFolder", gamePath),
+  // Lister le contenu d'une archive (zip, 7z, rar, tar, etc.)
+  listArchiveFiles: (filePath) => ipcRenderer.invoke("listArchiveFiles", filePath),
+  // Sélectionner et scanner une archive
+  selectAndScanArchive: () => ipcRenderer.invoke("selectAndScanArchive"),
+  // Lire un fichier archive en tant que buffer
+  readArchiveFile: (filePath) => ipcRenderer.invoke("readArchiveFile", filePath),
   // Obtenir les infos d'un processus de jeu
   getGameProcess: (gameId) => ipcRenderer.invoke("getGameProcess", gameId),
   // Vérifier si un jeu est en cours

@@ -294,6 +294,8 @@ ipcMain.handle("installGame", async (event, { serverGame }) => {
 
 // === GAME DETECTION ===
 import { SimpleExecutableDetector } from "./simpleExecutableDetector.js";
+import Seven from "node-7z";
+import sevenBin from "7zip-bin";
 
 let detectorInstance = null;
 const getDetector = () => {
@@ -525,6 +527,110 @@ ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
       error: error.message,
     };
   }
+});
+
+// === SCAN D'ARCHIVES ===
+
+const EXECUTABLE_PATTERNS = {
+  windows: ['.exe', '.bat', '.cmd'],
+  linux: ['.sh', '.run', '.bin', '.AppImage'],
+  mac: ['.app', '.command']
+};
+
+const detectExecutablePlatform = (filePath) => {
+  const lowerPath = filePath.toLowerCase();
+  for (const [platform, extensions] of Object.entries(EXECUTABLE_PATTERNS)) {
+    if (extensions.some(ext => lowerPath.endsWith(ext))) return platform;
+  }
+  return null;
+};
+
+const scanArchiveForExecutables = async (filePath) => {
+  const allExtensions = Object.values(EXECUTABLE_PATTERNS).flat();
+  const executables = [];
+
+  const stream = Seven.list(filePath, { $bin: sevenBin.path7za });
+
+  return new Promise((resolve) => {
+    stream.on('data', (data) => {
+      if (!data.file || data.file.endsWith('/') || data.file.endsWith('\\')) return;
+
+      const fileName = data.file.split(/[/\\]/).pop();
+      const isExecutable = allExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+
+      if (isExecutable) {
+        const platform = detectExecutablePlatform(data.file);
+        if (platform) {
+          executables.push({
+            path: data.file,
+            platform,
+            name: fileName,
+            size: data.size || 0
+          });
+        }
+      }
+    });
+
+    stream.on('end', () => {
+      executables.sort((a, b) => {
+        if (a.platform === 'windows' && b.platform !== 'windows') return -1;
+        if (a.platform !== 'windows' && b.platform === 'windows') return 1;
+        return a.path.length - b.path.length;
+      });
+
+      console.log(`[Main] ✅ ${executables.length} exécutable(s) trouvé(s)`);
+      resolve({ success: true, executables, count: executables.length });
+    });
+
+    stream.on('error', (err) => {
+      console.error(`[Main] ❌ Erreur lecture archive:`, err);
+      resolve({ success: false, error: err.message, executables: [] });
+    });
+  });
+};
+
+ipcMain.handle("readArchiveFile", async (event, filePath) => {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: "Fichier introuvable" };
+    }
+    const buffer = await fs.promises.readFile(filePath);
+    return { success: true, buffer };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("selectAndScanArchive", async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ["openFile"],
+      filters: [
+        { name: "Archives", extensions: ["zip", "7z", "rar", "tar", "gz", "bz2", "xz"] },
+        { name: "Tous les fichiers", extensions: ["*"] }
+      ],
+      title: "Sélectionner une archive"
+    });
+
+    if (result.canceled || !result.filePaths.length) {
+      return { success: false, canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    const scanResult = await scanArchiveForExecutables(filePath);
+
+    return {
+      ...scanResult,
+      filePath,
+      fileName: path.basename(filePath)
+    };
+  } catch (error) {
+    return { success: false, error: error.message, executables: [] };
+  }
+});
+
+ipcMain.handle("listArchiveFiles", async (event, filePath) => {
+  return await scanArchiveForExecutables(filePath);
 });
 
 //------------------------------\\
