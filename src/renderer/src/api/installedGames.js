@@ -1,16 +1,36 @@
-// drathos/src/renderer/src/api/installedGames.js
-
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
 
 export async function getInstalledGames() {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
 
+  // Charger le cache local (object)
+  const cachedGamesObject = await window.store.get("installedGamesCache", {});
+
   if (!token) {
-    console.error("No token found in store!");
-    // Essayer de charger depuis le cache local même sans token
-    const cachedGames = await window.store.get("installedGamesCache");
-    return cachedGames || [];
+    console.debug("[API] No token - loading from local cache");
+    const gamesArray = Object.entries(cachedGamesObject).map(([gameId, data]) => ({
+      _id: `installed_${gameId}`,
+      serverGameId: {
+        _id: gameId,
+        name: data.name,
+        summary: data.summary,
+        storyline: data.storyline,
+        coverUrl: data.coverUrl,
+        genres: data.genres,
+        platforms: data.platforms,
+        rating: data.rating,
+        aggregatedRating: data.aggregatedRating,
+        releaseDate: data.releaseDate,
+        developer: data.developer,
+        publisher: data.publisher,
+      },
+      path: data.path,
+      version: data.version,
+      stats: data.stats,
+      installedAt: data.installedAt,
+    }));
+    return gamesArray;
   }
 
   try {
@@ -27,27 +47,58 @@ export async function getInstalledGames() {
       throw new Error("Failed to fetch installed games");
     }
 
-    const games = await response.json();
+    const serverGames = await response.json();
 
-    // Mettre à jour le cache local pour le mode hors ligne
-    await window.store.set("installedGamesCache", games);
-    console.debug(`[API] ${games.length} installed game(s) fetched and cached`);
+    // Merger avec le cache local pour garder executable et stats locales
+    const mergedGames = serverGames.map((serverGame) => {
+      const gameId = serverGame.serverGameId?._id || serverGame.serverGameId;
+      const localData = cachedGamesObject[gameId];
 
-    return games;
+      if (localData) {
+        // Utiliser les stats locales qui sont plus à jour
+        return {
+          ...serverGame,
+          stats: localData.stats || serverGame.stats,
+        };
+      }
+
+      return serverGame;
+    });
+
+    console.debug(`[API] ${mergedGames.length} installed game(s) fetched and merged`);
+    return mergedGames;
   } catch (error) {
-    // Mode hors ligne : utiliser le cache sans afficher d'erreur
     console.debug("[API] Server unavailable, loading from cache");
 
-    // Fallback vers le cache local en cas d'erreur réseau
-    const cachedGames = await window.store.get("installedGamesCache");
+    const gamesArray = Object.entries(cachedGamesObject).map(([gameId, data]) => ({
+      _id: `installed_${gameId}`,
+      serverGameId: {
+        _id: gameId,
+        name: data.name,
+        summary: data.summary,
+        storyline: data.storyline,
+        coverUrl: data.coverUrl,
+        genres: data.genres,
+        platforms: data.platforms,
+        rating: data.rating,
+        aggregatedRating: data.aggregatedRating,
+        releaseDate: data.releaseDate,
+        developer: data.developer,
+        publisher: data.publisher,
+      },
+      path: data.path,
+      version: data.version,
+      stats: data.stats,
+      installedAt: data.installedAt,
+    }));
 
-    if (cachedGames && cachedGames.length > 0) {
-      console.debug(`[API] ${cachedGames.length} game(s) loaded from cache`);
-      return cachedGames;
+    if (gamesArray.length > 0) {
+      console.debug(`[API] ${gamesArray.length} game(s) loaded from cache`);
+    } else {
+      console.debug("[API] No games in cache");
     }
 
-    console.debug("[API] No games in cache");
-    return [];
+    return gamesArray;
   }
 }
 
@@ -100,20 +151,5 @@ export async function stopGame(gameId) {
   } catch (error) {
     console.error("Error stopping game:", error);
     throw error;
-  }
-}
-
-/**
- * Met à jour le cache local des jeux installés
- * Utilisé après installation/désinstallation pour maintenir la cohérence hors ligne
- */
-export async function updateInstalledGamesCache(games) {
-  try {
-    await window.store.set("installedGamesCache", games);
-    console.log(`[Cache] Mise à jour du cache: ${games.length} jeu(x)`);
-    return true;
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour du cache:", error);
-    return false;
   }
 }

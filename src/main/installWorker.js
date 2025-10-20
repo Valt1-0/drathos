@@ -1,14 +1,7 @@
-// src/main/installWorker.js - VERSION SIMPLIFIÉE 🚀
-
 import { parentPort, workerData } from "worker_threads";
 import { GameEngine } from "./gameEngine.js";
 
-/**
- * Worker thread pour installation de jeux
- * Architecture simplifiée: Worker -> GameEngine directement
- */
 async function runInstallation() {
-  // Instance unique du moteur d'installation
   const installationEngine = new GameEngine();
 
   try {
@@ -16,14 +9,18 @@ async function runInstallation() {
       `[InstallWorker] 🚀 Démarrage installation: ${workerData.serverGame.name}`
     );
 
-    // Lancer l'installation complète avec le moteur unifié
     const result = await installationEngine.installGame(workerData.serverGame, {
-      // Interface store simplifiée
       store: {
         get: (key) => workerData.storeData[key],
+        set: (key, value) => {
+          parentPort.postMessage({
+            type: "store-set",
+            key: key,
+            value: value,
+          });
+          workerData.storeData[key] = value;
+        },
       },
-
-      // Callback de progression vers le processus principal
       sendProgress: (progressData) => {
         parentPort.postMessage(progressData);
       },

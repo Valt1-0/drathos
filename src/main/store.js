@@ -10,13 +10,9 @@ const schema = {
   downloadPath: {
     type: "string",
   },
-  gameStats: {
+  installedGamesCache: {
     type: "object",
     default: {},
-  },
-  installedGamesCache: {
-    type: "array",
-    default: [],
   },
 };
 

@@ -1,6 +1,3 @@
-// src/renderer/src/pages/Games.jsx - Interface Steam-like 🎮
-// Fixed: 401 error handling + Object rendering issues
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
@@ -8,10 +5,8 @@ import {
   getInstalledGames,
   stopGame,
   launchGame as launchGameAPI,
-  updateInstalledGamesCache,
 } from "../api/installedGames";
 import {
-  getMergedStats,
   syncStatsToServer,
   formatStats as formatStatsAPI,
   saveLocalStats,
@@ -133,71 +128,76 @@ const Games = () => {
     return game.platforms.map(extractPlatformName);
   };
 
-  const loadGameStats = useCallback(async () => {
-    console.log("[Games] 🔄 Loading stats for all installed games...");
-    const gameIds = installedGames
-      .map((g) => g.serverGameId?._id)
-      .filter(Boolean);
-    const stats = {};
-
-    for (const gameId of gameIds) {
-      // Utiliser l'API centralisée pour charger et merger les stats
-      const mergedStats = await getMergedStats(gameId);
-      if (mergedStats) {
-        stats[gameId] = formatStatsAPI(mergedStats);
-      }
-    }
-
-    console.log("[Games] ✅ Stats loaded:", stats);
-    setGameStats(stats);
-  }, [installedGames]);
-
   useEffect(() => {
-    const fetchGames = async () => {
+    const loadGames = async () => {
+      const cachedGamesObject = await window.store.get("installedGamesCache", {});
+      const cachedGamesArray = Object.entries(cachedGamesObject).map(([gameId, data]) => ({
+        _id: `installed_${gameId}`,
+        serverGameId: {
+          _id: gameId,
+          name: data.name,
+          summary: data.summary,
+          storyline: data.storyline,
+          coverUrl: data.coverUrl,
+          genres: data.genres,
+          platforms: data.platforms,
+          rating: data.rating,
+          aggregatedRating: data.aggregatedRating,
+          releaseDate: data.releaseDate,
+          developer: data.developer,
+          publisher: data.publisher,
+        },
+        path: data.path,
+        version: data.version,
+        stats: data.stats,
+        installedAt: data.installedAt,
+      }));
+
+      if (cachedGamesArray.length > 0) {
+        setInstalledGames(cachedGamesArray);
+        const gamesFromCache = cachedGamesArray.map(g => g.serverGameId);
+        setGames(gamesFromCache);
+        setSelectedGame(gamesFromCache[0]);
+
+        const stats = {};
+        Object.entries(cachedGamesObject).forEach(([gameId, data]) => {
+          if (data.stats) {
+            stats[gameId] = formatStatsAPI(data.stats);
+          }
+        });
+        setGameStats(stats);
+      }
+
+      setLoading(false);
+
       try {
-        // Fetch server games
-        const allGames = await getAllServerGames();
+        const [allGames, installed, activeGames] = await Promise.all([
+          getAllServerGames(),
+          getInstalledGames(),
+          gameManager.getActiveGames(),
+        ]);
 
-        // Try to fetch installed games, but don't fail if unauthorized
-        const installed = await getInstalledGames();
-        setInstalledGames(installed || []);
-
-        // Mode hors ligne : si aucun jeu serveur, extraire les jeux depuis les installed
-        let finalGames = allGames || [];
-        if ((!finalGames || finalGames.length === 0) && installed && installed.length > 0) {
-          // Extraire les données serverGameId de chaque jeu installé
-          finalGames = installed
-            .filter(g => g.serverGameId) // S'assurer que serverGameId existe
-            .map(g => g.serverGameId);
+        if (installed) {
+          setInstalledGames(installed);
         }
 
-        setGames(finalGames);
+        if (allGames && allGames.length > 0) {
+          setGames(allGames);
+          if (!selectedGame) {
+            setSelectedGame(allGames[0]);
+          }
+        }
 
-        // Initialiser l'état des jeux en cours
-        const activeGames = await gameManager.getActiveGames();
         const playingSet = new Set(activeGames.map((game) => game.gameId));
         setPlayingGames(playingSet);
-
-        // Sélectionner le premier jeu par défaut
-        if (finalGames && finalGames.length > 0) {
-          setSelectedGame(finalGames[0]);
-        }
       } catch (err) {
-        console.debug("[Games] Error loading games:", err.message);
-        setError("Unable to load games. Please check your connection.");
-      } finally {
-        setLoading(false);
+        console.debug("[Games] Server unavailable:", err.message);
       }
     };
 
-    fetchGames();
+    loadGames();
   }, []);
 
-  useEffect(() => {
-    if (installedGames.length > 0) {
-      loadGameStats();
-    }
-  }, [installedGames]);
 
   // Écouter les changements de la queue de désinstallation
   useEffect(() => {
@@ -261,7 +261,6 @@ const Games = () => {
       try {
         const installed = await getInstalledGames();
         setInstalledGames(installed);
-        await updateInstalledGamesCache(installed);
       } catch (err) {
         console.warn("[Games] Erreur refresh:", err);
       }
@@ -282,54 +281,49 @@ const Games = () => {
 
       isProcessingStats.current = true;
 
-      // Formater la durée de session pour l'affichage
       const duration = data.sessionData.duration;
       const hours = Math.floor(duration / 3600);
       const minutes = Math.floor((duration % 3600) / 60);
       const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
       try {
-        // 1️⃣ Toujours sauvegarder localement d'abord
         const saveResult = await saveLocalStats(data.gameId, data.sessionData);
 
-        // 2️⃣ Essayer de synchroniser avec le serveur (envoyer les stats locales complètes)
         try {
           if (saveResult.success && saveResult.stats) {
-            // Envoyer au backend pour sync (via l'API centralisée)
             await syncStatsToServer(data.gameId, saveResult.stats, data.sessionData.duration);
-
           } else {
-            // Fallback : appeler l'ancienne méthode stopGame
             await stopGame(data.gameId);
           }
         } catch (error) {
-          // 🔄 Ajouter à la queue de retry pour synchronisation ultérieure
           if (saveResult.success && saveResult.stats) {
             await syncQueue.enqueue(data.gameId, saveResult.stats, data.sessionData.duration);
           }
 
-          // Notification de sauvegarde locale uniquement
           toast.info("Statistiques sauvegardées localement", {
             description: `Session de ${durationStr} sera synchronisée lors de la prochaine connexion`,
             duration: 4000,
           });
         }
 
-        // 3️⃣ Petit délai pour s'assurer que toutes les opérations sont terminées
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // 4️⃣ Recharger les stats avec merge automatique
-        await loadGameStats();
+        const cachedGamesObject = await window.store.get("installedGamesCache", {});
+        const stats = {};
+        Object.entries(cachedGamesObject).forEach(([gameId, gameData]) => {
+          if (gameData.stats) {
+            stats[gameId] = formatStatsAPI(gameData.stats);
+          }
+        });
+        setGameStats(stats);
       } catch (error) {
-        console.error("[Games] ❌ Erreur lors de la sauvegarde des stats:", error);
+        console.error("[Games] Erreur lors de la sauvegarde des stats:", error);
 
-        // Notification d'erreur
         toast.error("Erreur de sauvegarde des statistiques", {
           description: "Impossible d'enregistrer les données de la session",
           duration: 5000,
         });
       } finally {
-        // Augmentation du délai de protection à 2 secondes
         setTimeout(() => {
           isProcessingStats.current = false;
         }, 2000);
@@ -343,7 +337,7 @@ const Games = () => {
     return () => {
       // Cleanup listener
     };
-  }, [loadGameStats]);
+  }, []);
 
   // Gestionnaire global de changement de statut des jeux
   useEffect(() => {
@@ -395,10 +389,8 @@ const Games = () => {
 
         // Recharger la liste des jeux installés
         getInstalledGames()
-          .then(async (installed) => {
+          .then((installed) => {
             setInstalledGames(installed);
-            // Mettre à jour le cache après désinstallation
-            await updateInstalledGamesCache(installed);
           })
           .catch((err) => {
             console.warn("Could not refresh installed games:", err);
@@ -502,11 +494,15 @@ const Games = () => {
       // 2️⃣ Mettre à jour l'interface
       setPlayingGames((prev) => new Set([...prev, game._id]));
 
-      // 3️⃣ Lancer le processus du jeu (fonctionne hors ligne)
+      // 3️⃣ Récupérer executable depuis installedGamesCache
+      const cachedGames = await window.store.get("installedGamesCache", {});
+      const cachedData = cachedGames[game._id];
+
+      // 4️⃣ Lancer le processus du jeu (fonctionne hors ligne)
       const result = await gameManager.launchGame(
         game._id,
         installedData.path,
-        null,
+        cachedData?.executable || null, // Utiliser l'exécutable stocké dans le cache
         game.name
       );
 
@@ -612,8 +608,6 @@ const Games = () => {
             try {
               const installed = await getInstalledGames();
               setInstalledGames(installed);
-              // Mettre à jour le cache après installation
-              await updateInstalledGamesCache(installed);
             } catch (err) {
               console.warn("Could not refresh installed games:", err);
             }
@@ -1462,12 +1456,12 @@ const Games = () => {
                     <div className="space-y-3 text-sm">
                       <div>
                         <span className="text-gray-400">Développeur:</span>
-                        <p className="text-white">Inconnu</p>
+                        <p className="text-white">{selectedGame.developer || "Inconnu"}</p>
                       </div>
 
                       <div>
                         <span className="text-gray-400">Éditeur:</span>
-                        <p className="text-white">Inconnu</p>
+                        <p className="text-white">{selectedGame.publisher || "Inconnu"}</p>
                       </div>
 
                       <div>

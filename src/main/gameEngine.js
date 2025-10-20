@@ -1,6 +1,3 @@
-// src/main/gameEngine.js - SYSTÈME UNIFIÉ 🚀
-// Installation et Désinstallation de jeux
-
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -9,7 +6,6 @@ import { extractionEngine } from "./extractionEngine.js";
 
 export class GameEngine {
   constructor() {
-    // Configuration optimisée
     this.config = {
       chunkSize: 64 * 1024,
       bufferSize: 512 * 1024,
@@ -19,56 +15,38 @@ export class GameEngine {
       retryDelay: 1000,
     };
 
-    // État interne
-    this.activeDownloads = new Map(); // gameId -> downloadState
-    this.metrics = new Map(); // gameId -> metrics
+    this.activeDownloads = new Map();
+    this.metrics = new Map();
 
-    console.log(`[GameEngine] ✅ Système unifié initialisé`);
+    console.log(`[GameEngine] Système initialisé`);
   }
-
-  // ========================================
-  // INSTALLATION DE JEUX
-  // ========================================
-
-  /**
-   * 🎯 MÉTHODE PRINCIPALE - Installe un jeu complet
-   */
   async installGame(serverGame, { store, sendProgress }) {
     const gameId = serverGame._id;
 
     try {
-      console.log(`[GameEngine] 🚀 Installation: ${serverGame.name}`);
+      console.log(`[GameEngine] Installation: ${serverGame.name}`);
 
-      // Validation des paramètres
       if (!serverGame._id || !serverGame.zipFileName) {
         throw new Error("Données du jeu invalides");
       }
 
-      // Initialiser les paramètres depuis store
       this.initializeFromStore(store, sendProgress, gameId);
 
-      // Étape 1: Téléchargement
       const filePath = await this.downloadGameFile(serverGame);
-
-      // Étape 2: Extraction
       const extractPath = await this.extractGameFile(filePath, serverGame);
-
-      // Étape 3: Finalisation et enregistrement
       await this.finalizeInstallation(filePath, extractPath, serverGame);
 
-      console.log(`[GameEngine] ✅ Installation réussie: ${serverGame.name}`);
+      console.log(`[GameEngine] Installation réussie: ${serverGame.name}`);
 
-      // Nettoyage
       this.cleanupDownload(gameId);
 
       return { success: true, path: extractPath };
     } catch (error) {
       console.error(
-        `[GameEngine] ❌ Installation échouée: ${serverGame.name}`,
+        `[GameEngine] Installation échouée: ${serverGame.name}`,
         error
       );
 
-      // Envoyer l'erreur au frontend
       this.sendProgress({
         id: gameId,
         stage: "failed",
@@ -76,32 +54,19 @@ export class GameEngine {
         error: error.message,
       });
 
-      // Nettoyage en cas d'erreur
       this.cleanupDownload(gameId);
 
       return { success: false, error: error.message };
     }
   }
-
-  /**
-   * Initialise les paramètres depuis le store
-   */
   initializeFromStore(store, progressCallback, gameId) {
     this.store = store;
     this.sendProgress = progressCallback;
-
-    // Récupération des paramètres
     this.downloadPath = this.initializeDownloadPath(store);
     this.serverAddress = store.get("serverAddress");
     this.userToken = store.get("userToken");
-
-    // Initialiser les métriques pour ce téléchargement
     this.initializeMetrics(gameId);
   }
-
-  /**
-   * Initialise le dossier de téléchargement
-   */
   initializeDownloadPath(store) {
     let downloadPath = store.get("downloadPath");
 
@@ -129,13 +94,9 @@ export class GameEngine {
     return defaultPath;
   }
 
-  /**
-   * 📥 ÉTAPE 1: Téléchargement du fichier jeu
-   */
   async downloadGameFile(serverGame) {
     const gameId = serverGame._id;
 
-    // Detect archive extension from zipFileName
     const originalExtension = path.extname(serverGame.zipFileName).toLowerCase();
     const fileName = `${serverGame.name.replace(
       /[^a-zA-Z0-9]/g,
@@ -143,9 +104,7 @@ export class GameEngine {
     )}_${gameId}${originalExtension || ".zip"}`;
     const filePath = path.join(this.downloadPath, fileName);
 
-    console.log(`[GameEngine] 📥 Téléchargement: ${fileName}`);
-
-    // Marquer comme en cours de téléchargement
+    console.log(`[GameEngine] Téléchargement: ${fileName}`);
     this.activeDownloads.set(gameId, {
       stage: "downloading",
       filePath,
@@ -207,15 +166,13 @@ export class GameEngine {
 
       fileStream.end();
 
-      // Wait for the stream to finish writing
       await new Promise((resolve, reject) => {
         fileStream.on("finish", resolve);
         fileStream.on("error", reject);
       });
 
-      console.log(`[GameEngine] ✅ Téléchargement terminé: ${fileName}`);
+      console.log(`[GameEngine] Téléchargement terminé: ${fileName}`);
 
-      // Verify downloaded file integrity
       const downloadedSize = fs.statSync(filePath).size;
       if (totalSize > 0 && downloadedSize !== totalSize) {
         throw new Error(
@@ -223,13 +180,8 @@ export class GameEngine {
         );
       }
 
-      console.log(
-        `[GameEngine] ✅ Fichier vérifié: ${(downloadedSize / (1024 * 1024)).toFixed(2)} MB`
-      );
-
       return filePath;
     } catch (error) {
-      // Nettoyer le fichier partiel en cas d'erreur
       try {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
@@ -244,16 +196,12 @@ export class GameEngine {
     }
   }
 
-  /**
-   * 📦 ÉTAPE 2: Extraction du fichier jeu avec progression détaillée
-   */
   async extractGameFile(filePath, serverGame) {
     const gameId = serverGame._id;
     const extractPath = path.join(this.downloadPath, gameId);
 
-    console.log(`[GameEngine] 📦 Extraction: ${path.basename(filePath)}`);
+    console.log(`[GameEngine] Extraction: ${path.basename(filePath)}`);
 
-    // Créer le dossier d'extraction
     if (!fs.existsSync(extractPath)) {
       fs.mkdirSync(extractPath, { recursive: true });
     }
@@ -267,10 +215,9 @@ export class GameEngine {
 
     const fileExtension = extractionEngine.getFileExtension(filePath);
 
-    console.log(`[GameEngine] 🔍 Detected format: ${fileExtension}`);
+    console.log(`[GameEngine] Format détecté: ${fileExtension}`);
 
     try {
-      // Use the unified extraction engine
       if (extractionEngine.isSupported(fileExtension)) {
         return await extractionEngine.extract(
           filePath,
@@ -299,13 +246,10 @@ export class GameEngine {
   }
 
 
-  /**
-   * ✅ ÉTAPE 3: Finalisation et enregistrement
-   */
   async finalizeInstallation(filePath, extractPath, serverGame) {
     const gameId = serverGame._id;
 
-    console.log(`[GameEngine] ✅ Finalisation: ${serverGame.name}`);
+    console.log(`[GameEngine] Finalisation: ${serverGame.name}`);
 
     this.sendProgress({
       id: gameId,
@@ -314,17 +258,12 @@ export class GameEngine {
       message: "Finalisation...",
     });
 
-    // Supprimer fichier temporaire
     try {
       await fs.promises.unlink(filePath);
-      console.log(`[GameEngine] 🗑️ Fichier temporaire supprimé: ${filePath}`);
+      console.log(`[GameEngine] Fichier temporaire supprimé`);
     } catch (err) {
-      console.warn(
-        `[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`
-      );
+      console.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
     }
-
-    // Enregistrement dans l'API backend
     const decoded = jwtDecode(this.userToken);
     const response = await fetch(
       `http://${this.serverAddress}/api/installedGames/addInstalledGame`,
@@ -348,9 +287,42 @@ export class GameEngine {
       throw new Error(errorData?.message || `HTTP ${response.status}`);
     }
 
-    console.log(`[GameEngine] ✅ Jeu enregistré dans l'API`);
-
-    // Progression finale
+    console.log(`[GameEngine] Jeu enregistré dans l'API`);
+    const installedGamesCache = this.store.get("installedGamesCache", {});
+    installedGamesCache[gameId] = {
+      name: serverGame.name,
+      summary: serverGame.summary,
+      storyline: serverGame.storyline,
+      coverUrl: serverGame.coverUrl,
+      version: serverGame.version || "1.0.0",
+      sizeMB: serverGame.sizeMB,
+      executable: serverGame.executableName || null,
+      platforms: serverGame.platforms || [],
+      genres: (serverGame.genres || []).map(g => ({
+        name: g.name,
+        slug: g.slug
+      })),
+      rating: serverGame.rating || 0,
+      aggregatedRating: serverGame.aggregatedRating || 0,
+      releaseDate: serverGame.releaseDate,
+      developer: serverGame.developer,
+      publisher: serverGame.publisher,
+      path: extractPath,
+      installedAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+      stats: {
+        currentSession: {
+          startTime: null,
+          isPlaying: false,
+        },
+        totalPlayTime: 0,
+        totalSessions: 0,
+        lastPlayed: null,
+        firstLaunched: null,
+      },
+    };
+    this.store.set("installedGamesCache", installedGamesCache);
+    console.log(`[GameEngine] Jeu sauvegardé dans le cache local`);
     const metrics = this.metrics.get(gameId);
     this.sendProgress({
       id: gameId,
@@ -363,13 +335,6 @@ export class GameEngine {
     });
   }
 
-  // ========================================
-  // MÉTHODES UTILITAIRES
-  // ========================================
-
-  /**
-   * Initialise les métriques pour un téléchargement
-   */
   initializeMetrics(gameId) {
     this.metrics.set(gameId, {
       startTime: Date.now(),
@@ -382,9 +347,6 @@ export class GameEngine {
     });
   }
 
-  /**
-   * Met à jour les métriques de téléchargement
-   */
   updateMetrics(gameId, downloadedBytes, totalSize) {
     const metrics = this.metrics.get(gameId);
     if (!metrics) return;
@@ -419,9 +381,6 @@ export class GameEngine {
     }
   }
 
-  /**
-   * Détermine si on doit envoyer une mise à jour de progression
-   */
   shouldSendProgressUpdate(gameId) {
     const metrics = this.metrics.get(gameId);
     if (!metrics) return false;
@@ -432,12 +391,8 @@ export class GameEngine {
     return timeSinceLastUpdate >= this.config.progressUpdateInterval;
   }
 
-  /**
-   * Nettoyage des données de téléchargement
-   */
   cleanupDownload(gameId) {
     this.activeDownloads.delete(gameId);
     this.metrics.delete(gameId);
-    console.log(`[GameEngine] 🧹 Nettoyage effectué pour ${gameId}`);
   }
 }

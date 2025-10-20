@@ -1,7 +1,7 @@
 {
   "name": "Drathos",
   "version": "1.0.0",
-  "description": "Game Library Client for CRM Games",
+  "description": "Game Library Client for DRM Free Games",
   "main": "./out/main/index.js",
   "author": "Valt",
   "homepage": "https://electron-vite.org",

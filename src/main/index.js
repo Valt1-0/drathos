@@ -237,37 +237,39 @@ ipcMain.handle("installGame", async (event, { serverGame }) => {
       },
     });
 
-    // Écouter les messages de progression
     worker.on("message", (data) => {
+      if (data.type === "store-set") {
+        console.log(`[Main] Store.set: ${data.key}`);
+        store.set(data.key, data.value);
+        return;
+      }
+
       console.log(
-        `[Main] 📊 Progression ${serverGame.name}:`,
+        `[Main] Progression ${serverGame.name}:`,
         data.stage,
         `${data.progress}%`
       );
 
-      // Envoyer la progression au renderer
       event.sender.send("downloadProgress", {
         id: serverGame._id,
         ...data,
       });
 
-      // Gérer les états finaux
       if (data.stage === "Completed") {
-        console.log(`[Main] ✅ Installation terminée: ${serverGame.name}`);
+        console.log(`[Main] Installation terminée: ${serverGame.name}`);
         resolve({ success: true, path: data.finalPath });
       }
 
       if (data.stage === "Failed") {
         console.error(
-          `[Main] ❌ Installation échouée: ${serverGame.name} - ${data.error}`
+          `[Main] Installation échouée: ${serverGame.name} - ${data.error}`
         );
         reject(new Error(data.error));
       }
     });
 
-    // Gérer les erreurs du worker
     worker.on("error", (err) => {
-      console.error(`[Main] 💥 Erreur worker pour ${serverGame.name}:`, err);
+      console.error(`[Main] Erreur worker pour ${serverGame.name}:`, err);
 
       // Notifier le renderer
       event.sender.send("downloadProgress", {
@@ -698,27 +700,18 @@ ipcMain.handle(
         if (data.stage === "uninstalled") {
           console.log(`[Main] ✅ Désinstallation terminée: ${gameName}`);
 
-          // 🧹 Nettoyage du cache local
+          // 🧹 Nettoyage de installedGamesCache
           try {
-            // 1. Supprimer les statistiques du jeu
-            const allStats = store.get("gameStats", {});
-            if (allStats[gameId]) {
-              delete allStats[gameId];
-              store.set("gameStats", allStats);
-              console.log(`[Main] 🧹 Statistics supprimées pour: ${gameId}`);
+            const installedGames = store.get("installedGamesCache", {});
+            if (installedGames[gameId]) {
+              delete installedGames[gameId];
+              store.set("installedGamesCache", installedGames);
+              console.log(`[Main] 🗑️ Jeu ${gameId} supprimé de installedGamesCache`);
+            } else {
+              console.warn(`[Main] ⚠️ Jeu ${gameId} non trouvé dans installedGamesCache`);
             }
-
-            // 2. Mettre à jour le cache des jeux installés
-            const installedCache = store.get("installedGamesCache", []);
-            const updatedCache = installedCache.filter(
-              (game) => game.serverGameId?._id !== gameId
-            );
-            store.set("installedGamesCache", updatedCache);
-            console.log(
-              `[Main] 🧹 Cache mis à jour: ${installedCache.length} -> ${updatedCache.length} jeu(x)`
-            );
           } catch (cleanupError) {
-            console.error(`[Main] ⚠️ Erreur nettoyage cache:`, cleanupError);
+            console.error(`[Main] ⚠️ Erreur nettoyage installedGamesCache:`, cleanupError);
           }
 
           // Notifier le renderer après le nettoyage
@@ -842,24 +835,40 @@ ipcMain.handle("getGameSize", async (event, { gamePath }) => {
  */
 ipcMain.handle("save-local-stats", async (event, { gameId, sessionData }) => {
   try {
-    const allStats = store.get("gameStats", {});
+    const installedGames = store.get("installedGamesCache", {});
 
-    if (!allStats[gameId]) {
-      allStats[gameId] = {
+    if (!installedGames[gameId]) {
+      console.warn(`[Stats] Game ${gameId} not found in installedGamesCache`);
+      return { success: false, error: "Game not found" };
+    }
+
+    // Initialiser les stats si nécessaire
+    if (!installedGames[gameId].stats) {
+      installedGames[gameId].stats = {
+        currentSession: {
+          startTime: null,
+          isPlaying: false,
+        },
         totalPlayTime: 0,
         totalSessions: 0,
         lastPlayed: null,
-        firstLaunched: Date.now(),
+        firstLaunched: null,
       };
     }
 
-    allStats[gameId].totalPlayTime += sessionData.duration;
-    allStats[gameId].totalSessions += 1;
-    allStats[gameId].lastPlayed = Date.now();
+    // Mettre à jour les stats
+    installedGames[gameId].stats.totalPlayTime += sessionData.duration;
+    installedGames[gameId].stats.totalSessions += 1;
+    installedGames[gameId].stats.lastPlayed = Date.now();
 
-    store.set("gameStats", allStats);
+    // Si c'est la première session, définir firstLaunched
+    if (!installedGames[gameId].stats.firstLaunched) {
+      installedGames[gameId].stats.firstLaunched = Date.now();
+    }
 
-    return { success: true, stats: allStats[gameId] };
+    store.set("installedGamesCache", installedGames);
+
+    return { success: true, stats: installedGames[gameId].stats };
   } catch (error) {
     console.error("[Stats] Erreur sauvegarde locale:", error);
     return { success: false, error: error.message };
@@ -871,8 +880,8 @@ ipcMain.handle("save-local-stats", async (event, { gameId, sessionData }) => {
  */
 ipcMain.handle("get-local-stats", async (event, { gameId }) => {
   try {
-    const allStats = store.get("gameStats", {});
-    return allStats[gameId] || null;
+    const installedGames = store.get("installedGamesCache", {});
+    return installedGames[gameId]?.stats || null;
   } catch (error) {
     console.error("[Stats] Erreur lecture locale:", error);
     return null;

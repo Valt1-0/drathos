@@ -1,21 +1,30 @@
-// drathos/src/renderer/src/utils/apiUtils.js
-
 import { updateConnectionStatus } from "../contexts/connectionContext";
 
-/**
- * Wrapper autour de fetch qui met à jour automatiquement le statut de connexion
- */
-export async function fetchWithConnectionTracking(url, options = {}) {
-  try {
-    const response = await fetch(url, options);
+const DEFAULT_TIMEOUT = 5000;
 
-    // Si la requête aboutit, le serveur est online
+export async function fetchWithConnectionTracking(url, options = {}) {
+  const timeout = options.timeout || DEFAULT_TIMEOUT;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
     updateConnectionStatus(true);
 
     return response;
   } catch (error) {
-    // Si la requête échoue (réseau, timeout, etc.), le serveur est offline
+    clearTimeout(timeoutId);
     updateConnectionStatus(false);
+
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
     throw error;
   }
 }
