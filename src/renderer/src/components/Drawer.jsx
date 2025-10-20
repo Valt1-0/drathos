@@ -11,6 +11,7 @@ import { FiX, FiLogOut, FiUser } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { motion, AnimatePresence } from "framer-motion";
+import ConfirmationModal from "./ConfirmationModal";
 
 const menuItems = [
   { label: "Accueil", icon: FaHome, path: "/" },
@@ -21,14 +22,13 @@ const menuItems = [
 
 const Drawer = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
 
-  const handlerDeleteUserData = () => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer toutes vos données locales ?")) {
-      window.store.clear();
-      window.location.reload();
-    }
+  const handlerDeleteUserData = async () => {
+    await window.store.clear();
+    window.api.reloadApp();
   };
 
   const isActiveRoute = (path) => {
@@ -176,7 +176,7 @@ const Drawer = ({ children }) => {
         >
           {/* Delete Data Button */}
           <button
-            onClick={handlerDeleteUserData}
+            onClick={() => setShowDeleteModal(true)}
             className="group relative overflow-hidden w-full rounded-xl border border-slate-800/50 hover:border-red-500/30 transition-all duration-300"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -270,6 +270,19 @@ const Drawer = ({ children }) => {
       <div className="flex-1 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 overflow-hidden">
         {children}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handlerDeleteUserData}
+        title="Effacer toutes les données"
+        message="Êtes-vous sûr de vouloir supprimer toutes vos données locales ? Cette action est irréversible."
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        confirmColor="red"
+        icon={FaTrash}
+      />
     </div>
   );
 };

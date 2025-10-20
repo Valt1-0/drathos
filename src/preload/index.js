@@ -85,6 +85,9 @@ const api = {
   windowClose: () => ipcRenderer.send("window-close"),
   windowIsMaximized: () => ipcRenderer.invoke("window-is-maximized"),
   windowToggleDevTools: () => ipcRenderer.send("window-toggle-devtools"),
+
+  // Recharger l'application complètement
+  reloadApp: () => ipcRenderer.send("reload-app"),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

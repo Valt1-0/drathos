@@ -109,6 +109,12 @@ app.whenReady().then(() => {
     if (window) window.webContents.toggleDevTools();
   });
 
+  // Recharger l'application complètement
+  ipcMain.on("reload-app", () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) window.webContents.reloadIgnoringCache();
+  });
+
   const mainWindow = createWindow();
 
   // Tray icon setup
