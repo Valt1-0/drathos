@@ -145,6 +145,20 @@ const Welcome = () => {
     }
   };
 
+  // Gestion de la touche Entrée pour le serveur (step 2)
+  const handleServerKeyDown = (e) => {
+    if (e.key === "Enter" && !isChecking && serverAddress) {
+      handleServerCheck();
+    }
+  };
+
+  // Gestion de la touche Entrée pour l'authentification (step 3)
+  const handleAuthKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleAuth();
+    }
+  };
+
   // Rendu des étapes
   const renderStep = () => {
     switch (currentStep) {
@@ -317,6 +331,7 @@ const Welcome = () => {
                     type="text"
                     value={serverAddress}
                     onChange={(e) => setServerAddress(e.target.value)}
+                    onKeyDown={handleServerKeyDown}
                     placeholder="192.168.1.100:3000 ou domain.com:3000"
                     className="w-full p-4 pr-14 text-lg rounded-xl text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
                   />
@@ -540,6 +555,7 @@ const Welcome = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, username: e.target.value })
                       }
+                      onKeyDown={handleAuthKeyDown}
                     />
                   </div>
                 </motion.div>
@@ -566,6 +582,7 @@ const Welcome = () => {
                         onChange={(e) =>
                           setFormData({ ...formData, password: e.target.value })
                         }
+                        onKeyDown={handleAuthKeyDown}
                       />
                       <motion.div
                         className="absolute text-slate-400 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-400 transition-colors"
@@ -605,6 +622,7 @@ const Welcome = () => {
                               confirmPassword: e.target.value,
                             })
                           }
+                          onKeyDown={handleAuthKeyDown}
                         />
                         <motion.div
                           className="absolute text-slate-400 inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-400 transition-colors"
