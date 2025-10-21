@@ -59,7 +59,8 @@ export class GameLauncher {
         gameId,
         gamePath,
         executableName,
-        store
+        store,
+        needsWine
       );
       this.activeProcesses.set(gameId, processInfo);
 
@@ -149,7 +150,7 @@ export class GameLauncher {
     });
   }
 
-  _createProcessInfo(gameProcess, gameId, gamePath, executableName, store) {
+  _createProcessInfo(gameProcess, gameId, gamePath, executableName, store, usesWine = false) {
     return {
       process: gameProcess,
       pid: gameProcess.pid,
@@ -159,6 +160,7 @@ export class GameLauncher {
       startTime: Date.now(),
       status: "starting",
       store,
+      usesWine,
     };
   }
 
@@ -166,10 +168,10 @@ export class GameLauncher {
    * ✅ NOUVEAU: Configuration centralisée des événements (supprime les doublons d'événements)
    */
   _setupProcessEvents(gameProcess, processInfo, onStatusChange) {
-    // Événement de démarrage réussi
     gameProcess.on("spawn", () => {
+      const wineInfo = processInfo.usesWine ? " (via Wine)" : "";
       console.log(
-        `[GameLauncher] ✅ Jeu ${processInfo.gameId} démarré (PID: ${gameProcess.pid})`
+        `[GameLauncher] Jeu ${processInfo.gameId} démarré${wineInfo} (PID: ${gameProcess.pid})`
       );
       processInfo.status = "running";
 
@@ -180,6 +182,7 @@ export class GameLauncher {
         status: "running",
         pid: gameProcess.pid,
         startTime: processInfo.startTime,
+        usesWine: processInfo.usesWine,
       });
     });
 
@@ -363,7 +366,24 @@ export class GameLauncher {
   /**
    * Nettoie les ressources pour un jeu spécifique
    */
-  cleanupProcess(gameId) {
+  async cleanupProcess(gameId) {
+    const processInfo = this.activeProcesses.get(gameId);
+
+    if (processInfo?.usesWine) {
+      console.log(`[GameLauncher] Nettoyage Wine pour ${gameId}`);
+      try {
+        const { exec } = await import("child_process");
+        const { promisify } = await import("util");
+        const execAsync = promisify(exec);
+
+        const winePrefix = path.join(processInfo.gamePath, '.wine');
+        await execAsync(`WINEPREFIX="${winePrefix}" wineserver -k`).catch(() => {});
+        console.log(`[GameLauncher] Wine server arrêté pour ${gameId}`);
+      } catch (error) {
+        console.log(`[GameLauncher] Wine server cleanup ignoré (normal si déjà terminé)`);
+      }
+    }
+
     this.activeProcesses.delete(gameId);
 
     const tracker = this.sessionTrackers.get(gameId);
