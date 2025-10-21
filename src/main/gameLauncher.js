@@ -1,9 +1,8 @@
-// drathos/src/main/gameLauncher.js - VERSION OPTIMISÉE
-
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { shell } from "electron";
+import { wineDetector } from "./utils/wineDetector.js";
 
 export class GameLauncher {
   constructor() {
@@ -28,7 +27,6 @@ export class GameLauncher {
     try {
       console.log(`[GameLauncher] Lancement du jeu ${gameId}...`);
 
-      // ✅ Validation préliminaire (évite la duplication de vérifications)
       const validationResult = this._validateGameLaunch(
         gameId,
         gamePath,
@@ -40,10 +38,22 @@ export class GameLauncher {
 
       const executablePath = validationResult.executablePath;
 
-      // ✅ Création du processus (centralisé, plus de duplication)
-      const gameProcess = this._createGameProcess(executablePath, gamePath);
+      const needsWine = wineDetector.isWineRequired(executablePath);
 
-      // ✅ Stockage unifié des informations
+      if (needsWine) {
+        console.log(`[GameLauncher] Wine nécessaire pour ${executableName}`);
+        const wineCmd = await wineDetector.detectWine();
+
+        if (!wineCmd) {
+          const instructions = wineDetector.getWineInstallInstructions();
+          throw new Error(`WINE_NOT_INSTALLED:${JSON.stringify(instructions)}`);
+        }
+
+        const version = await wineDetector.getWineVersion();
+        console.log(`[GameLauncher] Wine détecté: ${version}`);
+      }
+
+      const gameProcess = await this._createGameProcess(executablePath, gamePath, needsWine);
       const processInfo = this._createProcessInfo(
         gameProcess,
         gameId,
@@ -115,7 +125,22 @@ export class GameLauncher {
     return { success: true, executablePath };
   }
 
-  _createGameProcess(executablePath, gamePath) {
+  async _createGameProcess(executablePath, gamePath, needsWine = false) {
+    if (needsWine) {
+      const wineCmd = await wineDetector.detectWine();
+      console.log(`[GameLauncher] Lancement avec Wine: ${wineCmd} ${executablePath}`);
+
+      return spawn(wineCmd, [executablePath], {
+        cwd: gamePath,
+        detached: true,
+        stdio: ["ignore", "pipe", "pipe"],
+        env: {
+          ...process.env,
+          WINEPREFIX: path.join(gamePath, '.wine'),
+        },
+      });
+    }
+
     return spawn(executablePath, [], {
       cwd: gamePath,
       detached: true,

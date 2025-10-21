@@ -108,6 +108,11 @@ if (process.contextIsolated) {
       delete: (key) => ipcRenderer.invoke("store-delete", key),
       clear: () => ipcRenderer.invoke("store-clear"),
     });
+    contextBridge.exposeInMainWorld("electron", {
+      shell: {
+        openExternal: (url) => ipcRenderer.invoke("shell:openExternal", url),
+      },
+    });
 
     console.log("[Preload] ✅ APIs exposées avec succès (sandbox mode)");
     console.log("[Preload] APIs disponibles:", [

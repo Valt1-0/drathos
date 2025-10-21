@@ -190,6 +190,10 @@ ipcMain.handle("store-clear", () => {
   store.clear();
 });
 
+ipcMain.handle("shell:openExternal", async (event, url) => {
+  await shell.openExternal(url);
+});
+
 //* Open file dialog */
 ipcMain.handle("dialog:selectAndCreate", async () => {
   const result = await dialog.showOpenDialog({

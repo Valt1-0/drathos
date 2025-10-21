@@ -23,6 +23,7 @@ import InstallPathModal from "../components/InstallPathModal";
 import DeleteGameModal from "../components/DeleteGameModal";
 import ConfirmationModal from "../components/ConfirmationModal";
 import AddGameModal from "../components/AddGameModal";
+import WineRequiredModal from "../components/WineRequiredModal";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 import {
@@ -93,6 +94,10 @@ const Games = () => {
 
   // États pour la modal d'ajout de jeu (admin only)
   const [addGameModalOpen, setAddGameModalOpen] = useState(false);
+
+  // États pour la modal Wine
+  const [wineModalOpen, setWineModalOpen] = useState(false);
+  const [wineInstructions, setWineInstructions] = useState(null);
 
   const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
   const { isOnline } = useConnection();
@@ -508,9 +513,22 @@ const Games = () => {
 
       if (!result.success) {
         console.error("Échec du lancement:", result.error);
-        toast.error("Échec du lancement", {
-          description: `Impossible de lancer "${game.name}". Vérifiez que le jeu est correctement installé.`,
-        });
+
+        if (result.error && result.error.startsWith("WINE_NOT_INSTALLED:")) {
+          const instructionsJson = result.error.replace("WINE_NOT_INSTALLED:", "");
+          try {
+            const instructions = JSON.parse(instructionsJson);
+            setWineInstructions(instructions);
+            setWineModalOpen(true);
+          } catch (e) {
+            console.error("Erreur parsing instructions Wine:", e);
+          }
+        } else {
+          toast.error("Échec du lancement", {
+            description: `Impossible de lancer "${game.name}". Vérifiez que le jeu est correctement installé.`,
+          });
+        }
+
         setPlayingGames((prev) => {
           const newSet = new Set(prev);
           newSet.delete(game._id);
@@ -1609,6 +1627,16 @@ const Games = () => {
         isOpen={addGameModalOpen}
         onClose={() => setAddGameModalOpen(false)}
         onSuccess={handleAddGameSuccess}
+      />
+
+      {/* Modal Wine required */}
+      <WineRequiredModal
+        isOpen={wineModalOpen}
+        onClose={() => {
+          setWineModalOpen(false);
+          setWineInstructions(null);
+        }}
+        instructions={wineInstructions}
       />
     </div>
   );
