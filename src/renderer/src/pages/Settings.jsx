@@ -9,13 +9,24 @@ import {
   FiSun,
   FiFolder,
   FiCheck,
+  FiActivity,
+  FiCircle,
 } from "react-icons/fi";
+import { SiDiscord } from "react-icons/si";
 import { useAuth } from "../contexts/authContext";
 
 const SettingsPage = () => {
   const [theme, setTheme] = useState("dark");
   const [downloadPath, setDownloadPath] = useState("");
   const { user } = useAuth();
+
+  // Discord RPC States
+  const [discordEnabled, setDiscordEnabled] = useState(false);
+  const [discordStatus, setDiscordStatus] = useState({
+    isConnected: false,
+    user: null,
+  });
+  const [discordLoading, setDiscordLoading] = useState(false);
 
   // Change le thème (clair/sombre)
   const handleThemeChange = () => {
@@ -39,8 +50,57 @@ const SettingsPage = () => {
     }
   };
 
+  // Discord RPC - Toggle
+  const handleDiscordToggle = async () => {
+    setDiscordLoading(true);
+
+    try {
+      if (discordEnabled) {
+        // Désactiver Discord RPC
+        await window.api.discordRPC.setEnabled({ enabled: false });
+        setDiscordEnabled(false);
+        await window.store.set("discordRPCEnabled", false);
+
+        toast.success("Discord RPC désactivé", {
+          description: "Votre activité ne sera plus affichée sur Discord",
+        });
+      } else {
+        // Activer Discord RPC
+        const result = await window.api.discordRPC.initialize({
+          enabled: true,
+        });
+
+        if (result.success) {
+          setDiscordEnabled(true);
+          await window.store.set("discordRPCEnabled", true);
+
+          // Récupérer le statut
+          const status = await window.api.discordRPC.getStatus();
+          setDiscordStatus(status);
+
+          toast.success("Discord RPC activé", {
+            description: result.connected
+              ? `Connecté à Discord${status.user ? ` (${status.user.username})` : ""}`
+              : "Discord n'est pas lancé, sera disponible au prochain démarrage",
+          });
+        } else {
+          toast.error("Erreur Discord RPC", {
+            description: result.error || "Impossible de se connecter à Discord",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Discord RPC error:", error);
+      toast.error("Erreur Discord RPC", {
+        description: error.message,
+      });
+    } finally {
+      setDiscordLoading(false);
+    }
+  };
+
   // Sauvegarder les paramètres
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     try {
       toast.success("Paramètres sauvegardés", {
         description: "Vos modifications ont été enregistrées avec succès",
@@ -55,10 +115,19 @@ const SettingsPage = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       const storedPath = await window.store.get("downloadPath");
-      const storedUsername = await window.store.get("username");
+      const storedEnabled = await window.store.get("discordRPCEnabled");
 
       if (storedPath) setDownloadPath(storedPath);
-      if (storedUsername) setUsername(storedUsername);
+      if (storedEnabled) {
+        setDiscordEnabled(storedEnabled);
+        // Récupérer le statut Discord
+        try {
+          const status = await window.api.discordRPC.getStatus();
+          setDiscordStatus(status);
+        } catch (error) {
+          console.error("Error fetching Discord status:", error);
+        }
+      }
     };
 
     fetchSettings();
@@ -168,6 +237,110 @@ const SettingsPage = () => {
                       </span>
                     </button>
                   </label>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Section Discord Rich Presence - Full width */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.25, duration: 0.6 }}
+              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-indigo-500/50 transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 bg-indigo-500/20 rounded-lg">
+                      <SiDiscord className="text-indigo-400 text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Discord Rich Presence</h3>
+                      <p className="text-xs text-gray-400">Affichez votre activité de jeu sur Discord</p>
+                    </div>
+                  </div>
+
+                  {/* Status Badge */}
+                  {discordEnabled && (
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                      discordStatus.isConnected
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                      <FiCircle className={`text-xs ${
+                        discordStatus.isConnected ? 'animate-pulse' : ''
+                      }`} />
+                      <span className="text-xs font-medium">
+                        {discordStatus.isConnected
+                          ? `Connecté${discordStatus.user ? ` · ${discordStatus.user.username}` : ''}`
+                          : 'En attente de Discord'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {/* Description */}
+                  <p className="text-sm text-gray-400">
+                    Activez cette option pour afficher automatiquement "Drathos" et le jeu en cours sur votre profil Discord.
+                    Assurez-vous que Discord Desktop est lancé.
+                  </p>
+
+                  {/* Toggle Button */}
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                      <FiActivity className="text-indigo-400" />
+                      <span>Afficher mon activité de jeu sur Discord</span>
+                    </div>
+                    <button
+                      onClick={handleDiscordToggle}
+                      disabled={discordLoading}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                        discordEnabled
+                          ? "bg-indigo-600 hover:bg-indigo-700"
+                          : "bg-gray-600 hover:bg-gray-500"
+                      } ${discordLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
+                          discordEnabled ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Info Box - Activité actuelle */}
+                  {discordEnabled && discordStatus.currentActivity && (
+                    <div className="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <FiActivity className="text-indigo-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-indigo-300">Activité actuelle</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {discordStatus.currentActivity.type === "game"
+                              ? `En train de jouer à ${discordStatus.currentActivity.gameName}`
+                              : "En navigation dans Drathos"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Info - Discord requis */}
+                  {!discordStatus.isConnected && discordEnabled && (
+                    <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <FiCircle className="text-yellow-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-yellow-300">Discord non détecté</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Lancez Discord Desktop pour voir votre activité apparaître
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

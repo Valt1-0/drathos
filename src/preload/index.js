@@ -85,6 +85,16 @@ const api = {
   saveLocalStats: (data) => ipcRenderer.invoke("save-local-stats", data),
   getLocalStats: (data) => ipcRenderer.invoke("get-local-stats", data),
 
+  // Discord Rich Presence
+  discordRPC: {
+    initialize: ({ enabled }) =>
+      ipcRenderer.invoke("discord-rpc:initialize", { enabled }),
+    setEnabled: ({ enabled }) =>
+      ipcRenderer.invoke("discord-rpc:setEnabled", { enabled }),
+    getStatus: () => ipcRenderer.invoke("discord-rpc:getStatus"),
+    disconnect: () => ipcRenderer.invoke("discord-rpc:disconnect"),
+  },
+
   // Contrôles de fenêtre
   windowMinimize: () => ipcRenderer.send("window-minimize"),
   windowMaximize: () => ipcRenderer.send("window-maximize"),

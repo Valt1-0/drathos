@@ -1,34 +1,58 @@
-# drathos
+# Drathos - Game Library Client
 
-An Electron application with React
+Application Electron de gestion de bibliothèque de jeux DRM-Free avec support Discord Rich Presence.
 
-## Recommended IDE Setup
-
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
-
-## Project Setup
-
-### Install
+## 🚀 Installation
 
 ```bash
-$ npm install
+npm install
 ```
 
-### Development
+## 💻 Development
 
 ```bash
-$ npm run dev
+npm run dev
 ```
 
-### Build
+## 📦 Build
 
 ```bash
-# For windows
-$ npm run build:win
+# Build standard
+npm run build
 
-# For macOS
-$ npm run build:mac
-
-# For Linux
-$ npm run build:linux
+# Build pour une plateforme spécifique
+npm run build:win     # Windows
+npm run build:mac     # macOS
+npm run build:linux   # Linux
 ```
+
+## 🛠️ Recommended IDE Setup
+
+- [VSCode](https://code.visualstudio.com/)
+- Extensions recommandées :
+  - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+  - [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+
+## 📁 Structure
+
+```
+drathos/
+├── src/
+│   ├── main/              # Main process (Electron)
+│   │   ├── index.js       # Point d'entrée
+│   │   └── utils/
+│   │       └── discordRPC.js  # Discord Rich Presence
+│   ├── preload/           # Preload scripts
+│   └── renderer/          # React app
+└── resources/             # Assets
+```
+
+## ✨ Fonctionnalités
+
+- 🎮 Gestion de bibliothèque de jeux
+- 🚀 Lancement de jeux (natif + Wine)
+- 📊 Statistiques de jeu
+- 🎯 Discord Rich Presence
+- 🌐 Mode online/offline
+
+---

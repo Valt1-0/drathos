@@ -16,6 +16,8 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/logo2.png?asset";
 
 import { GameLauncher } from "./gameLauncher.js";
+import { discordRPC } from "./utils/discordRPC.js";
+
 const gameLauncher = new GameLauncher();
 
 function createWindow() {
@@ -117,6 +119,20 @@ app.whenReady().then(() => {
 
   const mainWindow = createWindow();
 
+  // Initialiser Discord RPC si activé
+  const discordEnabled = store.get("discordRPCEnabled", false);
+
+  if (discordEnabled) {
+    console.log("[Main] Initialisation de Discord RPC...");
+    discordRPC.initialize(true).then((result) => {
+      if (result.success) {
+        console.log("[Main] ✅ Discord RPC initialisé avec succès");
+      } else {
+        console.log("[Main] ⚠️ Discord RPC non disponible:", result.error);
+      }
+    });
+  }
+
   // Tray icon setup
   const tray = new Tray(icon);
   tray.setToolTip("Drathos");
@@ -164,8 +180,15 @@ app.on("window-all-closed", () => {
 });
 
 // Nettoyage à la fermeture de l'application
-app.on("before-quit", () => {
+app.on("before-quit", async () => {
+  console.log("[Main] Fermeture de l'application...");
   gameLauncher.cleanup();
+
+  // Déconnecter Discord RPC proprement
+  if (discordRPC.isConnected) {
+    console.log("[Main] Déconnexion de Discord RPC...");
+    await discordRPC.disconnect();
+  }
 });
 
 // In this file you can include the rest of your app"s specific main process
@@ -963,6 +986,65 @@ ipcMain.handle("getDiskSpace", async () => {
     };
   } catch (error) {
     console.error("[Main] Erreur getDiskSpace:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// === DISCORD RICH PRESENCE ===
+
+/**
+ * Initialise Discord RPC
+ */
+ipcMain.handle("discord-rpc:initialize", async (event, { enabled }) => {
+  try {
+    const result = await discordRPC.initialize(enabled);
+    return result;
+  } catch (error) {
+    console.error("[Discord RPC] Erreur d'initialisation:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Active/désactive Discord RPC
+ */
+ipcMain.handle("discord-rpc:setEnabled", async (event, { enabled }) => {
+  try {
+    const result = await discordRPC.setEnabled(enabled);
+    return result;
+  } catch (error) {
+    console.error("[Discord RPC] Erreur setEnabled:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Obtient le statut actuel de Discord RPC
+ */
+ipcMain.handle("discord-rpc:getStatus", () => {
+  try {
+    return discordRPC.getStatus();
+  } catch (error) {
+    console.error("[Discord RPC] Erreur getStatus:", error);
+    return {
+      isConnected: false,
+      isEnabled: false,
+      currentActivity: null,
+      clientId: null,
+      user: null,
+    };
+  }
+});
+
+/**
+ * Déconnecte Discord RPC proprement
+ */
+ipcMain.handle("discord-rpc:disconnect", async () => {
+  try {
+    await discordRPC.disconnect();
+    return { success: true };
+  } catch (error) {
+    console.error("[Discord RPC] Erreur disconnect:", error);
     return { success: false, error: error.message };
   }
 });

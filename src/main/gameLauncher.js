@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { shell } from "electron";
 import { wineDetector } from "./utils/wineDetector.js";
+import { discordRPC } from "./utils/discordRPC.js";
 
 export class GameLauncher {
   constructor() {
@@ -66,6 +67,11 @@ export class GameLauncher {
 
       // ✅ Configuration des événements (une seule fois, pas de doublon)
       this._setupProcessEvents(gameProcess, processInfo, onStatusChange);
+
+      // 🎮 Mettre à jour Discord immédiatement (ne pas attendre spawn event qui peut être lent sur Windows)
+      this.updateDiscordActivity(processInfo).catch((err) => {
+        console.error(`[GameLauncher] Erreur Discord update:`, err);
+      });
 
       return {
         success: true,
@@ -177,6 +183,9 @@ export class GameLauncher {
 
       this.startSessionTracking(processInfo.gameId, onStatusChange);
 
+      // 🎮 Mettre à jour Discord Rich Presence
+      this.updateDiscordActivity(processInfo);
+
       onStatusChange({
         gameId: processInfo.gameId,
         status: "running",
@@ -222,6 +231,9 @@ export class GameLauncher {
         console.log(`[GameLauncher] 📊 Envoi des stats pour sauvegarde (${sessionDuration}s)`);
         this.sendStatsToBackend(processInfo.gameId);
       }
+
+      // 🎮 Remettre Discord en mode idle
+      discordRPC.setIdleActivity().catch(() => {});
 
       // 3️⃣ Nettoyer les ressources APRÈS l'envoi des stats
       this.cleanupProcess(processInfo.gameId);
@@ -360,6 +372,24 @@ export class GameLauncher {
       }
     } catch (error) {
       console.error(`[GameLauncher] Erreur envoi stats:`, error);
+    }
+  }
+
+  async updateDiscordActivity(processInfo) {
+    try {
+      const cachedGames = processInfo.store?.get("installedGamesCache", {});
+      const gameData = cachedGames?.[processInfo.gameId];
+
+      const gameName = gameData?.name || processInfo.executableName.replace(/\.(exe|sh|app)$/i, "");
+
+      await discordRPC.setGameActivity({
+        gameId: processInfo.gameId,
+        gameName,
+        startTime: processInfo.startTime,
+        usesWine: processInfo.usesWine,
+      });
+    } catch (error) {
+      console.error(`[GameLauncher] Erreur Discord:`, error.message);
     }
   }
 
