@@ -8,17 +8,86 @@ import {
   Tray,
   Menu,
   dialog,
+  session,
 } from "electron";
 import path, { join } from "path";
 import fs from "fs";
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/logo2.png?asset";
 
 import { GameLauncher } from "./gameLauncher.js";
 import { discordRPC } from "./utils/discordRPC.js";
+import store from "./store.js";
+
+const execAsync = promisify(exec);
 
 const gameLauncher = new GameLauncher();
+
+// === UTILITAIRES DE SÉCURITÉ ===
+
+/**
+ * Valide qu'une URL est sûre pour être ouverte avec shell.openExternal
+ * @param {string} url - URL à valider
+ * @returns {boolean} - true si l'URL est sûre
+ */
+function isSafeForExternalOpen(url) {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Liste blanche de protocoles sûrs
+    const safeProtocols = ['http:', 'https:', 'mailto:'];
+
+    if (!safeProtocols.includes(parsedUrl.protocol)) {
+      console.warn(`[Security] Protocole non autorisé: ${parsedUrl.protocol}`);
+      return false;
+    }
+
+    // Bloquer les URLs file:// et autres protocoles dangereux
+    if (parsedUrl.protocol === 'file:') {
+      console.warn(`[Security] Protocole file:// bloqué`);
+      return false;
+    }
+
+    // Pour http/https, vérifier que ce n'est pas localhost ou IP privée
+    // (optionnel selon vos besoins)
+
+    return true;
+  } catch (error) {
+    console.error(`[Security] URL invalide: ${url}`, error);
+    return false;
+  }
+}
+
+/**
+ * Valide que le sender d'un message IPC est légitime
+ * @param {Electron.WebFrameMain} frame - Frame qui a envoyé le message
+ * @returns {boolean} - true si le sender est autorisé
+ */
+function isValidSender(frame) {
+  // Vérifier que le frame provient de notre application
+  // En production, ajoutez des vérifications plus strictes
+  try {
+    const frameUrl = new URL(frame.url);
+
+    // Autoriser file:// pour notre application locale
+    if (frameUrl.protocol === 'file:') {
+      return true;
+    }
+
+    // En développement, autoriser localhost
+    if (is.dev && (frameUrl.hostname === 'localhost' || frameUrl.hostname === '127.0.0.1')) {
+      return true;
+    }
+
+    console.warn(`[Security] Sender non autorisé: ${frame.url}`);
+    return false;
+  } catch (error) {
+    console.error(`[Security] Erreur validation sender:`, error);
+    return false;
+  }
+}
 
 function createWindow() {
   // Create the browser window.
@@ -47,7 +116,14 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    // Valider l'URL avant de l'ouvrir
+    if (isSafeForExternalOpen(details.url)) {
+      setImmediate(() => {
+        shell.openExternal(details.url);
+      });
+    } else {
+      console.warn(`[Security] URL bloquée: ${details.url}`);
+    }
     return { action: "deny" };
   });
 
@@ -62,12 +138,110 @@ function createWindow() {
   return mainWindow;
 }
 
+// Désactiver le menu par défaut pour améliorer les performances de démarrage
+Menu.setApplicationMenu(null);
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
+
+  // === SÉCURITÉ: Content Security Policy ===
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Récupérer l'adresse du serveur backend configurée
+    const serverAddress = store.get("serverAddress", "");
+
+    // IGDB pour les images et métadonnées de jeux
+    const igdbDomains = "https://*.igdb.com https://images.igdb.com https://api.igdb.com";
+
+    // CSP adaptée selon l'environnement
+    const csp = is.dev
+      ? // Développement : autoriser Vite HMR + backend local + réseau local
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        `img-src 'self' data: https: http: blob: ${igdbDomains}; ` +
+        "font-src 'self' data:; " +
+        "connect-src 'self' ws: http: https:;" // Tout autoriser en dev
+      : // Production : autoriser réseau local + backend configuré + IGDB
+        (() => {
+          // Autoriser le backend configuré
+          const backendUrl = serverAddress ? ` ${serverAddress}` : "";
+
+          // Autoriser toutes les IP locales/privées (RFC 1918)
+          // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, localhost
+          const localNetworks = " http://10.*.*.* http://172.16.*.* http://172.17.*.* http://172.18.*.* " +
+                               "http://172.19.*.* http://172.20.*.* http://172.21.*.* http://172.22.*.* " +
+                               "http://172.23.*.* http://172.24.*.* http://172.25.*.* http://172.26.*.* " +
+                               "http://172.27.*.* http://172.28.*.* http://172.29.*.* http://172.30.*.* " +
+                               "http://172.31.*.* http://192.168.*.* http://localhost:* http://127.0.0.1:* " +
+                               "https://10.*.*.* https://172.16.*.* https://172.17.*.* https://172.18.*.* " +
+                               "https://172.19.*.* https://172.20.*.* https://172.21.*.* https://172.22.*.* " +
+                               "https://172.23.*.* https://172.24.*.* https://172.25.*.* https://172.26.*.* " +
+                               "https://172.27.*.* https://172.28.*.* https://172.29.*.* https://172.30.*.* " +
+                               "https://172.31.*.* https://192.168.*.* https://localhost:* https://127.0.0.1:*";
+
+          return "default-src 'self'; " +
+                 "script-src 'self'; " +
+                 "style-src 'self' 'unsafe-inline'; " +
+                 `img-src 'self' data: blob: ${igdbDomains}${localNetworks}${backendUrl}; ` +
+                 "font-src 'self' data:; " +
+                 `connect-src 'self' ${igdbDomains}${localNetworks}${backendUrl};`;
+        })();
+
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp]
+      }
+    });
+  });
+
+  // === SÉCURITÉ: Permission Request Handler ===
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const parsedUrl = new URL(webContents.getURL());
+
+    // Refuser toutes les permissions par défaut sauf pour notre app locale
+    if (parsedUrl.protocol === 'file:') {
+      // Pour les fichiers locaux, n'autoriser que certaines permissions
+      const allowedPermissions = ['notifications'];
+      callback(allowedPermissions.includes(permission));
+    } else {
+      // Refuser toutes les permissions pour le contenu distant
+      console.warn(`[Security] Permission ${permission} refusée pour ${parsedUrl.href}`);
+      callback(false);
+    }
+  });
+
+  // === SÉCURITÉ: Limitation de la navigation ===
+  app.on('web-contents-created', (event, contents) => {
+    contents.on('will-navigate', (event, navigationUrl) => {
+      const parsedUrl = new URL(navigationUrl);
+
+      // Autoriser uniquement file:// et localhost en dev
+      if (parsedUrl.protocol !== 'file:') {
+        if (is.dev && (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1')) {
+          // OK en développement
+          return;
+        }
+
+        console.warn(`[Security] Navigation bloquée vers: ${navigationUrl}`);
+        event.preventDefault();
+      }
+    });
+
+    // Empêcher la création de nouvelles fenêtres non autorisées
+    contents.setWindowOpenHandler(({ url }) => {
+      if (isSafeForExternalOpen(url)) {
+        setImmediate(() => {
+          shell.openExternal(url);
+        });
+      }
+      return { action: 'deny' };
+    });
+  });
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -119,19 +293,7 @@ app.whenReady().then(() => {
 
   const mainWindow = createWindow();
 
-  // Initialiser Discord RPC si activé
-  const discordEnabled = store.get("discordRPCEnabled", false);
-
-  if (discordEnabled) {
-    console.log("[Main] Initialisation de Discord RPC...");
-    discordRPC.initialize(true).then((result) => {
-      if (result.success) {
-        console.log("[Main] ✅ Discord RPC initialisé avec succès");
-      } else {
-        console.log("[Main] ⚠️ Discord RPC non disponible:", result.error);
-      }
-    });
-  }
+  // Discord RPC sera initialisé au premier lancement de jeu pour optimiser le démarrage
 
   // Tray icon setup
   const tray = new Tray(icon);
@@ -194,8 +356,7 @@ app.on("before-quit", async () => {
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
 
-//* Store
-import store from "./store";
+//* Store handlers
 
 ipcMain.handle("store-get", (event, key) => {
   return store.get(key);
@@ -214,6 +375,19 @@ ipcMain.handle("store-clear", () => {
 });
 
 ipcMain.handle("shell:openExternal", async (event, url) => {
+  // Valider le sender
+  if (!isValidSender(event.senderFrame)) {
+    console.error(`[Security] shell:openExternal appelé par un sender non autorisé`);
+    throw new Error('Unauthorized sender');
+  }
+
+  // Valider l'URL
+  if (!isSafeForExternalOpen(url)) {
+    console.error(`[Security] URL non sûre bloquée: ${url}`);
+    throw new Error('Unsafe URL blocked');
+  }
+
+  console.log(`[Security] Ouverture URL validée: ${url}`);
   await shell.openExternal(url);
 });
 
@@ -228,8 +402,10 @@ ipcMain.handle("dialog:selectAndCreate", async () => {
   const basePath = result.filePaths[0];
   const subfolder = path.join(basePath, "DrathosGames");
 
-  if (!fs.existsSync(subfolder)) {
-    fs.mkdirSync(subfolder);
+  try {
+    await fs.promises.access(subfolder);
+  } catch {
+    await fs.promises.mkdir(subfolder, { recursive: true });
   }
 
   return subfolder;
@@ -514,34 +690,44 @@ ipcMain.handle("detectExecutables", async (event, { gamePath, gameName }) => {
  */
 ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
   try {
-    if (!fs.existsSync(gamePath)) {
+    // Vérifier l'existence de manière asynchrone
+    try {
+      await fs.promises.access(gamePath);
+    } catch {
       return {
         success: false,
         error: "Dossier non trouvé",
       };
     }
 
-    const items = fs.readdirSync(gamePath);
+    const items = await fs.promises.readdir(gamePath);
     const files = [];
     const directories = [];
 
-    for (const item of items) {
-      const itemPath = path.join(gamePath, item);
-      const stats = fs.statSync(itemPath);
+    // Traiter tous les items en parallèle pour de meilleures performances
+    await Promise.all(
+      items.map(async (item) => {
+        const itemPath = path.join(gamePath, item);
+        try {
+          const stats = await fs.promises.stat(itemPath);
 
-      if (stats.isFile()) {
-        files.push({
-          name: item,
-          size: stats.size,
-          isExecutable: item.toLowerCase().endsWith(".exe"),
-        });
-      } else if (stats.isDirectory()) {
-        directories.push({
-          name: item,
-          path: itemPath,
-        });
-      }
-    }
+          if (stats.isFile()) {
+            files.push({
+              name: item,
+              size: stats.size,
+              isExecutable: item.toLowerCase().endsWith(".exe"),
+            });
+          } else if (stats.isDirectory()) {
+            directories.push({
+              name: item,
+              path: itemPath,
+            });
+          }
+        } catch (err) {
+          console.warn(`[Main] Impossible de lire ${itemPath}:`, err.message);
+        }
+      })
+    );
 
     return {
       success: true,
@@ -620,12 +806,12 @@ const scanArchiveForExecutables = async (filePath) => {
 
 ipcMain.handle("readArchiveFile", async (event, filePath) => {
   try {
-    if (!fs.existsSync(filePath)) {
-      return { success: false, error: "Fichier introuvable" };
-    }
     const buffer = await fs.promises.readFile(filePath);
     return { success: true, buffer };
   } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { success: false, error: "Fichier introuvable" };
+    }
     return { success: false, error: error.message };
   }
 });
@@ -696,6 +882,12 @@ import uninstallWorkerPath from "./uninstallWorker.js?modulePath";
 ipcMain.handle(
   "uninstallGame",
   async (event, { gameId, gamePath, gameName }) => {
+    // Validation de sécurité : opération critique
+    if (!isValidSender(event.senderFrame)) {
+      console.error(`[Security] uninstallGame appelé par un sender non autorisé`);
+      throw new Error('Unauthorized sender');
+    }
+
     console.log(`[Main] 🗑️ Désinstallation demandée: ${gameName} (${gameId})`);
 
     // Vérifier si le jeu est en cours d'exécution
@@ -809,8 +1001,10 @@ ipcMain.handle(
  */
 ipcMain.handle("canUninstallGame", async (event, { gameId, gamePath }) => {
   try {
-    // Vérifier si le dossier existe
-    if (!fs.existsSync(gamePath)) {
+    // Vérifier si le dossier existe de manière asynchrone
+    try {
+      await fs.promises.access(gamePath);
+    } catch {
       return {
         canUninstall: false,
         reason: "Dossier du jeu introuvable",
@@ -839,7 +1033,10 @@ ipcMain.handle("canUninstallGame", async (event, { gameId, gamePath }) => {
  */
 ipcMain.handle("getGameSize", async (event, { gamePath }) => {
   try {
-    if (!fs.existsSync(gamePath)) {
+    // Vérifier l'existence de manière asynchrone
+    try {
+      await fs.promises.access(gamePath);
+    } catch {
       return { success: false, error: "Dossier introuvable" };
     }
 
@@ -926,15 +1123,14 @@ ipcMain.handle("getDiskSpace", async () => {
     }
 
     if (process.platform === "win32") {
-      // Windows: utiliser wmic
+      // Windows: utiliser wmic de manière asynchrone
       const driveLetter = installPath.split(":")[0] + ":";
-      const output = execSync(
-        `wmic logicaldisk where "DeviceID='${driveLetter}'" get FreeSpace,Size /value`,
-        { encoding: "utf8" }
+      const { stdout } = await execAsync(
+        `wmic logicaldisk where "DeviceID='${driveLetter}'" get FreeSpace,Size /value`
       );
 
-      const freeMatch = output.match(/FreeSpace=(\d+)/);
-      const sizeMatch = output.match(/Size=(\d+)/);
+      const freeMatch = stdout.match(/FreeSpace=(\d+)/);
+      const sizeMatch = stdout.match(/Size=(\d+)/);
 
       if (freeMatch && sizeMatch) {
         const freeBytes = parseInt(freeMatch[1]);
@@ -955,9 +1151,9 @@ ipcMain.handle("getDiskSpace", async () => {
         };
       }
     } else {
-      // Linux/Mac: utiliser df
-      const output = execSync(`df -k "${installPath}"`, { encoding: "utf8" });
-      const lines = output.trim().split("\n");
+      // Linux/Mac: utiliser df de manière asynchrone
+      const { stdout } = await execAsync(`df -k "${installPath}"`);
+      const lines = stdout.trim().split("\n");
       if (lines.length > 1) {
         const parts = lines[1].split(/\s+/);
         // parts[1] = total, parts[3] = available (en KB)

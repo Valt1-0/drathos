@@ -33,22 +33,26 @@ const Home = () => {
   useEffect(() => {
     const loadGames = async () => {
       try {
-        const allGames = await getAllServerGames();
+        // Charger les jeux installés immédiatement pour ne pas bloquer l'UI
         const installed = await getInstalledGames();
 
-        // Mode hors ligne : si aucun jeu serveur, extraire les jeux depuis les installed
-        let finalGames = allGames || [];
-        if ((!finalGames || finalGames.length === 0) && installed && installed.length > 0) {
-          finalGames = installed
+        if (installed && installed.length > 0) {
+          const installedServerGames = installed
             .filter(g => g.serverGameId)
             .map(g => g.serverGameId);
+          setGames(installedServerGames);
         }
 
-        setGames(finalGames || []);
+        // Désactiver le loading immédiatement après les jeux installés
+        setLoading(false);
+
+        // Ensuite, essayer de charger depuis le serveur (sans bloquer)
+        const allGames = await getAllServerGames();
+        if (allGames && allGames.length > 0) {
+          setGames(allGames);
+        }
       } catch (error) {
         console.error("Error loading games:", error);
-        setGames([]);
-      } finally {
         setLoading(false);
       }
     };
@@ -70,13 +74,17 @@ const Home = () => {
         const allStats = {};
         let totalPlayTime = 0;
 
-        for (const gameId of gameIds) {
-          const mergedStats = await getMergedStats(gameId);
+        // Paralléliser les appels getMergedStats pour de meilleures performances
+        const statsPromises = gameIds.map(gameId => getMergedStats(gameId));
+        const allMergedStats = await Promise.all(statsPromises);
+
+        allMergedStats.forEach((mergedStats, index) => {
           if (mergedStats) {
+            const gameId = gameIds[index];
             allStats[gameId] = formatStatsAPI(mergedStats);
             totalPlayTime += mergedStats.totalPlayTime || 0;
           }
-        }
+        });
 
         // Get recent games
         const recentGames = installed

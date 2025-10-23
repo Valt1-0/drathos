@@ -14,11 +14,14 @@ export class SimpleExecutableDetector {
     try {
       console.log(`[SimpleDetector] Recherche dans: ${gamePath}`);
 
-      if (!fs.existsSync(gamePath)) {
+      // Vérifier l'existence de manière asynchrone
+      try {
+        await fs.promises.access(gamePath);
+      } catch {
         throw new Error(`Dossier non trouvé: ${gamePath}`);
       }
 
-      const executables = this.findExecutables(gamePath, gamePath);
+      const executables = await this.findExecutables(gamePath, gamePath);
 
       if (executables.length === 0) {
         console.log("[SimpleDetector] Aucun exécutable trouvé");
@@ -44,13 +47,13 @@ export class SimpleExecutableDetector {
   }
 
   /**
-   * Recherche récursive de tous les .exe
+   * Recherche récursive de tous les .exe (version asynchrone)
    * @param {string} currentPath - Dossier actuel à scanner
    * @param {string} basePath - Dossier racine pour calculer le chemin relatif
    * @param {number} depth - Profondeur actuelle (limite à 3 niveaux)
-   * @returns {Array} Liste des exécutables trouvés
+   * @returns {Promise<Array>} Liste des exécutables trouvés
    */
-  findExecutables(currentPath, basePath, depth = 0) {
+  async findExecutables(currentPath, basePath, depth = 0) {
     const executables = [];
 
     // Limiter la profondeur pour éviter des scans trop longs
@@ -59,47 +62,50 @@ export class SimpleExecutableDetector {
     }
 
     try {
-      const items = fs.readdirSync(currentPath);
+      const items = await fs.promises.readdir(currentPath);
 
-      for (const item of items) {
-        const itemPath = path.join(currentPath, item);
+      // Traiter les items en parallèle pour de meilleures performances
+      await Promise.all(
+        items.map(async (item) => {
+          const itemPath = path.join(currentPath, item);
 
-        try {
-          const stats = fs.statSync(itemPath);
+          try {
+            const stats = await fs.promises.stat(itemPath);
 
-          if (stats.isFile() && item.toLowerCase().endsWith(".exe")) {
-            // Calculer le chemin relatif depuis le dossier de base
-            const relativePath = path.relative(basePath, itemPath);
+            if (stats.isFile() && item.toLowerCase().endsWith(".exe")) {
+              // Calculer le chemin relatif depuis le dossier de base
+              const relativePath = path.relative(basePath, itemPath);
 
-            executables.push({
-              fileName: item,
-              fullPath: itemPath,
-              relativePath: relativePath,
-              directory: path.dirname(relativePath),
-              size: stats.size,
-              depth: depth,
-              score: 0,
-              reasons: [],
-            });
+              executables.push({
+                fileName: item,
+                fullPath: itemPath,
+                relativePath: relativePath,
+                directory: path.dirname(relativePath),
+                size: stats.size,
+                depth: depth,
+                score: 0,
+                reasons: [],
+              });
 
-            console.log(`[SimpleDetector] Trouvé: ${relativePath}`);
-          } else if (stats.isDirectory() && !this.shouldIgnoreDirectory(item)) {
-            // Recherche récursive dans les sous-dossiers
-            const subExecutables = this.findExecutables(
-              itemPath,
-              basePath,
-              depth + 1
+              console.log(`[SimpleDetector] Trouvé: ${relativePath}`);
+            } else if (stats.isDirectory() && !this.shouldIgnoreDirectory(item)) {
+              // Recherche récursive dans les sous-dossiers
+              const subExecutables = await this.findExecutables(
+                itemPath,
+                basePath,
+                depth + 1
+              );
+              executables.push(...subExecutables);
+            }
+          } catch (statError) {
+            // Ignorer les erreurs de fichiers inaccessibles
+            console.warn(
+              `[SimpleDetector] Impossible d'accéder à ${itemPath}:`,
+              statError.message
             );
-            executables.push(...subExecutables);
           }
-        } catch (statError) {
-          // Ignorer les erreurs de fichiers inaccessibles
-          console.warn(
-            `[SimpleDetector] Impossible d'accéder à ${itemPath}:`,
-            statError.message
-          );
-        }
-      }
+        })
+      );
     } catch (readError) {
       console.warn(
         `[SimpleDetector] Impossible de lire ${currentPath}:`,
@@ -221,7 +227,7 @@ export class SimpleExecutableDetector {
    */
   async listAllExecutables(gamePath, gameName = "") {
     try {
-      const executables = this.findExecutables(gamePath, gamePath);
+      const executables = await this.findExecutables(gamePath, gamePath);
       return this.scoreExecutables(executables, gameName);
     } catch (error) {
       console.error("[SimpleDetector] Erreur listage:", error);

@@ -22,13 +22,14 @@ export class DiscordRPCService extends EventEmitter {
     this.clientId = "1429998620282720340";
     this.socket = null;
     this.isConnected = false;
-    this.isEnabled = false;
+    this.isEnabled = true; // Activé par défaut
     this.currentActivity = null;
     this.savedActivity = null;
     this.connectionRetryTimeout = null;
     this.maxRetries = Infinity;
     this.retryCount = 0;
     this.user = null;
+    this.isInitializing = false; // Flag pour éviter les double-init
   }
 
   /**
@@ -266,6 +267,21 @@ export class DiscordRPCService extends EventEmitter {
   }
 
   async setGameActivity(gameData) {
+    // Initialisation automatique au premier lancement de jeu
+    if (!this.isConnected && this.isEnabled && !this.isInitializing) {
+      this.isInitializing = true;
+      console.log("[DiscordRPC] Initialisation automatique au premier lancement de jeu...");
+
+      try {
+        await this.initialize(true);
+      } catch (error) {
+        console.error("[DiscordRPC] Échec de l'initialisation automatique:", error.message);
+        this.isInitializing = false;
+      }
+
+      this.isInitializing = false;
+    }
+
     if (!this.isConnected || !this.isEnabled) {
       this.savedActivity = { type: "game", gameData };
       return;

@@ -203,6 +203,22 @@ const Games = () => {
     loadGames();
   }, []);
 
+  // Recharger l'état des jeux actifs au montage uniquement
+  // Note: Les mises à jour en temps réel sont gérées par handleGameStatusChange
+  useEffect(() => {
+    const refreshActiveGames = async () => {
+      try {
+        const activeGames = await gameManager.getActiveGames();
+        const playingSet = new Set(activeGames.map((game) => game.gameId));
+        setPlayingGames(playingSet);
+      } catch (error) {
+        console.error("[Games] Erreur lors du rechargement des jeux actifs:", error);
+      }
+    };
+
+    // Rafraîchir une seule fois au montage du composant
+    refreshActiveGames();
+  }, []);
 
   // Écouter les changements de la queue de désinstallation
   useEffect(() => {

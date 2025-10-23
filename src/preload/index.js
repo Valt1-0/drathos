@@ -76,9 +76,10 @@ const api = {
 
   onSaveGameStats: (callback) => {
     ipcRenderer.removeAllListeners("save-game-stats");
-    ipcRenderer.on("save-game-stats", (event, data) => {
+    ipcRenderer.on("save-game-stats", (_event, data) => {
       console.log("[Preload] 📡 Event save-game-stats reçu:", data);
-      callback(event, data);
+      // Ne jamais passer l'objet event au renderer pour éviter l'exposition de ipcRenderer
+      callback(data);
     });
   },
 
