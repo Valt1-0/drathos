@@ -28,6 +28,31 @@ const gameLauncher = new GameLauncher();
 // === UTILITAIRES DE SÉCURITÉ ===
 
 /**
+ * Vérifie si un fichier est exécutable selon la plateforme
+ * @param {string} fileName - Nom du fichier
+ * @returns {boolean} - true si le fichier est un exécutable
+ */
+function isExecutableFile(fileName) {
+  const platform = process.platform;
+  const lower = fileName.toLowerCase();
+
+  switch (platform) {
+    case 'win32':
+      return lower.endsWith('.exe') || lower.endsWith('.bat') || lower.endsWith('.cmd');
+
+    case 'linux':
+      return lower.endsWith('.sh') || lower.endsWith('.run') ||
+             lower.endsWith('.bin') || lower.endsWith('.appimage');
+
+    case 'darwin':
+      return fileName.endsWith('.app') || lower.endsWith('.command') || lower.endsWith('.sh');
+
+    default:
+      return false;
+  }
+}
+
+/**
  * Valide qu'une URL est sûre pour être ouverte avec shell.openExternal
  * @param {string} url - URL à valider
  * @returns {boolean} - true si l'URL est sûre
@@ -715,7 +740,7 @@ ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
             files.push({
               name: item,
               size: stats.size,
-              isExecutable: item.toLowerCase().endsWith(".exe"),
+              isExecutable: isExecutableFile(item),
             });
           } else if (stats.isDirectory()) {
             directories.push({
@@ -787,9 +812,20 @@ const scanArchiveForExecutables = async (filePath) => {
     });
 
     stream.on('end', () => {
+      // Détecter la plateforme actuelle
+      const currentPlatformMap = {
+        'win32': 'windows',
+        'linux': 'linux',
+        'darwin': 'mac'
+      };
+      const currentPlatform = currentPlatformMap[process.platform];
+
+      // Trier en priorisant la plateforme actuelle
       executables.sort((a, b) => {
-        if (a.platform === 'windows' && b.platform !== 'windows') return -1;
-        if (a.platform !== 'windows' && b.platform === 'windows') return 1;
+        // Prioriser les exécutables de la plateforme actuelle
+        if (a.platform === currentPlatform && b.platform !== currentPlatform) return -1;
+        if (a.platform !== currentPlatform && b.platform === currentPlatform) return 1;
+        // Si les deux sont de la même plateforme, préférer les chemins plus courts (racine)
         return a.path.length - b.path.length;
       });
 

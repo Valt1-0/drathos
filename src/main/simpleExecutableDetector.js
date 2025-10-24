@@ -47,7 +47,37 @@ export class SimpleExecutableDetector {
   }
 
   /**
-   * Recherche récursive de tous les .exe (version asynchrone)
+   * Vérifie si un fichier est un exécutable selon la plateforme
+   * @param {string} fileName - Nom du fichier
+   * @param {object} stats - Stats du fichier
+   * @returns {boolean} True si le fichier est un exécutable
+   */
+  isExecutableFile(fileName, stats) {
+    const platform = process.platform;
+    const lower = fileName.toLowerCase();
+
+    switch (platform) {
+      case 'win32':
+        return lower.endsWith('.exe') || lower.endsWith('.bat') || lower.endsWith('.cmd');
+
+      case 'linux':
+        // Sur Linux: .sh, .run, .bin, .AppImage, ou fichiers avec permissions exécutables
+        const hasExecutableExtension = lower.endsWith('.sh') || lower.endsWith('.run') ||
+                                       lower.endsWith('.bin') || lower.endsWith('.appimage');
+        const hasExecutablePermission = stats && (stats.mode & 0o111) !== 0;
+        return hasExecutableExtension || hasExecutablePermission;
+
+      case 'darwin':
+        // Sur macOS: .app (bundle), .command, .sh
+        return fileName.endsWith('.app') || lower.endsWith('.command') || lower.endsWith('.sh');
+
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Recherche récursive de tous les exécutables (version asynchrone multiplateforme)
    * @param {string} currentPath - Dossier actuel à scanner
    * @param {string} basePath - Dossier racine pour calculer le chemin relatif
    * @param {number} depth - Profondeur actuelle (limite à 3 niveaux)
@@ -72,7 +102,7 @@ export class SimpleExecutableDetector {
           try {
             const stats = await fs.promises.stat(itemPath);
 
-            if (stats.isFile() && item.toLowerCase().endsWith(".exe")) {
+            if (stats.isFile() && this.isExecutableFile(item, stats)) {
               // Calculer le chemin relatif depuis le dossier de base
               const relativePath = path.relative(basePath, itemPath);
 
