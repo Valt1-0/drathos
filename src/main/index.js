@@ -140,6 +140,11 @@ function createWindow() {
     mainWindow.show();
   });
 
+  // Ouvrir les DevTools en production pour débugger
+  if (!is.dev) {
+    mainWindow.webContents.openDevTools();
+  }
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     // Valider l'URL avant de l'ouvrir
     if (isSafeForExternalOpen(details.url)) {
@@ -209,7 +214,7 @@ app.whenReady().then(() => {
                                "https://172.31.*.* https://192.168.*.* https://localhost:* https://127.0.0.1:*";
 
           return "default-src 'self'; " +
-                 "script-src 'self'; " +
+                 "script-src 'self' 'unsafe-inline'; " + // Ajout de 'unsafe-inline' pour les scripts Vite
                  "style-src 'self' 'unsafe-inline'; " +
                  `img-src 'self' data: blob: ${igdbDomains}${localNetworks}${backendUrl}; ` +
                  "font-src 'self' data:; " +

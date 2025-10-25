@@ -6,7 +6,9 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
+    base: "./",
     build: {
+      outDir: "dist-electron/main",
       rollupOptions: {
         input: {
           index: resolve(__dirname, "src/main/index.js"),
@@ -16,31 +18,29 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
-    preload: {
-      build: {
-        rollupOptions: {
-          input: {
-            index: resolve(__dirname, "src/preload/index.js"),
-          },
+    build: {
+      outDir: "dist-electron/preload",
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "src/preload/index.js"),
         },
       },
     },
   },
   renderer: {
+    root: "src/renderer",
+    base: "./",
     resolve: {
       alias: {
         "@renderer": resolve("src/renderer/src"),
       },
     },
     plugins: [react(), tailwindcss()],
-    renderer: {
-      root: ".",
-      build: {
-        rollupOptions: {
-          input: {
-            index: resolve(__dirname, "index.html"),
-          },
-        },
+    build: {
+      outDir: "dist-electron/renderer",
+      assetsDir: "assets",
+      rollupOptions: {
+        input: resolve(__dirname, "src/renderer/index.html"),
       },
     },
   },
