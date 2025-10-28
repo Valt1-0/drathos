@@ -12,6 +12,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, "src/main/index.js"),
+          installWorker: resolve(__dirname, "src/main/installWorker.js"),
+          uninstallWorker: resolve(__dirname, "src/main/uninstallWorker.js"),
         },
       },
     },

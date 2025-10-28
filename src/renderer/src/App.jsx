@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
+import { HashRouter as Router, Routes, Route, Navigate } from "react-router";
 import { Toaster } from "sonner";
 
 import { AuthProvider, useAuth } from "./contexts/authContext";

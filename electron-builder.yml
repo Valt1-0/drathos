@@ -1,44 +1,59 @@
-appId: com.electron.app
-productName: drathos
+appId: com.valt.drathos
+productName: Drathos
+copyright: Copyright © 2025 Valt
+
 directories:
+  output: dist
   buildResources: build
+
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - dist-electron/**/*
+  - "!**/*.{ts,tsx,map}"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/node_modules/.bin"
+  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+  - "!.editorconfig"
+  - "!**/._*"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+  - "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}"
+  - "!**/{appveyor.yml,.travis.yml,circle.yml}"
+  - "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+  - "!src"
+  - "!.vite"
+  - "!forge.config.js"
+  - "!vite.*.config.mjs"
+  - "!electron.vite.config.mjs"
+
 asarUnpack:
-  - resources/**
-  - node_modules/7zip-bin/**/*
-  - node_modules/node-7z/**/*
+  - "**/*.node"
+
 win:
-  executableName: drathos
+  target:
+    - nsis
+    - zip
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   createDesktopShortcut: always
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
+  createStartMenuShortcut: true
+  shortcutName: Drathos
+
 linux:
   target:
     - AppImage
-    - snap
     - deb
-  maintainer: electronjs.org
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  category: Game
+  icon: build/icon.png
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.games
+  icon: build/icon.icns
+
+publish: null
