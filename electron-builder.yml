@@ -38,10 +38,14 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: Drathos
+  perMachine: false
+  allowElevation: true
+  runAfterFinish: true
+  deleteAppDataOnUninstall: true
+  include: build/installer.nsh
 
 linux:
   target:

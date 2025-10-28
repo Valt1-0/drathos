@@ -140,8 +140,8 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Ouvrir les DevTools en production pour débugger
-  if (!is.dev) {
+  // Ouvrir les DevTools uniquement en développement
+  if (is.dev) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -179,7 +179,7 @@ app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
-  // === SÉCURITÉ: Content Security Policy ===
+  // === SÉCURITÉ: Content Security Policy RENFORCÉE ===
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     // Récupérer l'adresse du serveur backend configurée
     const serverAddress = store.get("serverAddress", "");
@@ -195,8 +195,11 @@ app.whenReady().then(() => {
         "style-src 'self' 'unsafe-inline'; " +
         `img-src 'self' data: https: http: blob: ${igdbDomains}; ` +
         "font-src 'self' data:; " +
-        "connect-src 'self' ws: http: https:;" // Tout autoriser en dev
-      : // Production : autoriser réseau local + backend configuré + IGDB
+        "connect-src 'self' ws: http: https:; " + // Tout autoriser en dev
+        "object-src 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self';"
+      : // Production : CSP sécurisée avec support IGDB
         (() => {
           // Autoriser le backend configuré
           const backendUrl = serverAddress ? ` ${serverAddress}` : "";
@@ -215,17 +218,27 @@ app.whenReady().then(() => {
                                "https://172.31.*.* https://192.168.*.* https://localhost:* https://127.0.0.1:*";
 
           return "default-src 'self'; " +
-                 "script-src 'self' 'unsafe-inline'; " + // Ajout de 'unsafe-inline' pour les scripts Vite
-                 "style-src 'self' 'unsafe-inline'; " +
-                 `img-src 'self' data: blob: ${igdbDomains}${localNetworks}${backendUrl}; ` +
+                 "script-src 'self' 'unsafe-inline'; " + // Minimal inline nécessaire pour Vite
+                 "style-src 'self' 'unsafe-inline'; " + // Nécessaire pour Tailwind
+                 `img-src 'self' data: blob: https: ${igdbDomains}${localNetworks}${backendUrl}; ` + // IGDB + backend
                  "font-src 'self' data:; " +
-                 `connect-src 'self' ${igdbDomains}${localNetworks}${backendUrl};`;
+                 `connect-src 'self' ${igdbDomains}${localNetworks}${backendUrl}; ` + // API calls vers IGDB + backend
+                 "object-src 'none'; " + // Bloquer Flash, Java, etc.
+                 "base-uri 'self'; " + // Empêcher injection via <base>
+                 "form-action 'self'; " + // Limiter les soumissions de formulaires
+                 "frame-ancestors 'none'; " + // Empêcher clickjacking
+                 "upgrade-insecure-requests;"; // Forcer HTTPS quand disponible
         })();
 
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [csp]
+        'Content-Security-Policy': [csp],
+        // Headers de sécurité additionnels
+        'X-Content-Type-Options': ['nosniff'],
+        'X-Frame-Options': ['DENY'],
+        'X-XSS-Protection': ['1; mode=block'],
+        'Referrer-Policy': ['strict-origin-when-cross-origin']
       }
     });
   });

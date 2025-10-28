@@ -9,6 +9,7 @@ export default defineConfig({
     base: "./",
     build: {
       outDir: "dist-electron/main",
+      minify: false, // Désactiver la minification pour éviter les problèmes
       rollupOptions: {
         input: {
           index: resolve(__dirname, "src/main/index.js"),
@@ -41,8 +42,15 @@ export default defineConfig({
     build: {
       outDir: "dist-electron/renderer",
       assetsDir: "assets",
+      minify: 'esbuild',
+      sourcemap: false,
+      target: 'esnext', // Utiliser les fonctionnalités modernes pour éviter eval
       rollupOptions: {
         input: resolve(__dirname, "src/renderer/index.html"),
+        output: {
+          format: 'es', // Format ES modules (pas de eval)
+          manualChunks: undefined,
+        },
       },
     },
   },
