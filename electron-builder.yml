@@ -26,6 +26,7 @@ files:
 
 asarUnpack:
   - "**/*.node"
+  - "**/node_modules/7zip-bin/**/*"
 
 win:
   target:

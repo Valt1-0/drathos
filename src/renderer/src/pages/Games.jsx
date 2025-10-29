@@ -294,13 +294,19 @@ const Games = () => {
   const isProcessingStats = useRef(false);
 
   useEffect(() => {
-    const handleSaveStats = async (event, data) => {
+    const handleSaveStats = async (data) => {
       if (isProcessingStats.current) {
         console.debug("[Games] Stats update already in progress, skipping...");
         return;
       }
 
       isProcessingStats.current = true;
+
+      if (!data || !data.sessionData) {
+        console.error("[Games] Données de session invalides");
+        isProcessingStats.current = false;
+        return;
+      }
 
       const duration = data.sessionData.duration;
       const hours = Math.floor(duration / 3600);

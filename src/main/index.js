@@ -1,5 +1,10 @@
 // Fichier: drathos/src/main/index.js
 
+// Désactiver les warnings de sécurité en développement (unsafe-eval nécessaire pour Vite HMR)
+if (process.env.NODE_ENV !== 'production') {
+  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+}
+
 import {
   app,
   shell,
@@ -437,7 +442,8 @@ ipcMain.handle("shell:openExternal", async (event, url) => {
 
 //* Open file dialog */
 ipcMain.handle("dialog:selectAndCreate", async () => {
-  const result = await dialog.showOpenDialog({
+  const mainWindow = BrowserWindow.getAllWindows()[0];
+  const result = await dialog.showOpenDialog(mainWindow, {
     properties: ["openDirectory"],
   });
 
@@ -456,7 +462,8 @@ ipcMain.handle("dialog:selectAndCreate", async () => {
 });
 
 ipcMain.handle("dialog:openFolder", async () => {
-  const result = await dialog.showOpenDialog({
+  const mainWindow = BrowserWindow.getAllWindows()[0];
+  const result = await dialog.showOpenDialog(mainWindow, {
     properties: ["openDirectory"],
   });
 
@@ -552,6 +559,21 @@ const getDetector = () => {
     detectorInstance = new SimpleExecutableDetector();
   }
   return detectorInstance;
+};
+
+/**
+ * Obtient le chemin correct du binaire 7zip, même quand l'app est packagée
+ * En production, les binaires sont dans app.asar.unpacked, pas dans app.asar
+ */
+const get7zipPath = () => {
+  let binPath = sevenBin.path7za;
+
+  // En production, remplacer app.asar par app.asar.unpacked
+  if (binPath.includes('app.asar') && !binPath.includes('app.asar.unpacked')) {
+    binPath = binPath.replace('app.asar', 'app.asar.unpacked');
+  }
+
+  return binPath;
 };
 
 ipcMain.handle("getBestExecutable", async (event, { gamePath, gameName }) => {
@@ -805,58 +827,72 @@ const detectExecutablePlatform = (filePath) => {
 };
 
 const scanArchiveForExecutables = async (filePath) => {
+  const sevenZipPath = get7zipPath();
+
+  if (!fs.existsSync(filePath)) {
+    return { success: false, error: 'Fichier introuvable', executables: [] };
+  }
+
   const allExtensions = Object.values(EXECUTABLE_PATTERNS).flat();
   const executables = [];
 
-  const stream = Seven.list(filePath, { $bin: sevenBin.path7za });
+  try {
+    const stream = Seven.list(filePath, { $bin: sevenZipPath });
 
-  return new Promise((resolve) => {
-    stream.on('data', (data) => {
-      if (!data.file || data.file.endsWith('/') || data.file.endsWith('\\')) return;
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve({ success: false, error: 'Timeout lors du scan de l\'archive', executables: [] });
+      }, 30000);
 
-      const fileName = data.file.split(/[/\\]/).pop();
-      const isExecutable = allExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+      stream.on('data', (data) => {
+        if (!data.file || data.file.endsWith('/') || data.file.endsWith('\\')) return;
 
-      if (isExecutable) {
-        const platform = detectExecutablePlatform(data.file);
-        if (platform) {
-          executables.push({
-            path: data.file,
-            platform,
-            name: fileName,
-            size: data.size || 0
-          });
+        const fileName = data.file.split(/[/\\]/).pop();
+        const isExecutable = allExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+
+        if (isExecutable) {
+          const platform = detectExecutablePlatform(data.file);
+          if (platform) {
+            executables.push({
+              path: data.file,
+              platform,
+              name: fileName,
+              size: data.size || 0
+            });
+          }
         }
-      }
-    });
-
-    stream.on('end', () => {
-      // Détecter la plateforme actuelle
-      const currentPlatformMap = {
-        'win32': 'windows',
-        'linux': 'linux',
-        'darwin': 'mac'
-      };
-      const currentPlatform = currentPlatformMap[process.platform];
-
-      // Trier en priorisant la plateforme actuelle
-      executables.sort((a, b) => {
-        // Prioriser les exécutables de la plateforme actuelle
-        if (a.platform === currentPlatform && b.platform !== currentPlatform) return -1;
-        if (a.platform !== currentPlatform && b.platform === currentPlatform) return 1;
-        // Si les deux sont de la même plateforme, préférer les chemins plus courts (racine)
-        return a.path.length - b.path.length;
       });
 
-      console.log(`[Main] ✅ ${executables.length} exécutable(s) trouvé(s)`);
-      resolve({ success: true, executables, count: executables.length });
-    });
+      stream.on('end', () => {
+        clearTimeout(timeout);
 
-    stream.on('error', (err) => {
-      console.error(`[Main] ❌ Erreur lecture archive:`, err);
-      resolve({ success: false, error: err.message, executables: [] });
+        const currentPlatformMap = {
+          'win32': 'windows',
+          'linux': 'linux',
+          'darwin': 'mac'
+        };
+        const currentPlatform = currentPlatformMap[process.platform];
+
+        executables.sort((a, b) => {
+          if (a.platform === currentPlatform && b.platform !== currentPlatform) return -1;
+          if (a.platform !== currentPlatform && b.platform === currentPlatform) return 1;
+          return a.path.length - b.path.length;
+        });
+
+        console.log(`[Main] ✅ ${executables.length} exécutable(s) trouvé(s)`);
+        resolve({ success: true, executables, count: executables.length });
+      });
+
+      stream.on('error', (err) => {
+        clearTimeout(timeout);
+        console.error(`[Main] ❌ Erreur lecture archive:`, err.message);
+        resolve({ success: false, error: err.message || 'Erreur inconnue lors du scan', executables: [] });
+      });
     });
-  });
+  } catch (error) {
+    console.error('[Main] ❌ Exception lors de la création du stream:', error.message);
+    return { success: false, error: error.message || 'Erreur lors de la création du stream', executables: [] };
+  }
 };
 
 ipcMain.handle("readArchiveFile", async (event, filePath) => {
@@ -873,7 +909,9 @@ ipcMain.handle("readArchiveFile", async (event, filePath) => {
 
 ipcMain.handle("selectAndScanArchive", async () => {
   try {
-    const result = await dialog.showOpenDialog({
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+
+    const result = await dialog.showOpenDialog(mainWindow, {
       properties: ["openFile"],
       filters: [
         { name: "Archives", extensions: ["zip", "7z", "rar", "tar", "gz", "bz2", "xz"] },
@@ -895,6 +933,7 @@ ipcMain.handle("selectAndScanArchive", async () => {
       fileName: path.basename(filePath)
     };
   } catch (error) {
+    console.error('[Main] ❌ Erreur dans selectAndScanArchive:', error);
     return { success: false, error: error.message, executables: [] };
   }
 });

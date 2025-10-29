@@ -75,7 +75,14 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
     try {
       const result = await window.api.selectAndScanArchive();
-      if (result.canceled || !result.success) return;
+
+      if (result.canceled) return;
+
+      if (!result.success) {
+        setErrorMessage(result.error || "Erreur lors du scan de l'archive");
+        setUploadState("error");
+        return;
+      }
 
       setZipFile({ name: result.fileName, path: result.filePath });
       setAvailableExecutables(result.executables || []);
@@ -90,6 +97,8 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
     } catch (error) {
       console.error("[AddGameModal] Erreur scan archive:", error);
       setAvailableExecutables([]);
+      setErrorMessage("Erreur lors de la sélection du fichier");
+      setUploadState("error");
     } finally {
       setIsLoadingExecutables(false);
     }

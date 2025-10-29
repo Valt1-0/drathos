@@ -17,7 +17,14 @@ export class ExtractionEngine {
     this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".7z"];
 
     // Get the path to embedded 7z binary
-    this.sevenZipPath = sevenBin.path7za;
+    let binPath = sevenBin.path7za;
+
+    // En production, remplacer app.asar par app.asar.unpacked
+    if (binPath.includes('app.asar') && !binPath.includes('app.asar.unpacked')) {
+      binPath = binPath.replace('app.asar', 'app.asar.unpacked');
+    }
+
+    this.sevenZipPath = binPath;
 
     console.log(
       `[ExtractionEngine] ✅ Initialized with support for: ${this.supportedFormats.join(", ")}`
