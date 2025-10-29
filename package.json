@@ -5,6 +5,7 @@
   "main": "dist-electron/main/index.js",
   "author": "Valt",
   "homepage": "https://drathos.gg",
+  "email": "contact@drathos.gg",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
