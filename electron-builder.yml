@@ -18,6 +18,7 @@ files:
   - "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}"
   - "!**/{appveyor.yml,.travis.yml,circle.yml}"
   - "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+  - "!**/nul"
   - "!src"
   - "!.vite"
   - "!forge.config.js"
@@ -54,11 +55,20 @@ linux:
     - deb
   category: Game
   icon: build/icon.png
+  synopsis: "Client de bibliothèque de jeux DRM-free"
+  description: "Drathos est un client moderne pour gérer votre bibliothèque de jeux DRM-free. Téléchargez, installez et lancez vos jeux facilement."
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  executableName: drathos
 
 mac:
   target:
     - dmg
   category: public.app-category.games
   icon: build/icon.icns
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
 
 publish: null
