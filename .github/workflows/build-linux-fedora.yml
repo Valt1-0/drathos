@@ -20,7 +20,7 @@ jobs:
       - name: Setup Fedora environment
         run: |
           dnf update -y
-          dnf install -y rpm-build git nodejs npm fuse-libs libxcrypt-compat
+          dnf install -y rpm-build rpmbuild rpmdevtools git nodejs npm fuse-libs libxcrypt-compat
 
       - name: Checkout repository
         uses: actions/checkout@v4
