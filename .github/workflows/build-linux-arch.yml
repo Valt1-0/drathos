@@ -1,0 +1,56 @@
+name: Build Linux (Arch)
+
+on:
+  workflow_call:
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded artifact"
+        value: ${{ jobs.build-arch.outputs.artifact-name }}
+  workflow_dispatch:
+
+jobs:
+  build-arch:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    outputs:
+      artifact-name: ${{ steps.set-output.outputs.artifact-name }}
+
+    steps:
+      - name: Setup Arch Linux environment
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git nodejs npm fakeroot snapd
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Arch package
+        run: npm run dist:linux
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: List build outputs
+        run: |
+          echo "Build outputs:"
+          ls -lh dist/
+
+      - name: Set output
+        id: set-output
+        run: echo "artifact-name=Drathos-arch-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drathos-arch-${{ github.sha }}
+          path: |
+            dist/*.pacman
+            dist/*.pkg.tar.zst
+            dist/*.AppImage
+            dist/*.snap
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 9

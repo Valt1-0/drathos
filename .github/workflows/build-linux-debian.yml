@@ -1,0 +1,57 @@
+name: Build Linux (Debian/Ubuntu)
+
+on:
+  workflow_call:
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded artifact"
+        value: ${{ jobs.build-debian.outputs.artifact-name }}
+  workflow_dispatch:
+
+jobs:
+  build-debian:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.set-output.outputs.artifact-name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2 snapd
+          npm ci --legacy-peer-deps
+
+      - name: Build Debian package
+        run: npm run dist:linux
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: List build outputs
+        run: |
+          echo "Build outputs:"
+          ls -lh dist/
+
+      - name: Set output
+        id: set-output
+        run: echo "artifact-name=Drathos-debian-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drathos-debian-${{ github.sha }}
+          path: |
+            dist/*.deb
+            dist/*.AppImage
+            dist/*.snap
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 9
