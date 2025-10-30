@@ -44,14 +44,12 @@ jobs:
           echo "✅ System dependencies installed"
 
       - name: Install npm dependencies
-        working-directory: drathos
         run: |
           npm ci --legacy-peer-deps
           echo "✅ Dependencies installed"
 
       - name: Clean problematic files (Windows)
         if: matrix.os == 'windows-latest'
-        working-directory: drathos
         shell: pwsh
         run: |
           $nulFiles = Get-ChildItem -Path "node_modules\7zip-bin" -Filter "nul" -Recurse -ErrorAction SilentlyContinue
@@ -66,20 +64,17 @@ jobs:
 
       - name: Clean problematic files (Linux/macOS)
         if: matrix.os != 'windows-latest'
-        working-directory: drathos
         run: |
           find node_modules/7zip-bin -name "nul" -type f -delete 2>/dev/null || true
           echo "✅ Cleaned problematic files"
 
       - name: Build application
-        working-directory: drathos
         run: npm run dist:${{ matrix.platform }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           DEBUG: electron-builder
 
       - name: List build outputs
-        working-directory: drathos
         shell: bash
         run: |
           if [ -d "dist" ]; then
@@ -99,8 +94,8 @@ jobs:
         with:
           name: Drathos-${{ matrix.platform }}-${{ github.sha }}
           path: |
-            drathos/dist/*.exe
-            drathos/dist/*.zip
+            dist/*.exe
+            dist/*.zip
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
@@ -110,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Drathos-${{ matrix.platform }}-${{ github.sha }}
-          path: drathos/dist/*.dmg
+          path: dist/*.dmg
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
@@ -121,10 +116,10 @@ jobs:
         with:
           name: Drathos-${{ matrix.platform }}-${{ github.sha }}
           path: |
-            drathos/dist/*.AppImage
-            drathos/dist/*.deb
-            drathos/dist/*.pacman
-            drathos/dist/*.pkg.tar.zst
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.pacman
+            dist/*.pkg.tar.zst
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
