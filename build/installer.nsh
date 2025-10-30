@@ -48,7 +48,7 @@
   DetailPrint "Suppression des données de l'application..."
 
   ; Lire le chemin des jeux depuis la config avec PowerShell et le supprimer
-  nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference=\"SilentlyContinue\"; try { $config = Get-Content \"$env:APPDATA\Drathos\config.json\" -Raw | ConvertFrom-Json; if ($config.downloadPath -and (Test-Path $config.downloadPath)) { Remove-Item -Path $config.downloadPath -Recurse -Force; Write-Output \"Jeux supprimés\" } } catch { }"'
+  nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $$config = Get-Content $$env:APPDATA\Drathos\config.json -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json; if ($$config.downloadPath -and (Test-Path $$config.downloadPath)) { Remove-Item -Path $$config.downloadPath -Recurse -Force } } catch { }"'
   Pop $0
 
   ; Supprimer le dossier de configuration de l'app (%APPDATA%\Drathos)
