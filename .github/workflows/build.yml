@@ -115,7 +115,7 @@ jobs:
           name: Drathos-${{ matrix.platform }}-${{ github.sha }}
           path: |
             dist/*.deb
-            dist/*.tar.zst
+            dist/*.pacman
           if-no-files-found: error
           retention-days: 30
           compression-level: 9

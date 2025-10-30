@@ -54,7 +54,7 @@ linux:
     - target: deb
       arch:
         - x64
-    - target: tar.zst
+    - target: pacman
       arch:
         - x64
   category: Game
