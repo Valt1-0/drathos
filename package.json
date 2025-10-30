@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "Game Library Client for DRM Free Games",
   "main": "dist-electron/main/index.js",
-  "author": "Valt",
+  "author": {
+    "name": "Valt",
+    "email": "contact@drathos.gg"
+  },
   "homepage": "https://drathos.gg",
-  "email": "contact@drathos.gg",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
