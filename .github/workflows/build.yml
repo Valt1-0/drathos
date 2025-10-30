@@ -74,78 +74,72 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           DEBUG: electron-builder
 
-      - name: Create Arch Linux package with makepkg
+      - name: Create Arch Linux package (proper method)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          # Install makepkg dependencies
-          sudo apt-get update
-          sudo apt-get install -y binutils fakeroot zstd
+          pkgname="drathos"
+          pkgver="1.0.0"
+          pkgrel="1"
 
+          echo "🔄 Creating proper Arch Linux package following Arch guidelines"
+
+          # Create package directory structure
+          mkdir -p arch-pkg/pkg/usr/share/${pkgname}
+          mkdir -p arch-pkg/pkg/usr/bin
+
+          # Copy only the app resources (not electron binaries)
           cd dist
           if ls *.pacman 1> /dev/null 2>&1; then
             for f in *.pacman; do
-              pkgname="drathos"
-              pkgver="1.0.0"
-              arch="x86_64"
+              echo "📦 Extracting resources from $f"
+              bsdtar -xf "$f" -C ../arch-pkg/extract
 
-              echo "🔄 Creating Arch package from $f"
-
-              # Extract the .pacman file
-              mkdir -p pkg
-              bsdtar -xf "$f" -C pkg
-
-              # Create PKGBUILD directory
-              mkdir -p build-arch
-              cd build-arch
-
-              # Generate PKGBUILD
-              cat > PKGBUILD <<EOF
-          # Maintainer: Valt <contact@drathos.gg>
-          pkgname=${pkgname}
-          pkgver=${pkgver}
-          pkgrel=1
-          pkgdesc="Client de bibliothèque de jeux DRM-free"
-          arch=('x86_64')
-          url="https://github.com/Valt1-0/drathos"
-          license=('custom')
-          depends=('gtk3' 'nss' 'alsa-lib')
-          options=('!strip' '!emptydirs')
-
-          package() {
-            # Copy all files from extracted package
-            cp -r "\${srcdir}"/../pkg/* "\${pkgdir}/"
-          }
-          EOF
-
-              # Create the package
-              echo "📦 Building package with makepkg..."
-              PKGEXT='.pkg.tar.zst' makepkg --nodeps --skipinteg --skipchecksums 2>&1 || true
-
-              # Move the package to dist
-              if ls *.pkg.tar.zst 1> /dev/null 2>&1; then
-                mv *.pkg.tar.zst ../
-                echo "✅ Created Arch package"
+              # Copy only the app resources, not electron
+              if [ -d "../arch-pkg/extract/usr/lib/${pkgname}/resources/app" ]; then
+                cp -r ../arch-pkg/extract/usr/lib/${pkgname}/resources/app/* ../arch-pkg/pkg/usr/share/${pkgname}/
+              elif [ -d "../arch-pkg/extract/opt/${pkgname}/resources/app" ]; then
+                cp -r ../arch-pkg/extract/opt/${pkgname}/resources/app/* ../arch-pkg/pkg/usr/share/${pkgname}/
+              elif [ -d "../arch-pkg/extract/resources/app" ]; then
+                cp -r ../arch-pkg/extract/resources/app/* ../arch-pkg/pkg/usr/share/${pkgname}/
               else
-                echo "⚠️ Failed to create package, falling back to simple conversion"
-                cd ..
-                # Fallback: create minimal package with .PKGINFO
-                cd pkg
-                cat > .PKGINFO <<EOF
-          pkgname = ${pkgname}
-          pkgver = ${pkgver}-1
-          pkgdesc = Client de bibliothèque de jeux DRM-free
-          url = https://github.com/Valt1-0/drathos
-          arch = x86_64
-          license = custom
-          EOF
-                tar --zstd -cf "../${pkgname}-${pkgver}-${arch}.pkg.tar.zst" .
-                cd ..
-                echo "✅ Created fallback package"
+                echo "⚠️ Cannot find app resources, copying everything"
+                cp -r ../arch-pkg/extract/* ../arch-pkg/pkg/usr/share/${pkgname}/ 2>/dev/null || true
               fi
 
-              cd ..
-              rm -rf build-arch pkg "$f"
+              # Create launcher script
+              cat > ../arch-pkg/pkg/usr/bin/${pkgname} <<'LAUNCHER'
+#!/bin/sh
+exec electron /usr/share/drathos "$@"
+LAUNCHER
+              chmod +x ../arch-pkg/pkg/usr/bin/${pkgname}
+
+              # Create .PKGINFO
+              cd ../arch-pkg/pkg
+              cat > .PKGINFO <<PKGINFO
+pkgname = ${pkgname}
+pkgver = ${pkgver}-${pkgrel}
+pkgdesc = Client de bibliothèque de jeux DRM-free
+url = https://github.com/Valt1-0/drathos
+builddate = $(date +%s)
+packager = GitHub Actions
+size = $(du -sb . | cut -f1)
+arch = x86_64
+license = custom
+depend = electron
+depend = gtk3
+depend = nss
+depend = alsa-lib
+PKGINFO
+
+              # Create package
+              echo "📦 Creating .pkg.tar.zst"
+              tar --zstd -cf "../../dist/${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst" .
+
+              cd ../../dist
+              rm -rf ../arch-pkg "$f"
+              echo "✅ Created: ${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst"
+              ls -lh ${pkgname}-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst
             done
           else
             echo "⚠️ No .pacman files found"
