@@ -166,7 +166,7 @@ const Welcome = () => {
         return (
           <motion.div
             key="step1"
-            className="h-full flex flex-col justify-center gap-8"
+            className="flex flex-col gap-8"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
@@ -289,7 +289,7 @@ const Welcome = () => {
         return (
           <motion.div
             key="step2"
-            className="h-full flex flex-col justify-center gap-6 max-w-4xl mx-auto w-full"
+            className="flex flex-col gap-6 max-w-4xl mx-auto w-full"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
@@ -441,7 +441,7 @@ const Welcome = () => {
         return (
           <motion.div
             key="step3"
-            className="h-full flex flex-col justify-center gap-4 max-w-3xl mx-auto w-full px-4"
+            className="flex flex-col gap-4 max-w-3xl mx-auto w-full px-4"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
@@ -728,11 +728,13 @@ const Welcome = () => {
       </div>
 
       {/* Step Content - Takes full remaining space */}
-      <div className="relative z-10 flex-1 flex items-center justify-center px-12 pb-12">
-        <div className="w-full max-w-6xl h-full">
-          <AnimatePresence mode="wait">
-            {renderStep()}
-          </AnimatePresence>
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="flex items-center justify-center min-h-full px-12 pb-12">
+          <div className="w-full max-w-6xl py-8">
+            <AnimatePresence mode="wait">
+              {renderStep()}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>
