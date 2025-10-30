@@ -88,6 +88,11 @@ snap:
     - pulseaudio
     - x11
 
+rpm:
+  compression: xz
+  fpm:
+    - "--rpm-rpmbuild-define=_build_id_links none"
+
 mac:
   target:
     - dmg
