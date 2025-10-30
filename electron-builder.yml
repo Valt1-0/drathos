@@ -60,11 +60,6 @@ linux:
   description: "Drathos est un client moderne pour gérer votre bibliothèque de jeux DRM-free. Téléchargez, installez et lancez vos jeux facilement."
   artifactName: ${productName}-${version}-${arch}.${ext}
   executableName: drathos
-  desktop:
-    Name: Drathos
-    Comment: "Game Library Client for DRM Free Games"
-    Categories: Game;
-    Terminal: false
 
 mac:
   target:
