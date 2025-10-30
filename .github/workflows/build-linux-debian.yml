@@ -27,11 +27,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2 snapd
+          sudo apt-get install -y libfuse2 snapd ruby ruby-dev build-essential
           npm ci --legacy-peer-deps
 
       - name: Build Debian package
-        run: npm run dist:linux
+        run: |
+          npm run build
+          npx electron-builder --linux deb snap appimage
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 

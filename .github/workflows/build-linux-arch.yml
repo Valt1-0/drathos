@@ -31,7 +31,9 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Build Arch package
-        run: npm run dist:linux
+        run: |
+          npm run build
+          npx electron-builder --linux pacman appimage
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 

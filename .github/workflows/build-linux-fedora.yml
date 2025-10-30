@@ -20,7 +20,7 @@ jobs:
       - name: Setup Fedora environment
         run: |
           dnf update -y
-          dnf install -y rpm-build git nodejs npm fuse-libs snapd
+          dnf install -y rpm-build git nodejs npm fuse-libs libcrypt-compat
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,7 +29,9 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Build RPM package
-        run: npm run dist:linux
+        run: |
+          npm run build
+          npx electron-builder --linux rpm appimage
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -49,7 +51,6 @@ jobs:
           path: |
             dist/*.rpm
             dist/*.AppImage
-            dist/*.snap
           if-no-files-found: warn
           retention-days: 30
           compression-level: 9
