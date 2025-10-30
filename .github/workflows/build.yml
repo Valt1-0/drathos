@@ -74,6 +74,27 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           DEBUG: electron-builder
 
+      - name: Convert .pacman to .pkg.tar.zst (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          cd dist
+          if ls *.pacman 1> /dev/null 2>&1; then
+            for f in *.pacman; do
+              name=$(basename "$f" .pacman)
+              echo "🔄 Converting $f → $name.pkg.tar.zst"
+              mkdir -p tmp
+              bsdtar -xf "$f" -C tmp
+              cd tmp
+              tar --zstd -cf "../$name.pkg.tar.zst" .
+              cd ..
+              rm -rf tmp "$f"
+              echo "✅ Created: $name.pkg.tar.zst"
+            done
+          else
+            echo "⚠️ No .pacman files found"
+          fi
+
       - name: List build outputs
         shell: bash
         run: |
@@ -115,7 +136,7 @@ jobs:
           name: Drathos-${{ matrix.platform }}-${{ github.sha }}
           path: |
             dist/*.deb
-            dist/*.pacman
+            dist/*.pkg.tar.zst
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
