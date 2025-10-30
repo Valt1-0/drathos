@@ -111,10 +111,8 @@ jobs:
               fi
 
               # Create launcher script
-              cat > ../arch-pkg/pkg/usr/bin/${pkgname} <<'LAUNCHER'
-#!/bin/sh
-exec electron /usr/share/drathos "$@"
-LAUNCHER
+              echo '#!/bin/sh' > ../arch-pkg/pkg/usr/bin/${pkgname}
+              echo 'exec electron /usr/share/drathos "$@"' >> ../arch-pkg/pkg/usr/bin/${pkgname}
               chmod +x ../arch-pkg/pkg/usr/bin/${pkgname}
 
               # Create .PKGINFO
