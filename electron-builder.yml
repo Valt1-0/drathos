@@ -8,6 +8,7 @@ directories:
 
 files:
   - dist-electron/**/*
+  - resources/**/*
   - "!**/*.{ts,tsx,map}"
   - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
   - "!**/node_modules/.bin"
@@ -28,6 +29,7 @@ files:
 asarUnpack:
   - "**/*.node"
   - "**/node_modules/7zip-bin/**/*"
+  - "**/resources/**/*"
 
 win:
   target:
@@ -75,6 +77,9 @@ linux:
   executableName: drathos
   vendor: Valt
   packageCategory: games
+  desktop:
+    StartupWMClass: drathos
+    StartupNotify: true
 
 snap:
   summary: "Client de bibliothèque de jeux DRM-free"

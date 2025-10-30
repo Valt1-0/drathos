@@ -20,7 +20,7 @@ import fs from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
-import icon from "../../resources/logo2.png?asset";
+import iconPath from "../../resources/logo2.png?asset";
 
 import { GameLauncher } from "./gameLauncher.js";
 import { discordRPC } from "./utils/discordRPC.js";
@@ -29,6 +29,28 @@ import store from "./store.js";
 const execAsync = promisify(exec);
 
 const gameLauncher = new GameLauncher();
+
+// Fonction pour obtenir le chemin de l'icône de manière sécurisée
+function getIconPath() {
+  // Vérifier si le fichier existe
+  if (fs.existsSync(iconPath)) {
+    return iconPath;
+  }
+
+  // Fallback pour Linux (utilise l'icône système si disponible)
+  if (process.platform === 'linux') {
+    const systemIconPath = path.join(__dirname, '../../build/icon.png');
+    if (fs.existsSync(systemIconPath)) {
+      return systemIconPath;
+    }
+  }
+
+  // Si aucun chemin ne fonctionne, retourner undefined (Electron utilisera l'icône par défaut)
+  console.warn('[Icon] Impossible de trouver l\'icône, utilisation de l\'icône par défaut');
+  return undefined;
+}
+
+const icon = getIconPath();
 
 // === UTILITAIRES DE SÉCURITÉ ===
 
@@ -128,7 +150,7 @@ function createWindow() {
     minWidth: 1280,
     minHeight: 800,
     show: false,
-    frame: false, // Désactive la barre de titre native
+    frame: process.platform === "linux" ? true : false, // Frame native sur Linux pour Wayland/X11
     autoHideMenuBar: true,
     icon: icon,
     ...(process.platform === "linux" ? { icon } : {}),
