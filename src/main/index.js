@@ -188,17 +188,39 @@ function createWindow() {
 
   // Fix pour Wayland: forcer le repaint quand la fenêtre est redimensionnée
   if (process.platform === 'linux') {
+    let resizeTimeout;
+
     mainWindow.on('resize', () => {
-      // Force un repaint en envoyant un événement au renderer
-      mainWindow.webContents.send('window-resized');
+      // Débounce pour éviter trop d'appels
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const bounds = mainWindow.getBounds();
+        mainWindow.webContents.send('window-resized', bounds);
+
+        // Force immédiat pour tiling
+        mainWindow.webContents.executeJavaScript(`
+          window.dispatchEvent(new Event('resize'));
+        `);
+      }, 50);
     });
 
     mainWindow.on('maximize', () => {
-      mainWindow.webContents.send('window-resized');
+      const bounds = mainWindow.getBounds();
+      mainWindow.webContents.send('window-resized', bounds);
     });
 
     mainWindow.on('unmaximize', () => {
-      mainWindow.webContents.send('window-resized');
+      const bounds = mainWindow.getBounds();
+      mainWindow.webContents.send('window-resized', bounds);
+    });
+
+    // Événement spécifique pour le tiling/snapping
+    mainWindow.on('moved', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const bounds = mainWindow.getBounds();
+        mainWindow.webContents.send('window-resized', bounds);
+      }, 100);
     });
   }
 
