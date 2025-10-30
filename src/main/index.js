@@ -5,24 +5,6 @@ if (process.env.NODE_ENV !== 'production') {
   process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 }
 
-// Enable Wayland support on Linux
-if (process.platform === 'linux') {
-  // Détecter si on est sous Wayland
-  const isWayland = process.env.XDG_SESSION_TYPE === 'wayland' || process.env.WAYLAND_DISPLAY;
-
-  if (isWayland) {
-    // Activer Wayland natif
-    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform,WaylandWindowDecorations');
-    app.commandLine.appendSwitch('ozone-platform', 'wayland');
-
-    // Fix DPI/scaling pour éviter le contenu rogné
-    app.commandLine.appendSwitch('force-device-scale-factor', '1');
-  } else {
-    // Fallback sur X11
-    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
-  }
-}
-
 import {
   app,
   shell,
@@ -165,10 +147,8 @@ function createWindow() {
     title: "Drathos",
     width: 1280,
     height: 800,
-    minWidth: 1280,
-    minHeight: 800,
     show: false,
-    frame: process.platform === "linux" ? true : false, // Frame native sur Linux pour Wayland/X11
+    frame: false,
     autoHideMenuBar: true,
     icon: icon,
     ...(process.platform === "linux" ? { icon } : {}),
@@ -185,44 +165,6 @@ function createWindow() {
   mainWindow.on("ready-to-show", () => {
     mainWindow.show();
   });
-
-  // Fix pour Wayland: forcer le repaint quand la fenêtre est redimensionnée
-  if (process.platform === 'linux') {
-    let resizeTimeout;
-
-    mainWindow.on('resize', () => {
-      // Débounce pour éviter trop d'appels
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const bounds = mainWindow.getBounds();
-        mainWindow.webContents.send('window-resized', bounds);
-
-        // Force immédiat pour tiling
-        mainWindow.webContents.executeJavaScript(`
-          window.dispatchEvent(new Event('resize'));
-        `);
-      }, 50);
-    });
-
-    mainWindow.on('maximize', () => {
-      const bounds = mainWindow.getBounds();
-      mainWindow.webContents.send('window-resized', bounds);
-    });
-
-    mainWindow.on('unmaximize', () => {
-      const bounds = mainWindow.getBounds();
-      mainWindow.webContents.send('window-resized', bounds);
-    });
-
-    // Événement spécifique pour le tiling/snapping
-    mainWindow.on('moved', () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const bounds = mainWindow.getBounds();
-        mainWindow.webContents.send('window-resized', bounds);
-      }, 100);
-    });
-  }
 
   // Ouvrir les DevTools uniquement en développement
   if (is.dev) {
