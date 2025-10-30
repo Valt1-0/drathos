@@ -74,22 +74,78 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           DEBUG: electron-builder
 
-      - name: Convert .pacman to .pkg.tar.zst (Linux)
+      - name: Create Arch Linux package with makepkg
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
+          # Install makepkg dependencies
+          sudo apt-get update
+          sudo apt-get install -y binutils fakeroot zstd
+
           cd dist
           if ls *.pacman 1> /dev/null 2>&1; then
             for f in *.pacman; do
-              name=$(basename "$f" .pacman)
-              echo "🔄 Converting $f → $name.pkg.tar.zst"
-              mkdir -p tmp
-              bsdtar -xf "$f" -C tmp
-              cd tmp
-              tar --zstd -cf "../$name.pkg.tar.zst" .
+              pkgname="drathos"
+              pkgver="1.0.0"
+              arch="x86_64"
+
+              echo "🔄 Creating Arch package from $f"
+
+              # Extract the .pacman file
+              mkdir -p pkg
+              bsdtar -xf "$f" -C pkg
+
+              # Create PKGBUILD directory
+              mkdir -p build-arch
+              cd build-arch
+
+              # Generate PKGBUILD
+              cat > PKGBUILD <<EOF
+          # Maintainer: Valt <contact@drathos.gg>
+          pkgname=${pkgname}
+          pkgver=${pkgver}
+          pkgrel=1
+          pkgdesc="Client de bibliothèque de jeux DRM-free"
+          arch=('x86_64')
+          url="https://github.com/Valt1-0/drathos"
+          license=('custom')
+          depends=('gtk3' 'nss' 'alsa-lib')
+          options=('!strip' '!emptydirs')
+
+          package() {
+            # Copy all files from extracted package
+            cp -r "\${srcdir}"/../pkg/* "\${pkgdir}/"
+          }
+          EOF
+
+              # Create the package
+              echo "📦 Building package with makepkg..."
+              PKGEXT='.pkg.tar.zst' makepkg --nodeps --skipinteg --skipchecksums 2>&1 || true
+
+              # Move the package to dist
+              if ls *.pkg.tar.zst 1> /dev/null 2>&1; then
+                mv *.pkg.tar.zst ../
+                echo "✅ Created Arch package"
+              else
+                echo "⚠️ Failed to create package, falling back to simple conversion"
+                cd ..
+                # Fallback: create minimal package with .PKGINFO
+                cd pkg
+                cat > .PKGINFO <<EOF
+          pkgname = ${pkgname}
+          pkgver = ${pkgver}-1
+          pkgdesc = Client de bibliothèque de jeux DRM-free
+          url = https://github.com/Valt1-0/drathos
+          arch = x86_64
+          license = custom
+          EOF
+                tar --zstd -cf "../${pkgname}-${pkgver}-${arch}.pkg.tar.zst" .
+                cd ..
+                echo "✅ Created fallback package"
+              fi
+
               cd ..
-              rm -rf tmp "$f"
-              echo "✅ Created: $name.pkg.tar.zst"
+              rm -rf build-arch pkg "$f"
             done
           else
             echo "⚠️ No .pacman files found"
