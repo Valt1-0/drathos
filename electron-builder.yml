@@ -78,8 +78,9 @@ linux:
   vendor: Valt
   packageCategory: games
   desktop:
-    StartupWMClass: drathos
-    StartupNotify: true
+    entry:
+      StartupWMClass: drathos
+      StartupNotify: "true"
 
 snap:
   summary: "Client de bibliothèque de jeux DRM-free"
