@@ -92,6 +92,32 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    // Fix pour Wayland: forcer le repaint quand la fenêtre est redimensionnée
+    const handleResize = () => {
+      // Force un reflow en modifiant temporairement le style
+      document.body.style.display = 'none';
+      // eslint-disable-next-line no-unused-expressions
+      document.body.offsetHeight; // Force reflow
+      document.body.style.display = '';
+    };
+
+    // Écouter l'événement window resize natif
+    window.addEventListener('resize', handleResize);
+
+    // Écouter aussi l'événement IPC depuis le main process (pour Linux)
+    if (window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.on('window-resized', handleResize);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.removeAllListeners('window-resized');
+      }
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <ConnectionProvider>

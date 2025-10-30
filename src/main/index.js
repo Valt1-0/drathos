@@ -7,8 +7,20 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Enable Wayland support on Linux
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform,WaylandWindowDecorations');
-  app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+  // Détecter si on est sous Wayland
+  const isWayland = process.env.XDG_SESSION_TYPE === 'wayland' || process.env.WAYLAND_DISPLAY;
+
+  if (isWayland) {
+    // Activer Wayland natif
+    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform,WaylandWindowDecorations');
+    app.commandLine.appendSwitch('ozone-platform', 'wayland');
+
+    // Fix DPI/scaling pour éviter le contenu rogné
+    app.commandLine.appendSwitch('force-device-scale-factor', '1');
+  } else {
+    // Fallback sur X11
+    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+  }
 }
 
 import {
@@ -166,12 +178,29 @@ function createWindow() {
       contextIsolation: true, // ✅ Obligatoire pour la sécurité
       nodeIntegration: false, // ✅ Désactiver Node dans le renderer
       nodeIntegrationInWorker: false, // ✅ Pas nécessaire pour vos Worker Threads
+      zoomFactor: 1.0, // Fix scaling Wayland
     },
   });
 
   mainWindow.on("ready-to-show", () => {
     mainWindow.show();
   });
+
+  // Fix pour Wayland: forcer le repaint quand la fenêtre est redimensionnée
+  if (process.platform === 'linux') {
+    mainWindow.on('resize', () => {
+      // Force un repaint en envoyant un événement au renderer
+      mainWindow.webContents.send('window-resized');
+    });
+
+    mainWindow.on('maximize', () => {
+      mainWindow.webContents.send('window-resized');
+    });
+
+    mainWindow.on('unmaximize', () => {
+      mainWindow.webContents.send('window-resized');
+    });
+  }
 
   // Ouvrir les DevTools uniquement en développement
   if (is.dev) {
