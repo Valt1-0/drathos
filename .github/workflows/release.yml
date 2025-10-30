@@ -23,12 +23,15 @@ jobs:
 
   release:
     needs: [build-windows, build-macos, build-linux]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -37,12 +40,38 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R artifacts
 
-      - name: Create Release
+      - name: Prepare artifacts for release
+        run: |
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.exe" -o -name "*.zip" -o -name "*.dmg" -o -name "*.deb" -o -name "*.rpm" -o -name "*.pacman" -o -name "*.pkg.tar.zst" -o -name "*.AppImage" -o -name "*.snap" \) -exec cp {} release-files/ \;
+          ls -lh release-files/
+
+      - name: Create Release (Tag)
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: release-files/*
           draft: true
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') || contains(github.ref, 'rc') }}
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Development Release (Main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Development Build - ${{ github.sha }}"
+          tag_name: "dev-${{ github.run_number }}"
+          files: release-files/*
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            🚧 **Development Build**
+
+            Automated build from commit ${{ github.sha }}
+
+            ⚠️ This is a pre-release development build. Use at your own risk.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
