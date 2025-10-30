@@ -95,16 +95,42 @@ jobs:
               echo "📦 Extracting resources from $f"
               bsdtar -xf "$f" -C ../arch-pkg/extract
 
-              # Copy only the app resources, not electron
-              if [ -d "../arch-pkg/extract/usr/lib/${pkgname}/resources/app" ]; then
-                cp -r ../arch-pkg/extract/usr/lib/${pkgname}/resources/app/* ../arch-pkg/pkg/usr/share/${pkgname}/
-              elif [ -d "../arch-pkg/extract/opt/${pkgname}/resources/app" ]; then
-                cp -r ../arch-pkg/extract/opt/${pkgname}/resources/app/* ../arch-pkg/pkg/usr/share/${pkgname}/
-              elif [ -d "../arch-pkg/extract/resources/app" ]; then
-                cp -r ../arch-pkg/extract/resources/app/* ../arch-pkg/pkg/usr/share/${pkgname}/
-              else
-                echo "⚠️ Cannot find app resources, copying everything"
-                cp -r ../arch-pkg/extract/* ../arch-pkg/pkg/usr/share/${pkgname}/ 2>/dev/null || true
+              # Find and copy app resources (app.asar or app/ folder + unpacked files)
+              found=false
+              for base_dir in "../arch-pkg/extract/usr/lib/${pkgname}/resources" \
+                              "../arch-pkg/extract/opt/${pkgname}/resources" \
+                              "../arch-pkg/extract/resources"; do
+                if [ -d "$base_dir" ]; then
+                  echo "📁 Found resources in: $base_dir"
+
+                  # Copy app.asar if it exists
+                  if [ -f "$base_dir/app.asar" ]; then
+                    echo "  → Copying app.asar"
+                    cp "$base_dir/app.asar" ../arch-pkg/pkg/usr/share/${pkgname}/
+                  fi
+
+                  # Copy app.asar.unpacked if it exists (contains 7zip-bin, .node files, etc.)
+                  if [ -d "$base_dir/app.asar.unpacked" ]; then
+                    echo "  → Copying app.asar.unpacked (native modules)"
+                    cp -r "$base_dir/app.asar.unpacked" ../arch-pkg/pkg/usr/share/${pkgname}/
+                  fi
+
+                  # Copy app/ folder if no asar (fallback)
+                  if [ -d "$base_dir/app" ] && [ ! -f "$base_dir/app.asar" ]; then
+                    echo "  → Copying app/ folder"
+                    cp -r "$base_dir/app/"* ../arch-pkg/pkg/usr/share/${pkgname}/
+                  fi
+
+                  found=true
+                  break
+                fi
+              done
+
+              if [ "$found" = false ]; then
+                echo "⚠️ Cannot find app resources in expected locations"
+                echo "Directory structure:"
+                find ../arch-pkg/extract -type d -name resources | head -5
+                exit 1
               fi
 
               # Create launcher script
