@@ -1,30 +1,18 @@
-name: Build & Release
+name: Build Linux
 
 on:
-  push:
-    tags:
-      - 'v*'
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_call:
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded artifact"
+        value: ${{ jobs.build-linux.outputs.artifact-name }}
   workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
-          - os: ubuntu-latest
-            platform: linux
-
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.set-output.outputs.artifact-name }}
 
     steps:
       - name: Checkout repository
@@ -36,8 +24,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install system dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libfuse2 libarchive-tools
@@ -48,34 +35,18 @@ jobs:
           npm ci --legacy-peer-deps
           echo "✅ Dependencies installed"
 
-      - name: Clean problematic files (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $nulFiles = Get-ChildItem -Path "node_modules\7zip-bin" -Filter "nul" -Recurse -ErrorAction SilentlyContinue
-          foreach ($file in $nulFiles) {
-            Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
-            Write-Host "Removed: $($file.FullName)"
-          }
-          if ($nulFiles.Count -eq 0) {
-            Write-Host "No problematic 'nul' files found"
-          }
-          Write-Host "✅ Cleaned problematic files"
-
-      - name: Clean problematic files (Linux/macOS)
-        if: matrix.os != 'windows-latest'
+      - name: Clean problematic files
         run: |
           find node_modules/7zip-bin -name "nul" -type f -delete 2>/dev/null || true
           echo "✅ Cleaned problematic files"
 
       - name: Build application
-        run: npm run dist:${{ matrix.platform }}
+        run: npm run dist:linux
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           DEBUG: electron-builder
 
       - name: Create Arch Linux package (proper method)
-        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           pkgname="drathos"
@@ -176,68 +147,26 @@ PKGINFO
         run: |
           if [ -d "dist" ]; then
             echo "📦 Contents of dist directory:"
-            ls -lah dist/ || dir dist/
+            ls -lah dist/
             echo ""
             echo "📊 Disk usage:"
-            du -sh dist/ || echo "Could not get size"
+            du -sh dist/
           else
             echo "⚠️ dist directory does not exist!"
             exit 1
           fi
 
-      - name: Upload artifacts (Windows)
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Drathos-${{ matrix.platform }}-${{ github.sha }}
-          path: dist/*.exe
-          if-no-files-found: error
-          retention-days: 30
-          compression-level: 9
+      - name: Set output
+        id: set-output
+        run: echo "artifact-name=Drathos-linux-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      - name: Upload artifacts (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Drathos-${{ matrix.platform }}-${{ github.sha }}
-          path: dist/*.dmg
-          if-no-files-found: error
-          retention-days: 30
-          compression-level: 9
-
-      - name: Upload artifacts (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Drathos-${{ matrix.platform }}-${{ github.sha }}
+          name: Drathos-linux-${{ github.sha }}
           path: |
             dist/*.deb
             dist/*.pkg.tar.zst
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
-
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          draft: true
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

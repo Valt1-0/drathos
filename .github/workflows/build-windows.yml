@@ -1,0 +1,77 @@
+name: Build Windows
+
+on:
+  workflow_call:
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded artifact"
+        value: ${{ jobs.build-windows.outputs.artifact-name }}
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    outputs:
+      artifact-name: ${{ steps.set-output.outputs.artifact-name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: |
+          npm ci --legacy-peer-deps
+          echo "✅ Dependencies installed"
+
+      - name: Clean problematic files
+        shell: pwsh
+        run: |
+          $nulFiles = Get-ChildItem -Path "node_modules\7zip-bin" -Filter "nul" -Recurse -ErrorAction SilentlyContinue
+          foreach ($file in $nulFiles) {
+            Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
+            Write-Host "Removed: $($file.FullName)"
+          }
+          if ($nulFiles.Count -eq 0) {
+            Write-Host "No problematic 'nul' files found"
+          }
+          Write-Host "✅ Cleaned problematic files"
+
+      - name: Build application
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          DEBUG: electron-builder
+
+      - name: List build outputs
+        shell: bash
+        run: |
+          if [ -d "dist" ]; then
+            echo "📦 Contents of dist directory:"
+            ls -lah dist/ || dir dist/
+            echo ""
+            echo "📊 Disk usage:"
+            du -sh dist/ || echo "Could not get size"
+          else
+            echo "⚠️ dist directory does not exist!"
+            exit 1
+          fi
+
+      - name: Set output
+        id: set-output
+        shell: bash
+        run: echo "artifact-name=Drathos-windows-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drathos-windows-${{ github.sha }}
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9

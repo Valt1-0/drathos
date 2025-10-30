@@ -1,0 +1,68 @@
+name: Build macOS
+
+on:
+  workflow_call:
+    outputs:
+      artifact-name:
+        description: "Name of the uploaded artifact"
+        value: ${{ jobs.build-macos.outputs.artifact-name }}
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    outputs:
+      artifact-name: ${{ steps.set-output.outputs.artifact-name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: |
+          npm ci --legacy-peer-deps
+          echo "✅ Dependencies installed"
+
+      - name: Clean problematic files
+        run: |
+          find node_modules/7zip-bin -name "nul" -type f -delete 2>/dev/null || true
+          echo "✅ Cleaned problematic files"
+
+      - name: Build application
+        run: npm run dist:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          DEBUG: electron-builder
+
+      - name: List build outputs
+        shell: bash
+        run: |
+          if [ -d "dist" ]; then
+            echo "📦 Contents of dist directory:"
+            ls -lah dist/
+            echo ""
+            echo "📊 Disk usage:"
+            du -sh dist/
+          else
+            echo "⚠️ dist directory does not exist!"
+            exit 1
+          fi
+
+      - name: Set output
+        id: set-output
+        run: echo "artifact-name=Drathos-macos-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drathos-macos-${{ github.sha }}
+          path: dist/*.dmg
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
