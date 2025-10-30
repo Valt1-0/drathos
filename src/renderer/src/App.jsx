@@ -97,9 +97,9 @@ export default function App() {
       <ConnectionProvider>
         <DownloadProvider>
           <Router>
-            <div className="flex flex-col h-screen overflow-hidden">
+            <div className="flex flex-col h-screen w-screen overflow-hidden">
               <TitleBar />
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <AppRoutes />
               </div>
             </div>
