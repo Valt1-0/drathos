@@ -27,7 +27,13 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2 libarchive-tools
+          sudo apt-get install -y \
+            libfuse2 \
+            libarchive-tools \
+            rpm \
+            snapcraft \
+            fakeroot \
+            dpkg
           echo "✅ System dependencies installed"
 
       - name: Install npm dependencies
@@ -46,14 +52,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           DEBUG: electron-builder
 
-      - name: Create Arch Linux package (proper method)
+      - name: Create Arch Linux package from .pacman (proper method)
         shell: bash
         run: |
           pkgname="drathos"
           pkgver="1.0.0"
           pkgrel="1"
 
-          echo "🔄 Creating proper Arch Linux package following Arch guidelines"
+          echo "🔄 Creating proper Arch Linux package from .pacman following Arch guidelines"
 
           # Create package directory structure
           mkdir -p arch-pkg/pkg/usr/share/${pkgname}
@@ -165,8 +171,11 @@ PKGINFO
         with:
           name: Drathos-linux-${{ github.sha }}
           path: |
+            dist/*.AppImage
             dist/*.deb
+            dist/*.rpm
             dist/*.pkg.tar.zst
+            dist/*.snap
           if-no-files-found: error
           retention-days: 30
           compression-level: 9

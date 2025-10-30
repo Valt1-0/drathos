@@ -51,10 +51,19 @@ nsis:
 
 linux:
   target:
+    - target: AppImage
+      arch:
+        - x64
     - target: deb
       arch:
         - x64
+    - target: rpm
+      arch:
+        - x64
     - target: pacman
+      arch:
+        - x64
+    - target: snap
       arch:
         - x64
   category: Game
@@ -66,6 +75,18 @@ linux:
   executableName: drathos
   vendor: Valt
   packageCategory: games
+
+snap:
+  summary: "Client de bibliothèque de jeux DRM-free"
+  grade: stable
+  confinement: strict
+  plugs:
+    - browser-support
+    - network
+    - home
+    - opengl
+    - pulseaudio
+    - x11
 
 mac:
   target:
