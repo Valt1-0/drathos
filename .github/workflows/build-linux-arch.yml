@@ -19,8 +19,10 @@ jobs:
     steps:
       - name: Setup Arch Linux environment
         run: |
+          pacman-key --init
+          pacman-key --populate archlinux
           pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel git nodejs npm fakeroot snapd
+          pacman -S --noconfirm base-devel git nodejs npm fakeroot
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,7 +52,6 @@ jobs:
             dist/*.pacman
             dist/*.pkg.tar.zst
             dist/*.AppImage
-            dist/*.snap
           if-no-files-found: warn
           retention-days: 30
           compression-level: 9
