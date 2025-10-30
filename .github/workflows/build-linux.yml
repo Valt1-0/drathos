@@ -11,5 +11,5 @@ jobs:
   build-debian:
     uses: ./.github/workflows/build-linux-debian.yml
 
-  build-fedora:
-    uses: ./.github/workflows/build-linux-fedora.yml
+  # build-fedora:
+  #   uses: ./.github/workflows/build-linux-fedora.yml
