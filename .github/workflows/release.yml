@@ -12,11 +12,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  # build-windows:
-  #   uses: ./.github/workflows/build-windows.yml
+  build-windows:
+    uses: ./.github/workflows/build-windows.yml
 
-  # build-macos:
-  #   uses: ./.github/workflows/build-macos.yml
+  build-macos:
+    uses: ./.github/workflows/build-macos.yml
 
   build-linux:
     uses: ./.github/workflows/build-linux.yml
