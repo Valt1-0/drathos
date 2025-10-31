@@ -209,6 +209,8 @@ app.whenReady().then(() => {
     const serverAddress = store.get("serverAddress", "");
 
     const buildCSP = () => {
+      // En développement ET pour les applications Electron packagées,
+      // autoriser toutes les connexions HTTP/HTTPS pour faciliter la configuration
       if (is.dev) {
         return "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
@@ -222,14 +224,18 @@ app.whenReady().then(() => {
       }
 
       const igdb = "https://images.igdb.com";
-      const backend = serverAddress || "";
+
+      // Construire dynamiquement les URLs backend autorisées
+      // Autoriser HTTP et HTTPS pour supporter les IPs locales et domaines
+      const backendHttp = serverAddress ? `http://${serverAddress.replace(/^https?:\/\//, '')}` : "";
+      const backendHttps = serverAddress ? `https://${serverAddress.replace(/^https?:\/\//, '')}` : "";
 
       return "default-src 'self'; " +
              "script-src 'self' 'unsafe-inline'; " +
              "style-src 'self' 'unsafe-inline'; " +
-             `img-src 'self' data: blob: ${igdb} ${backend}; ` +
+             `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps} http: https:; ` +
              "font-src 'self' data:; " +
-             `connect-src 'self' ${igdb} ${backend}; ` +
+             `connect-src 'self' ${igdb} ${backendHttp} ${backendHttps} http: https:; ` +
              "object-src 'none'; " +
              "base-uri 'self'; " +
              "form-action 'self'; " +
