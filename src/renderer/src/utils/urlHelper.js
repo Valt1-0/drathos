@@ -9,7 +9,6 @@ export const buildServerUrl = (serverAddress, path = '', protocol = null) => {
 
 export const detectServerProtocol = async (serverAddress, testPath = '/api/server/status', timeout = 3000) => {
   if (!serverAddress) throw new Error('Server address is required');
-
   if (serverAddress.startsWith('http://')) return { protocol: 'http', url: serverAddress };
   if (serverAddress.startsWith('https://')) return { protocol: 'https', url: serverAddress };
 
@@ -17,20 +16,20 @@ export const detectServerProtocol = async (serverAddress, testPath = '/api/serve
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetch(url, { method: 'HEAD', signal: controller.signal, mode: 'cors' });
+      const response = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'cors' });
       clearTimeout(timeoutId);
-      return response.ok || response.status < 500;
+      return response.ok;
     } catch (error) {
       clearTimeout(timeoutId);
       return false;
     }
   };
 
-  const httpsUrl = `https://${serverAddress}${testPath}`;
-  if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}` };
-
   const httpUrl = `http://${serverAddress}${testPath}`;
   if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}` };
+
+  const httpsUrl = `https://${serverAddress}${testPath}`;
+  if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}` };
 
   return { protocol: 'http', url: `http://${serverAddress}` };
 };

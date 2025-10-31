@@ -5,6 +5,8 @@ import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
 import { buildServerUrl } from "./utils/urlHelper.js";
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 export class GameEngine {
   constructor() {
     this.config = {
@@ -121,10 +123,15 @@ export class GameEngine {
 
     const downloadUrl = buildServerUrl(this.serverAddress, `/api/serverGame/downloadGame/${gameId}`);
 
+    console.log(`[GameEngine] URL de téléchargement: ${downloadUrl}`);
+    console.log(`[GameEngine] Server address: ${this.serverAddress}`);
+
     try {
       const response = await fetch(downloadUrl, {
         headers: { Authorization: `Bearer ${this.userToken}` },
       });
+
+      console.log(`[GameEngine] R\u00e9ponse re\u00e7ue - Status: ${response.status}`);
 
       if (!response.ok) {
         throw new Error(
@@ -133,15 +140,29 @@ export class GameEngine {
       }
 
       const totalSize = parseInt(response.headers.get("content-length") || "0");
+      console.log(`[GameEngine] Taille totale: ${totalSize} octets (${(totalSize / (1024 * 1024)).toFixed(2)} MB)`);
+
       let downloadedBytes = 0;
 
       const fileStream = fs.createWriteStream(filePath);
-      const reader = response.body.getReader();
+      console.log(`[GameEngine] Stream cr\u00e9\u00e9: ${filePath}`);
 
+      const reader = response.body.getReader();
+      console.log(`[GameEngine] Reader cr\u00e9\u00e9, d\u00e9but lecture...`);
+
+      let chunkCount = 0;
       while (true) {
         const { done, value } = await reader.read();
 
-        if (done) break;
+        if (done) {
+          console.log(`[GameEngine] Lecture termin\u00e9e - ${chunkCount} chunks re\u00e7us`);
+          break;
+        }
+
+        chunkCount++;
+        if (chunkCount === 1) {
+          console.log(`[GameEngine] Premier chunk re\u00e7u (${value.length} octets)`);
+        }
 
         fileStream.write(value);
         downloadedBytes += value.length;
@@ -183,6 +204,10 @@ export class GameEngine {
 
       return filePath;
     } catch (error) {
+      console.error(`[GameEngine] Erreur détaillée de fetch:`, error);
+      console.error(`[GameEngine] Type d'erreur:`, error.constructor.name);
+      console.error(`[GameEngine] Cause:`, error.cause);
+
       try {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
@@ -340,6 +365,7 @@ export class GameEngine {
     this.metrics.set(gameId, {
       startTime: Date.now(),
       lastUpdateTime: Date.now(),
+      lastProgressSent: Date.now(),
       lastBytes: 0,
       speeds: [],
       avgSpeed: 0,
@@ -387,9 +413,14 @@ export class GameEngine {
     if (!metrics) return false;
 
     const now = Date.now();
-    const timeSinceLastUpdate = now - metrics.lastUpdateTime;
+    const timeSinceLastProgress = now - metrics.lastProgressSent;
 
-    return timeSinceLastUpdate >= this.config.progressUpdateInterval;
+    if (timeSinceLastProgress >= this.config.progressUpdateInterval) {
+      metrics.lastProgressSent = now;
+      return true;
+    }
+
+    return false;
   }
 
   cleanupDownload(gameId) {

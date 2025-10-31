@@ -1,8 +1,8 @@
-// src/main/uninstallEngine.js - Version sécurisée avec rollback 🛡️
-
 import fs from "fs";
 import path from "path";
 import { buildServerUrl } from "./utils/urlHelper.js";
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 export class UninstallEngine {
   constructor() {
