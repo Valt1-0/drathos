@@ -2,6 +2,7 @@
 
 import fs from "fs";
 import path from "path";
+import { buildServerUrl } from "./utils/urlHelper.js";
 
 export class UninstallEngine {
   constructor() {
@@ -307,7 +308,7 @@ export class UninstallEngine {
       );
 
       const response = await fetch(
-        `http://${this.serverAddress}/api/installedGames/removeInstalledGame/${gameId}`,
+        buildServerUrl(this.serverAddress, `/api/installedGames/removeInstalledGame/${gameId}`),
         {
           method: "DELETE",
           headers: {

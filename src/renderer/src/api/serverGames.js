@@ -1,10 +1,11 @@
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { buildServerUrl } from "../utils/urlHelper";
 
 export const getAllServerGames = async () => {
   try {
     const serverAddress = await window.store.get("serverAddress");
     const response = await fetchWithConnectionTracking(
-      `http://${serverAddress}/api/serverGame/getAllGames`,
+      buildServerUrl(serverAddress, '/api/serverGame/getAllGames'),
     );
     if (!response.ok) {
       throw new Error(
@@ -30,7 +31,7 @@ export const addGameToServer = async (
   try {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
-    const url = `http://${serverAddress}/api/serverGame/addGame`;
+    const url = buildServerUrl(serverAddress, '/api/serverGame/addGame');
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -92,7 +93,7 @@ export const deleteServerGame = async (gameId) => {
     const token = await window.store.get("userToken");
 
     const response = await fetchWithConnectionTracking(
-      `http://${serverAddress}/api/serverGame/deleteGame/${gameId}`,
+      buildServerUrl(serverAddress, `/api/serverGame/deleteGame/${gameId}`),
       {
         method: "DELETE",
         headers: {

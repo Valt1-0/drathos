@@ -3,6 +3,7 @@ import path from "path";
 import os from "os";
 import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
+import { buildServerUrl } from "./utils/urlHelper.js";
 
 export class GameEngine {
   constructor() {
@@ -118,7 +119,7 @@ export class GameEngine {
       message: "Connexion au serveur...",
     });
 
-    const downloadUrl = `http://${this.serverAddress}/api/serverGame/downloadGame/${gameId}`;
+    const downloadUrl = buildServerUrl(this.serverAddress, `/api/serverGame/downloadGame/${gameId}`);
 
     try {
       const response = await fetch(downloadUrl, {
@@ -266,7 +267,7 @@ export class GameEngine {
     }
     const decoded = jwtDecode(this.userToken);
     const response = await fetch(
-      `http://${this.serverAddress}/api/installedGames/addInstalledGame`,
+      buildServerUrl(this.serverAddress, '/api/installedGames/addInstalledGame'),
       {
         method: "POST",
         headers: {

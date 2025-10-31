@@ -1,4 +1,5 @@
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { buildServerUrl } from "../utils/urlHelper";
 
 export const registerUser = async (username, password) => {
   return apiCall("/api/users/register", { username, password });
@@ -12,7 +13,7 @@ const apiCall = async (endpoint, body) => {
   try {
     const serverAddress = await window.store.get("serverAddress");
 
-    const response = await fetchWithConnectionTracking(`http://${serverAddress}${endpoint}`, {
+    const response = await fetchWithConnectionTracking(buildServerUrl(serverAddress, endpoint), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

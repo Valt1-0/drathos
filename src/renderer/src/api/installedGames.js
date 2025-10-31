@@ -1,4 +1,5 @@
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { buildServerUrl } from "../utils/urlHelper";
 
 export async function getInstalledGames() {
   const serverAddress = await window.store.get("serverAddress");
@@ -35,7 +36,7 @@ export async function getInstalledGames() {
 
   try {
     const response = await fetchWithConnectionTracking(
-      `http://${serverAddress}/api/installedGames/getInstalledGames`,
+      buildServerUrl(serverAddress, '/api/installedGames/getInstalledGames'),
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -108,7 +109,7 @@ export async function launchGame(gameId) {
 
   try {
     const response = await fetchWithConnectionTracking(
-      `http://${serverAddress}/api/installedGames/launch/${gameId}`,
+      buildServerUrl(serverAddress, `/api/installedGames/launch/${gameId}`),
       {
         method: "POST",
         headers: {
@@ -132,9 +133,9 @@ export async function stopGame(gameId) {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
 
-  try {
+  try{
     const response = await fetchWithConnectionTracking(
-      `http://${serverAddress}/api/installedGames/stop/${gameId}`,
+      buildServerUrl(serverAddress, `/api/installedGames/stop/${gameId}`),
       {
         method: "POST",
         headers: {

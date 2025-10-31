@@ -1,6 +1,7 @@
 // drathos/src/renderer/src/api/gameStats.js
 
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { buildServerUrl } from "../utils/urlHelper";
 
 
 /**
@@ -13,7 +14,7 @@ export async function getGameStats(gameId) {
   const token = await window.store.get("userToken");
 
   const response = await fetchWithConnectionTracking(
-    `http://${serverAddress}/api/installedGames/stats/${gameId}`,
+    buildServerUrl(serverAddress, `/api/installedGames/stats/${gameId}`),
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -40,7 +41,7 @@ export async function syncStatsToServer(gameId, localStats, sessionDuration) {
   const token = await window.store.get("userToken");
 
   const response = await fetchWithConnectionTracking(
-    `http://${serverAddress}/api/installedGames/sync-stats/${gameId}`,
+    buildServerUrl(serverAddress, `/api/installedGames/sync-stats/${gameId}`),
     {
       method: "POST",
       headers: {

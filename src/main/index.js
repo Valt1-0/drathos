@@ -205,62 +205,41 @@ app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
-  // === SÉCURITÉ: Content Security Policy RENFORCÉE ===
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    // Récupérer l'adresse du serveur backend configurée
     const serverAddress = store.get("serverAddress", "");
 
-    // IGDB pour les images et métadonnées de jeux
-    const igdbDomains = "https://*.igdb.com https://images.igdb.com https://api.igdb.com";
+    const buildCSP = () => {
+      if (is.dev) {
+        return "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+               "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+               "style-src 'self' 'unsafe-inline'; " +
+               "img-src 'self' data: https: http: blob:; " +
+               "font-src 'self' data:; " +
+               "connect-src 'self' ws: http: https:; " +
+               "object-src 'none'; " +
+               "base-uri 'self'; " +
+               "form-action 'self';";
+      }
 
-    // CSP adaptée selon l'environnement
-    const csp = is.dev
-      ? // Développement : autoriser Vite HMR + backend local + réseau local
-        "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        `img-src 'self' data: https: http: blob: ${igdbDomains}; ` +
-        "font-src 'self' data:; " +
-        "connect-src 'self' ws: http: https:; " + // Tout autoriser en dev
-        "object-src 'none'; " +
-        "base-uri 'self'; " +
-        "form-action 'self';"
-      : // Production : CSP sécurisée avec support IGDB
-        (() => {
-          // Autoriser le backend configuré
-          const backendUrl = serverAddress ? ` ${serverAddress}` : "";
+      const igdb = "https://images.igdb.com";
+      const backend = serverAddress || "";
 
-          // Autoriser toutes les IP locales/privées (RFC 1918)
-          // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, localhost
-          const localNetworks = " http://10.*.*.* http://172.16.*.* http://172.17.*.* http://172.18.*.* " +
-                               "http://172.19.*.* http://172.20.*.* http://172.21.*.* http://172.22.*.* " +
-                               "http://172.23.*.* http://172.24.*.* http://172.25.*.* http://172.26.*.* " +
-                               "http://172.27.*.* http://172.28.*.* http://172.29.*.* http://172.30.*.* " +
-                               "http://172.31.*.* http://192.168.*.* http://localhost:* http://127.0.0.1:* " +
-                               "https://10.*.*.* https://172.16.*.* https://172.17.*.* https://172.18.*.* " +
-                               "https://172.19.*.* https://172.20.*.* https://172.21.*.* https://172.22.*.* " +
-                               "https://172.23.*.* https://172.24.*.* https://172.25.*.* https://172.26.*.* " +
-                               "https://172.27.*.* https://172.28.*.* https://172.29.*.* https://172.30.*.* " +
-                               "https://172.31.*.* https://192.168.*.* https://localhost:* https://127.0.0.1:*";
-
-          return "default-src 'self'; " +
-                 "script-src 'self' 'unsafe-inline'; " + // Minimal inline nécessaire pour Vite
-                 "style-src 'self' 'unsafe-inline'; " + // Nécessaire pour Tailwind
-                 `img-src 'self' data: blob: https: ${igdbDomains}${localNetworks}${backendUrl}; ` + // IGDB + backend
-                 "font-src 'self' data:; " +
-                 `connect-src 'self' ${igdbDomains}${localNetworks}${backendUrl}; ` + // API calls vers IGDB + backend
-                 "object-src 'none'; " + // Bloquer Flash, Java, etc.
-                 "base-uri 'self'; " + // Empêcher injection via <base>
-                 "form-action 'self'; " + // Limiter les soumissions de formulaires
-                 "frame-ancestors 'none'; " + // Empêcher clickjacking
-                 "upgrade-insecure-requests;"; // Forcer HTTPS quand disponible
-        })();
+      return "default-src 'self'; " +
+             "script-src 'self' 'unsafe-inline'; " +
+             "style-src 'self' 'unsafe-inline'; " +
+             `img-src 'self' data: blob: ${igdb} ${backend}; ` +
+             "font-src 'self' data:; " +
+             `connect-src 'self' ${igdb} ${backend}; ` +
+             "object-src 'none'; " +
+             "base-uri 'self'; " +
+             "form-action 'self'; " +
+             "frame-ancestors 'none';";
+    };
 
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [csp],
-        // Headers de sécurité additionnels
+        'Content-Security-Policy': [buildCSP()],
         'X-Content-Type-Options': ['nosniff'],
         'X-Frame-Options': ['DENY'],
         'X-XSS-Protection': ['1; mode=block'],

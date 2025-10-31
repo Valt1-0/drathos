@@ -49,11 +49,7 @@ const Welcome = () => {
 
   const handleServerCheck = async () => {
     if (!validateAddress(serverAddress)) {
-      setServerStatus({
-        online: false,
-        error:
-          "Format d'adresse invalide. Utilisez une IP ou un nom de domaine (port optionnel)",
-      });
+      setServerStatus({ online: false, error: "Format d'adresse invalide. Utilisez une IP ou un nom de domaine (port optionnel)" });
       return;
     }
 
@@ -61,7 +57,13 @@ const Welcome = () => {
     try {
       const status = await checkServerStatus(serverAddress);
       setServerStatus(status);
-      window.store.set("serverAddress", serverAddress);
+
+      if (status.online && status.protocol) {
+        const fullAddress = serverAddress.startsWith('http') ? serverAddress : `${status.protocol}://${serverAddress}`;
+        window.store.set("serverAddress", fullAddress);
+      } else {
+        window.store.set("serverAddress", serverAddress);
+      }
     } catch (error) {
       setServerStatus({ online: false, error: error.message });
     } finally {
@@ -91,9 +93,16 @@ const Welcome = () => {
                 >
                   <FiCheckCircle className="text-green-400 text-2xl" />
                 </motion.div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="text-lg font-bold text-white">Serveur en ligne</div>
-                  <div className="text-sm text-green-400">Connexion établie avec succès</div>
+                  <div className="text-sm text-green-400">
+                    Connexion établie avec succès
+                    {serverStatus.protocol && (
+                      <span className="ml-2 px-2 py-0.5 bg-green-500/20 rounded text-xs font-semibold uppercase">
+                        {serverStatus.protocol}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
