@@ -47,12 +47,37 @@ export const addGameToServer = async (
       xhr.open("POST", url, true);
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
+      // Variables pour calculer la vitesse et l'ETA
+      let lastLoaded = 0;
+      let lastTime = Date.now();
+
       // Suivi de la progression si onProgress est fourni
       if (onProgress && xhr.upload) {
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
             const percent = Math.round((event.loaded / event.total) * 100);
-            onProgress(percent);
+            const currentTime = Date.now();
+            const timeElapsed = (currentTime - lastTime) / 1000; // en secondes
+
+            // Calculer la vitesse (bytes par seconde)
+            const bytesUploaded = event.loaded - lastLoaded;
+            const speed = timeElapsed > 0 ? bytesUploaded / timeElapsed : 0;
+
+            // Calculer le temps restant
+            const bytesRemaining = event.total - event.loaded;
+            const eta = speed > 0 ? bytesRemaining / speed : 0;
+
+            // Mettre à jour pour la prochaine mesure
+            lastLoaded = event.loaded;
+            lastTime = currentTime;
+
+            onProgress({
+              percent,
+              loaded: event.loaded,
+              total: event.total,
+              speed, // bytes/s
+              eta, // secondes
+            });
           }
         };
       }

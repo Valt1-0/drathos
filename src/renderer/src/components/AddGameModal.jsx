@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { searchGamesFromIGDB } from "../api/igdb";
 import { addGameToServer } from "../api/serverGames";
 import { useAuth } from "../contexts/authContext";
+import { useUpload } from "../contexts/uploadContext";
 import {
   FiSearch,
   FiX,
@@ -13,7 +14,6 @@ import {
   FiLock,
   FiUnlock,
   FiAlertTriangle,
-  FiCheckCircle,
   FiCpu,
 } from "react-icons/fi";
 import { FaWindows, FaLinux, FaApple } from "react-icons/fa";
@@ -26,6 +26,7 @@ const PLATFORM_CONFIG = {
 
 const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useAuth();
+  const { startUpload, updateUploadProgress, completeUpload, failUpload } = useUpload();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,8 +37,6 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const [availableExecutables, setAvailableExecutables] = useState([]);
   const [isLoadingExecutables, setIsLoadingExecutables] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadState, setUploadState] = useState("idle"); // idle, uploading, success, error
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -107,52 +106,73 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const handleUpload = async () => {
     if (!selectedGame || !zipFile) {
       setErrorMessage("Veuillez sélectionner un jeu et un fichier");
-      setUploadState("error");
       return;
     }
 
     try {
-      setUploadState("uploading");
       setErrorMessage("");
 
-      let fileToUpload = zipFile;
-
-      // Convertir le path en File object si nécessaire
-      if (zipFile.path && !zipFile.size) {
-        const fileData = await window.api.readArchiveFile(zipFile.path);
-        if (!fileData.success) throw new Error(fileData.error);
-
-        const blob = new Blob([fileData.buffer], { type: 'application/octet-stream' });
-        fileToUpload = new File([blob], zipFile.name, { type: 'application/octet-stream' });
-      }
-
-      await addGameToServer(
-        fileToUpload,
+      // Sauvegarder les infos avant de fermer la modal
+      const gameInfo = {
+        name: selectedGame.name,
+        id: selectedGame.id,
         version,
         isPublic,
-        selectedGame.id,
-        setUploadProgress,
-        executableName || null
-      );
+        executableName: executableName || null,
+      };
+      const fileInfo = { ...zipFile };
 
-      setUploadState("success");
-      setTimeout(() => {
-        onSuccess?.();
-        handleClose();
-      }, 2000);
+      // Fermer la modal IMMÉDIATEMENT pour éviter le freeze
+      handleClose();
+
+      // Démarrer l'upload dans le contexte global
+      startUpload(gameInfo.name);
+
+      // Lancer le processus en arrière-plan (ne bloque pas l'UI)
+      setTimeout(async () => {
+        try {
+          let fileToUpload = fileInfo;
+
+          // Convertir le path en File object si nécessaire
+          if (fileInfo.path && !fileInfo.size) {
+            const fileData = await window.api.readArchiveFile(fileInfo.path);
+            if (!fileData.success) throw new Error(fileData.error);
+
+            const blob = new Blob([fileData.buffer], { type: 'application/octet-stream' });
+            fileToUpload = new File([blob], fileInfo.name, { type: 'application/octet-stream' });
+          }
+
+          // Lancer l'upload
+          await addGameToServer(
+            fileToUpload,
+            gameInfo.version,
+            gameInfo.isPublic,
+            gameInfo.id,
+            updateUploadProgress,
+            gameInfo.executableName
+          );
+
+          // Upload réussi
+          completeUpload();
+
+          // Rafraîchir la liste après un court délai
+          setTimeout(() => {
+            onSuccess?.();
+          }, 500);
+        } catch (uploadError) {
+          console.error("[AddGameModal] Erreur upload:", uploadError);
+          failUpload(uploadError.message || "Erreur lors de l'ajout du jeu");
+        }
+      }, 100);
     } catch (err) {
-      console.error("[AddGameModal] Erreur upload:", err);
-      setErrorMessage(err.message || "Erreur lors de l'ajout du jeu");
-      setUploadState("error");
-      setUploadProgress(0);
+      console.error("[AddGameModal] Erreur préparation upload:", err);
+      setErrorMessage(err.message || "Erreur lors de la préparation de l'upload");
+      failUpload(err.message || "Erreur lors de la préparation de l'upload");
     }
   };
 
   const handleClose = () => {
-    if (uploadState === "uploading") return;
-
     // Reset tous les états
-    setUploadProgress(0);
     setSelectedGame(null);
     setZipFile(null);
     setVersion("1.0.0");
@@ -161,7 +181,6 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
     setIsLoadingExecutables(false);
     setQuery("");
     setSuggestions([]);
-    setUploadState("idle");
     setErrorMessage("");
     onClose();
   };
@@ -182,7 +201,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={uploadState !== "uploading" ? handleClose : undefined}
+            onClick={handleClose}
             className="absolute inset-0 bg-black/70 backdrop-blur-md"
           />
 
@@ -196,96 +215,15 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
           >
             <div className="bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden">
               {/* Close Button */}
-              {uploadState !== "uploading" && uploadState !== "success" && (
-                <button
-                  onClick={handleClose}
-                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-all duration-200"
-                >
-                  <FiX className="text-lg" />
-                </button>
-              )}
+              <button
+                onClick={handleClose}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-all duration-200"
+              >
+                <FiX className="text-lg" />
+              </button>
 
-              {/* Success State */}
-              {uploadState === "success" && (
-                <div className="p-8 text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                    className="flex justify-center mb-6"
-                  >
-                    <div className="w-20 h-20 rounded-2xl bg-green-500/20 flex items-center justify-center shadow-lg shadow-green-500/30">
-                      <FiCheckCircle className="text-4xl text-green-400" />
-                    </div>
-                  </motion.div>
-
-                  <motion.h2
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-2xl font-bold text-white text-center mb-4"
-                  >
-                    Jeu ajouté avec succès !
-                  </motion.h2>
-
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="text-slate-300 text-center"
-                  >
-                    "{selectedGame?.name}" a été ajouté au serveur
-                  </motion.p>
-                </div>
-              )}
-
-              {/* Upload State */}
-              {uploadState === "uploading" && (
-                <div className="p-8 text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200 }}
-                    className="flex justify-center mb-6"
-                  >
-                    <div className="w-20 h-20 rounded-2xl bg-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      >
-                        <FiLoader className="text-4xl text-blue-400" />
-                      </motion.div>
-                    </div>
-                  </motion.div>
-
-                  <h2 className="text-2xl font-bold text-white text-center mb-4">
-                    Upload en cours...
-                  </h2>
-
-                  <div className="mb-6">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-slate-400">Progression</span>
-                      <span className="text-blue-400 font-bold">{uploadProgress}%</span>
-                    </div>
-                    <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${uploadProgress}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-slate-400 text-sm">
-                    Veuillez patienter pendant l'upload du jeu...
-                  </p>
-                </div>
-              )}
-
-              {/* Form State */}
-              {uploadState !== "uploading" && uploadState !== "success" && (
-                <div className="p-8">
+              {/* Form */}
+              <div className="p-8">
                   {/* Header */}
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -302,7 +240,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
 
                   {/* Error Message */}
-                  {uploadState === "error" && errorMessage && (
+                  {errorMessage && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -340,7 +278,6 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         }}
                         placeholder="Rechercher un jeu par nom..."
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white placeholder-slate-500"
-                        disabled={uploadState === "uploading"}
                       />
                     </div>
                   </div>
@@ -633,7 +570,6 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                     </motion.div>
                   )}
                 </div>
-              )}
             </div>
           </motion.div>
         </div>

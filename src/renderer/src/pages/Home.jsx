@@ -447,6 +447,16 @@ const Home = () => {
       <AddGameModal
         isOpen={showAddGameModal}
         onClose={() => setShowAddGameModal(false)}
+        onSuccess={async () => {
+          try {
+            const allGames = await getAllServerGames();
+            if (allGames && allGames.length > 0) {
+              setGames(allGames);
+            }
+          } catch (error) {
+            console.error("Erreur lors du rechargement des jeux:", error);
+          }
+        }}
       />
     </div>
   );
