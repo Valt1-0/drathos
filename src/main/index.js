@@ -348,7 +348,18 @@ app.whenReady().then(() => {
 
   const mainWindow = createWindow();
 
-  // Discord RPC sera initialisé au premier lancement de jeu pour optimiser le démarrage
+  // Initialiser Discord RPC avec le setting de l'utilisateur
+  const discordRPCEnabled = store.get("discordRPCEnabled", false);
+  discordRPC.isEnabled = discordRPCEnabled;
+
+  if (discordRPCEnabled) {
+    console.log("[Discord RPC] Activé dans les settings, initialisation...");
+    discordRPC.initialize(true).catch((error) => {
+      console.error("[Discord RPC] Erreur lors de l'initialisation:", error);
+    });
+  } else {
+    console.log("[Discord RPC] Désactivé dans les settings");
+  }
 
   // Tray icon setup
   const tray = new Tray(icon);

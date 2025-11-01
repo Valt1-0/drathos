@@ -22,7 +22,7 @@ export class DiscordRPCService extends EventEmitter {
     this.clientId = "1429998620282720340";
     this.socket = null;
     this.isConnected = false;
-    this.isEnabled = true; // Activé par défaut
+    this.isEnabled = false; // Désactivé par défaut, sera activé via le setting
     this.currentActivity = null;
     this.savedActivity = null;
     this.connectionRetryTimeout = null;
@@ -267,6 +267,12 @@ export class DiscordRPCService extends EventEmitter {
   }
 
   async setGameActivity(gameData) {
+    // Ne rien faire si le Rich Presence n'est pas activé
+    if (!this.isEnabled) {
+      console.log("[DiscordRPC] Rich Presence désactivé, pas d'activité définie");
+      return;
+    }
+
     // Initialisation automatique au premier lancement de jeu
     if (!this.isConnected && this.isEnabled && !this.isInitializing) {
       this.isInitializing = true;
@@ -277,12 +283,13 @@ export class DiscordRPCService extends EventEmitter {
       } catch (error) {
         console.error("[DiscordRPC] Échec de l'initialisation automatique:", error.message);
         this.isInitializing = false;
+        return;
       }
 
       this.isInitializing = false;
     }
 
-    if (!this.isConnected || !this.isEnabled) {
+    if (!this.isConnected) {
       this.savedActivity = { type: "game", gameData };
       return;
     }
