@@ -24,6 +24,7 @@ import DeleteGameModal from "../components/DeleteGameModal";
 import ConfirmationModal from "../components/ConfirmationModal";
 import AddGameModal from "../components/AddGameModal";
 import WineRequiredModal from "../components/WineRequiredModal";
+import GameCover from "../components/GameCover";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 import {
@@ -929,13 +930,11 @@ const Games = () => {
                 <div className="flex items-center gap-3">
                   {/* Miniature */}
                   <div className="relative w-12 h-12 bg-gray-700 rounded-md flex-shrink-0 overflow-hidden">
-                    <img
+                    <GameCover
                       src={game.coverUrl}
                       alt={game.name}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = "none";
-                      }}
+                      size="thumb"
                     />
                     {/* Badge de statut sur l'image */}
                     {playing && (
@@ -1038,10 +1037,12 @@ const Games = () => {
             <div className="relative h-64 bg-gray-800 overflow-hidden">
               {selectedGame.coverUrl && (
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-transparent">
-                  <img
+                  <GameCover
                     src={selectedGame.coverUrl}
                     alt={selectedGame.name}
-                    className="w-full h-full object-cover opacity-70 blur-xs"
+                    className="w-full h-full object-cover opacity-70"
+                    size="cover_big"
+                    blur={true}
                   />
                 </div>
               )}

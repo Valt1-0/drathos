@@ -16,6 +16,7 @@ import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { getMergedStats, formatStats as formatStatsAPI } from "../api/gameStats";
 import AddGameModal from "../components/AddGameModal";
+import GameCover from "../components/GameCover";
 import { useAuth } from "../contexts/authContext";
 
 const Home = () => {
@@ -166,10 +167,12 @@ const Home = () => {
           >
             {/* Background Image */}
             <div className="absolute inset-0">
-              <img
+              <GameCover
                 src={currentGame.coverUrl}
                 alt={currentGame.name}
-                className="w-full h-full object-cover blur-2xl scale-110"
+                className="w-full h-full object-cover scale-110"
+                size="screenshot_big"
+                blur={true}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-gray-900/40"></div>
               <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-transparent to-gray-900/60"></div>
@@ -187,10 +190,11 @@ const Home = () => {
                 >
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-600/30 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
-                    <img
+                    <GameCover
                       src={currentGame.coverUrl}
                       alt={currentGame.name}
                       className="relative w-48 md:w-64 lg:w-72 rounded-2xl shadow-2xl transform group-hover:scale-105 transition-transform duration-300 border border-white/10"
+                      size="cover_big"
                     />
                   </div>
                 </motion.div>
@@ -378,10 +382,11 @@ const Home = () => {
                   className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 hover:border-blue-500/50 transition-all duration-300"
                 >
                   <div className="relative h-48 overflow-hidden">
-                    <img
+                    <GameCover
                       src={game.coverUrl}
                       alt={game.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      size="cover_small"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent"></div>
 

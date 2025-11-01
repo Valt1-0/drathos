@@ -11,9 +11,12 @@ import {
   FiCheck,
   FiActivity,
   FiCircle,
+  FiImage,
+  FiTrash2,
 } from "react-icons/fi";
 import { SiDiscord } from "react-icons/si";
 import { useAuth } from "../contexts/authContext";
+import imageCacheService from "../services/imageCacheService";
 
 const SettingsPage = () => {
   const [theme, setTheme] = useState("dark");
@@ -27,6 +30,10 @@ const SettingsPage = () => {
     user: null,
   });
   const [discordLoading, setDiscordLoading] = useState(false);
+
+  // Image Cache States
+  const [cacheSize, setCacheSize] = useState(0);
+  const [cacheLoading, setCacheLoading] = useState(false);
 
   // Change le thème (clair/sombre)
   const handleThemeChange = () => {
@@ -112,6 +119,48 @@ const SettingsPage = () => {
     }
   };
 
+  // Clear Image Cache
+  const handleClearImageCache = async () => {
+    setCacheLoading(true);
+    try {
+      await imageCacheService.clearCache();
+      const newSize = await imageCacheService.getCacheSize();
+      setCacheSize(newSize);
+
+      toast.success("Cache vidé", {
+        description: "Toutes les images en cache ont été supprimées",
+      });
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      toast.error("Erreur", {
+        description: "Impossible de vider le cache",
+      });
+    } finally {
+      setCacheLoading(false);
+    }
+  };
+
+  // Clean Expired Images
+  const handleCleanExpiredImages = async () => {
+    setCacheLoading(true);
+    try {
+      const deletedCount = await imageCacheService.cleanExpiredImages();
+      const newSize = await imageCacheService.getCacheSize();
+      setCacheSize(newSize);
+
+      toast.success("Nettoyage terminé", {
+        description: `${deletedCount} image(s) expirée(s) supprimée(s)`,
+      });
+    } catch (error) {
+      console.error("Error cleaning cache:", error);
+      toast.error("Erreur", {
+        description: "Impossible de nettoyer le cache",
+      });
+    } finally {
+      setCacheLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchSettings = async () => {
       const storedPath = await window.store.get("downloadPath");
@@ -127,6 +176,14 @@ const SettingsPage = () => {
         } catch (error) {
           console.error("Error fetching Discord status:", error);
         }
+      }
+
+      // Récupérer la taille du cache d'images
+      try {
+        const size = await imageCacheService.getCacheSize();
+        setCacheSize(size);
+      } catch (error) {
+        console.error("Error fetching cache size:", error);
       }
     };
 
@@ -345,11 +402,91 @@ const SettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Section Téléchargement - Full width */}
+            {/* Section Cache d'Images - Full width */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.6 }}
+              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 bg-orange-500/20 rounded-lg">
+                      <FiImage className="text-orange-400 text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Cache d'Images</h3>
+                      <p className="text-xs text-gray-400">Gestion du cache local des covers de jeux</p>
+                    </div>
+                  </div>
+
+                  {/* Cache Size Badge */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400">
+                    <FiImage className="text-xs" />
+                    <span className="text-xs font-medium">
+                      {cacheSize} image{cacheSize > 1 ? 's' : ''} en cache
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Description */}
+                  <p className="text-sm text-gray-400">
+                    Les covers de jeux sont automatiquement mises en cache localement pour améliorer les performances.
+                    Le cache est automatiquement nettoyé après 7 jours.
+                  </p>
+
+                  {/* Cache Actions */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button
+                      onClick={handleCleanExpiredImages}
+                      disabled={cacheLoading}
+                      className={`px-4 py-3 bg-gray-700/50 border border-gray-600 hover:border-orange-500 hover:bg-gray-700 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
+                        cacheLoading ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <FiActivity className="text-orange-400" />
+                      <span>Nettoyer images expirées</span>
+                    </button>
+
+                    <button
+                      onClick={handleClearImageCache}
+                      disabled={cacheLoading}
+                      className={`px-4 py-3 bg-gray-700/50 border border-gray-600 hover:border-red-500 hover:bg-gray-700 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
+                        cacheLoading ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <FiTrash2 className="text-red-400" />
+                      <span>Vider tout le cache</span>
+                    </button>
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FiImage className="text-orange-400 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-orange-300">Optimisations actives</p>
+                        <ul className="text-xs text-gray-400 mt-1 space-y-1">
+                          <li>• Lazy loading des images</li>
+                          <li>• Compression automatique des covers IGDB</li>
+                          <li>• Cache local avec IndexedDB</li>
+                          <li>• Placeholders animés pendant le chargement</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Section Téléchargement - Full width */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.6 }}
               className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
