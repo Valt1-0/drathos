@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDownload } from "../contexts/downloadContext";
+import {
+  useDownloadStats,
+  useActiveDownloads,
+  useDownloadsByStage,
+  useDownloadCount,
+} from "../contexts/downloadContext";
 import EnhancedDownloadProgress from "../components/EnhancedDownloadProgress";
+import GameCover from "../components/GameCover";
 import {
   FiDownload,
   FiCheckCircle,
@@ -14,11 +20,14 @@ import {
 } from "react-icons/fi";
 
 const Download = () => {
-  const { downloads } = useDownload();
-  const [stats, setStats] = useState({
-    totalSpeed: 0,
-    activeDownloads: 0,
-    completedCount: 0,
+  // Utiliser les hooks optimisés au lieu de useDownload()
+  const downloadStats = useDownloadStats();
+  const activeDownloads = useActiveDownloads();
+  const completedDownloads = useDownloadsByStage("completed");
+  const failedDownloads = useDownloadsByStage("failed");
+  const totalDownloads = useDownloadCount();
+
+  const [diskSpace, setDiskSpace] = useState({
     freeSpace: 0,
     totalSpace: 0,
     usedPercent: 0,
@@ -28,14 +37,13 @@ const Download = () => {
   useEffect(() => {
     const loadDiskSpace = async () => {
       try {
-        const diskSpace = await window.api.getDiskSpace();
-        if (diskSpace.success) {
-          setStats((prev) => ({
-            ...prev,
-            freeSpace: diskSpace.freeGB,
-            totalSpace: diskSpace.totalGB,
-            usedPercent: diskSpace.usedPercent,
-          }));
+        const result = await window.api.getDiskSpace();
+        if (result.success) {
+          setDiskSpace({
+            freeSpace: result.freeGB,
+            totalSpace: result.totalGB,
+            usedPercent: result.usedPercent,
+          });
         }
       } catch (error) {
         console.error("Error loading disk space:", error);
@@ -47,40 +55,6 @@ const Download = () => {
     const interval = setInterval(loadDiskSpace, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  // Calcul des statistiques temps réel
-  useEffect(() => {
-    const activeDownloads = downloads.filter(
-      (d) =>
-        d.stage === "downloading" ||
-        d.stage === "extracting" ||
-        d.stage === "preparing"
-    );
-
-    const totalSpeed = activeDownloads.reduce(
-      (sum, d) => sum + (d.speed || 0),
-      0
-    );
-
-    const completedCount = downloads.filter(
-      (d) => d.stage === "completed"
-    ).length;
-
-    setStats((prev) => ({
-      ...prev,
-      totalSpeed,
-      activeDownloads: activeDownloads.length,
-      completedCount,
-    }));
-  }, [downloads]);
-
-  // Groupement par statut
-  const activeDownloads = downloads.filter((d) =>
-    ["preparing", "downloading", "extracting", "finalizing"].includes(d.stage)
-  );
-
-  const completedDownloads = downloads.filter((d) => d.stage === "completed");
-  const failedDownloads = downloads.filter((d) => d.stage === "failed");
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
@@ -127,7 +101,7 @@ const Download = () => {
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-white">
-                    {stats.totalSpeed.toFixed(1)}
+                    {downloadStats.totalSpeed.toFixed(1)}
                   </span>
                   <span className="text-sm text-gray-400">MB/s</span>
                 </div>
@@ -136,7 +110,7 @@ const Download = () => {
                     className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
                     initial={{ width: 0 }}
                     animate={{
-                      width: `${Math.min(100, (stats.totalSpeed / 100) * 100)}%`,
+                      width: `${Math.min(100, (downloadStats.totalSpeed / 100) * 100)}%`,
                     }}
                     transition={{ duration: 0.5 }}
                   />
@@ -162,36 +136,36 @@ const Download = () => {
                   </div>
                 </div>
 
-                {stats.freeSpace > 0 ? (
+                {diskSpace.freeSpace > 0 ? (
                   <>
                     <div className="flex items-baseline gap-2 mb-2">
                       <span className="text-3xl font-bold text-white">
-                        {stats.freeSpace}
+                        {diskSpace.freeSpace}
                       </span>
                       <span className="text-sm text-gray-400">GB free</span>
                     </div>
-                    {stats.totalSpace > 0 && (
+                    {diskSpace.totalSpace > 0 && (
                       <div className="text-sm text-gray-500 mb-2">
-                        of {stats.totalSpace} GB total
+                        of {diskSpace.totalSpace} GB total
                       </div>
                     )}
                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <motion.div
                         className={`h-full rounded-full ${
-                          stats.usedPercent > 90
+                          diskSpace.usedPercent > 90
                             ? "bg-gradient-to-r from-red-500 to-red-400"
-                            : stats.usedPercent > 75
+                            : diskSpace.usedPercent > 75
                             ? "bg-gradient-to-r from-orange-500 to-yellow-400"
                             : "bg-gradient-to-r from-yellow-500 to-green-400"
                         }`}
                         initial={{ width: 0 }}
-                        animate={{ width: `${stats.usedPercent || 0}%` }}
+                        animate={{ width: `${diskSpace.usedPercent || 0}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
-                    {stats.usedPercent > 0 && (
+                    {diskSpace.usedPercent > 0 && (
                       <div className="text-sm text-gray-400 mt-2 text-right">
-                        {stats.usedPercent}% used
+                        {diskSpace.usedPercent}% used
                       </div>
                     )}
                   </>
@@ -278,10 +252,11 @@ const Download = () => {
                   >
                     <div className="flex items-center gap-3">
                       <div className="relative w-16 h-16 bg-gray-700 rounded-xl overflow-hidden flex-shrink-0">
-                        <img
+                        <GameCover
                           src={download.image}
                           alt="Cover"
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          size="thumb"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                           <FiCheckCircle className="text-green-400 text-2xl" />
@@ -344,10 +319,11 @@ const Download = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gray-700 rounded-xl overflow-hidden">
-                          <img
+                          <GameCover
                             src={download.image}
                             alt="Cover"
                             className="w-full h-full object-cover"
+                            size="thumb"
                           />
                         </div>
 
@@ -378,7 +354,7 @@ const Download = () => {
         </AnimatePresence>
 
         {/* État vide */}
-        {downloads.length === 0 && (
+        {totalDownloads === 0 && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -401,7 +377,7 @@ const Download = () => {
         )}
 
         {/* Footer info */}
-        {downloads.length > 0 && (
+        {totalDownloads > 0 && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

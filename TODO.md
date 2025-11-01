@@ -62,20 +62,20 @@
   - [ ] Séparer les composants : `GameCard`, `GameList`, `GameFilters`, `GameStats`
   - [ ] Optimiser les re-renders avec `React.memo` et `useMemo`
 
-- [ ] **Optimiser les images**
-  - [ ] Lazy loading des covers de jeux
-  - [ ] Ajouter des placeholders pendant le chargement
-  - [ ] Compresser les images IGDB
-  - [ ] Cache local des covers
+- [x] **Optimiser les images**
+  - [x] Lazy loading des covers de jeux
+  - [x] Ajouter des placeholders pendant le chargement
+  - [x] Compresser les images IGDB
+  - [x] Cache local des covers
 
 - [ ] **Améliorer les performances de recherche**
   - [ ] Débounce sur la recherche de jeux (300ms)
   - [ ] Virtualisation des listes longues (react-window ou react-virtualized)
   - [ ] Pagination côté serveur pour les grandes bibliothèques
 
-- [ ] **Optimiser le contexte Download**
-  - [ ] Ne pas re-render tous les composants à chaque progression
-  - [ ] Utiliser des selectors pour ne s'abonner qu'aux données nécessaires
+- [x] **Optimiser le contexte Download**
+  - [x] Ne pas re-render tous les composants à chaque progression
+  - [x] Utiliser des selectors pour ne s'abonner qu'aux données nécessaires
 
 ### Backend
 - [ ] **Optimiser les requêtes base de données**

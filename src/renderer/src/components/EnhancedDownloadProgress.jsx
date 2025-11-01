@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { motion } from "framer-motion";
-import { useDownload } from "../contexts/downloadContext";
 import {
   FiDownload,
   FiPackage,
@@ -342,4 +341,32 @@ const EnhancedDownloadProgress = ({ download }) => {
   );
 };
 
-export default EnhancedDownloadProgress;
+// Fonction de comparaison personnalisée pour React.memo
+// Ne re-rend que si les propriétés pertinentes du download ont changé
+const arePropsEqual = (prevProps, nextProps) => {
+  const prev = prevProps.download;
+  const next = nextProps.download;
+
+  // Si l'un des deux est null/undefined
+  if (!prev || !next) return prev === next;
+
+  // Comparer uniquement les propriétés qui affectent le rendu
+  return (
+    prev.id === next.id &&
+    prev.progress === next.progress &&
+    prev.speed === next.speed &&
+    prev.stage === next.stage &&
+    prev.eta === next.eta &&
+    prev.sizeDownloaded === next.sizeDownloaded &&
+    prev.totalSize === next.totalSize &&
+    prev.error === next.error &&
+    prev.extractedFiles === next.extractedFiles &&
+    prev.totalFiles === next.totalFiles &&
+    prev.elapsedTime === next.elapsedTime &&
+    prev.totalTime === next.totalTime &&
+    prev.instantSpeed === next.instantSpeed
+  );
+};
+
+// Exporter le composant mémorisé
+export default memo(EnhancedDownloadProgress, arePropsEqual);

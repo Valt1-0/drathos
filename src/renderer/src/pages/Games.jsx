@@ -13,7 +13,7 @@ import {
 } from "../api/gameStats";
 import syncQueue from "../utils/syncQueue";
 import uninstallQueue from "../utils/uninstallQueue";
-import { useDownload } from "../contexts/downloadContext";
+import { useDownloadActions } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useAuth } from "../contexts/authContext";
 import { checkServerStatus } from "../api/server";
@@ -100,7 +100,7 @@ const Games = () => {
   const [wineModalOpen, setWineModalOpen] = useState(false);
   const [wineInstructions, setWineInstructions] = useState(null);
 
-  const { addDownload, updateDownloadProgress, removeDownload } = useDownload();
+  const { addDownload, updateDownloadProgress, removeDownload } = useDownloadActions();
   const { isOnline } = useConnection();
   const { user } = useAuth();
 
