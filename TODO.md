@@ -56,11 +56,11 @@
 ## ⚡ Optimisations & Performance
 
 ### Frontend
-- [ ] **Refactoriser Games.jsx** (fichier trop long - 1600+ lignes)
-  - [ ] Extraire la logique de stats dans un hook `useGameStats`
-  - [ ] Extraire la gestion des modals dans un hook `useGameModals`
-  - [ ] Séparer les composants : `GameCard`, `GameList`, `GameFilters`, `GameStats`
-  - [ ] Optimiser les re-renders avec `React.memo` et `useMemo`
+- [x] **Refactoriser Games.jsx** (fichier trop long - 1600+ lignes)
+  - [x] Extraire la logique de stats dans un hook `useGameStats`
+  - [x] Extraire la gestion des modals dans un hook `useGameModals`
+  - [x] Séparer les composants : `GameCard`, `GameList`, `GameFilters`, `GameStats`
+  - [x] Optimiser les re-renders avec `React.memo` et `useMemo`
 
 - [x] **Optimiser les images**
   - [x] Lazy loading des covers de jeux
@@ -90,15 +90,15 @@
   - [ ] Reprendre les uploads interrompus (resumable uploads)
 
 ### Electron / Main Process
-- [ ] **Optimiser le démarrage de l'app**
-  - [ ] Lazy load des modules non critiques
-  - [ ] Charger Discord RPC uniquement si activé
-  - [ ] Pré-charger les données en cache au démarrage
+- [x] **Optimiser le démarrage de l'app**
+  - [x] Lazy load des modules non critiques
+  - [x] Charger Discord RPC uniquement si activé
+  - [x] Pré-charger les données en cache au démarrage
 
-- [ ] **Améliorer la gestion mémoire**
-  - [ ] Nettoyer les listeners d'événements inutilisés
-  - [ ] Limiter le nombre de processus de jeux simultanés
-  - [ ] Garbage collection des caches obsolètes
+- [x] **Améliorer la gestion mémoire**
+  - [x] Nettoyer les listeners d'événements inutilisés
+  - [x] Limiter le nombre de processus de jeux simultanés
+  - [x] Garbage collection des caches obsolètes
 
 ---
 

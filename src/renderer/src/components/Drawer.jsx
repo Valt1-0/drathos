@@ -11,7 +11,7 @@ import { FiX, FiLogOut, FiUser } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { motion, AnimatePresence } from "framer-motion";
-import ConfirmationModal from "./ConfirmationModal";
+import ConfirmationModal from "./modals/ConfirmationModal";
 
 const menuItems = [
   { label: "Accueil", icon: FaHome, path: "/" },

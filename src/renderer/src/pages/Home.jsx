@@ -15,7 +15,7 @@ import {
 import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { getMergedStats, formatStats as formatStatsAPI } from "../api/gameStats";
-import AddGameModal from "../components/AddGameModal";
+import AddGameModal from "../components/modals/AddGameModal";
 import GameCover from "../components/GameCover";
 import { useAuth } from "../contexts/authContext";
 

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Games_temp.jsx)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
