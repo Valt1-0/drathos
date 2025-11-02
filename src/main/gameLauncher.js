@@ -3,72 +3,48 @@ import fs from "fs";
 import path from "path";
 import { shell } from "electron";
 import { wineDetector } from "./utils/wineDetector.js";
-import { discordRPC } from "./utils/discordRPC.js";
 
 export class GameLauncher {
   constructor() {
-    this.activeProcesses = new Map(); // Map<gameId, ProcessInfo>
-    this.sessionTrackers = new Map(); // Map<gameId, IntervalId>
+    this.activeProcesses = new Map();
+    this.sessionTrackers = new Map();
+    this.discordRPC = null;
+  }
+
+  setDiscordRPC(rpcInstance) {
+    this.discordRPC = rpcInstance;
   }
 
   /**
-   * Lance un jeu de manière centralisée (supprime tous les doublons)
-   * @param {string} gameId - ID du jeu
-   * @param {string} gamePath - Chemin vers le dossier du jeu
-   * @param {string} executableName - Nom de l'exécutable
-   * @param {Function} onStatusChange - Callback pour les changements d'état
+   * Lance un jeu
    */
-  async launchGame(
-    gameId,
-    gamePath,
-    executableName,
-    onStatusChange = () => {},
-    store = null
-  ) {
+  async launchGame(gameId, gamePath, executableName, onStatusChange = () => {}, store = null) {
     try {
       console.log(`[GameLauncher] Lancement du jeu ${gameId}...`);
 
-      const validationResult = this._validateGameLaunch(
-        gameId,
-        gamePath,
-        executableName
-      );
+      const validationResult = this._validateGameLaunch(gameId, gamePath, executableName);
       if (!validationResult.success) {
         throw new Error(validationResult.error);
       }
 
       const executablePath = validationResult.executablePath;
-
       const needsWine = wineDetector.isWineRequired(executablePath);
 
       if (needsWine) {
-        console.log(`[GameLauncher] Wine nécessaire pour ${executableName}`);
         const wineCmd = await wineDetector.detectWine();
-
         if (!wineCmd) {
           const instructions = wineDetector.getWineInstallInstructions();
           throw new Error(`WINE_NOT_INSTALLED:${JSON.stringify(instructions)}`);
         }
-
         const version = await wineDetector.getWineVersion();
         console.log(`[GameLauncher] Wine détecté: ${version}`);
       }
 
       const gameProcess = await this._createGameProcess(executablePath, gamePath, needsWine);
-      const processInfo = this._createProcessInfo(
-        gameProcess,
-        gameId,
-        gamePath,
-        executableName,
-        store,
-        needsWine
-      );
+      const processInfo = this._createProcessInfo(gameProcess, gameId, gamePath, executableName, store, needsWine);
       this.activeProcesses.set(gameId, processInfo);
 
-      // ✅ Configuration des événements (une seule fois, pas de doublon)
       this._setupProcessEvents(gameProcess, processInfo, onStatusChange);
-
-      // 🎮 Mettre à jour Discord immédiatement (ne pas attendre spawn event qui peut être lent sur Windows)
       this.updateDiscordActivity(processInfo).catch((err) => {
         console.error(`[GameLauncher] Erreur Discord update:`, err);
       });
@@ -96,29 +72,24 @@ export class GameLauncher {
   }
 
   /**
-   * ✅ NOUVEAU: Validation centralisée (évite la duplication de vérifications)
+   * Valide le lancement du jeu
    */
   _validateGameLaunch(gameId, gamePath, executableName) {
-    // Vérification si le jeu est déjà en cours (avec vérification du PID)
     const existingProcess = this.activeProcesses.get(gameId);
     if (existingProcess) {
-      // Vérifier si le processus tourne vraiment
       const isActuallyRunning = existingProcess.process && !existingProcess.process.killed;
 
       if (isActuallyRunning) {
         console.warn(`[GameLauncher] Jeu ${gameId} déjà en cours (PID: ${existingProcess.pid})`);
         return { success: false, error: "Le jeu est déjà en cours d'exécution" };
       } else {
-        // Processus zombie, nettoyer
         console.warn(`[GameLauncher] Processus zombie détecté pour ${gameId}, nettoyage...`);
         this.cleanupProcess(gameId);
       }
     }
 
-    // Construction du chemin complet
     const executablePath = path.join(gamePath, executableName);
 
-    // Vérification de l'existence du fichier
     if (!fs.existsSync(executablePath)) {
       return {
         success: false,
@@ -126,7 +97,6 @@ export class GameLauncher {
       };
     }
 
-    // Vérification des permissions
     const stats = fs.statSync(executablePath);
     if (!stats.isFile()) {
       return {
@@ -135,19 +105,12 @@ export class GameLauncher {
       };
     }
 
-    console.log(
-      `[GameLauncher] ✅ Validation OK - Exécution de : ${executablePath}`
-    );
-    console.log(`[GameLauncher] Répertoire de travail : ${gamePath}`);
-
     return { success: true, executablePath };
   }
 
   async _createGameProcess(executablePath, gamePath, needsWine = false) {
     if (needsWine) {
       const wineCmd = await wineDetector.detectWine();
-      console.log(`[GameLauncher] Lancement avec Wine: ${wineCmd} ${executablePath}`);
-
       return spawn(wineCmd, [executablePath], {
         cwd: gamePath,
         detached: true,
@@ -159,7 +122,6 @@ export class GameLauncher {
       });
     }
 
-    // Windows: pas de detached, ignorer complètement les streams pour éviter EPIPE
     if (process.platform === 'win32') {
       return spawn(executablePath, [], {
         cwd: gamePath,
@@ -168,7 +130,6 @@ export class GameLauncher {
       });
     }
 
-    // Unix/macOS: utiliser detached avec pipes
     return spawn(executablePath, [], {
       cwd: gamePath,
       detached: true,
@@ -192,19 +153,15 @@ export class GameLauncher {
   }
 
   /**
-   * ✅ NOUVEAU: Configuration centralisée des événements (supprime les doublons d'événements)
+   * Configure les événements du processus
    */
   _setupProcessEvents(gameProcess, processInfo, onStatusChange) {
     gameProcess.on("spawn", () => {
       const wineInfo = processInfo.usesWine ? " (via Wine)" : "";
-      console.log(
-        `[GameLauncher] Jeu ${processInfo.gameId} démarré${wineInfo} (PID: ${gameProcess.pid})`
-      );
+      console.log(`[GameLauncher] Jeu ${processInfo.gameId} démarré${wineInfo} (PID: ${gameProcess.pid})`);
       processInfo.status = "running";
 
       this.startSessionTracking(processInfo.gameId, onStatusChange);
-
-      // 🎮 Mettre à jour Discord Rich Presence
       this.updateDiscordActivity(processInfo);
 
       onStatusChange({
@@ -216,9 +173,8 @@ export class GameLauncher {
       });
     });
 
-    // Événement d'erreur
     gameProcess.on("error", (error) => {
-      console.error(`[GameLauncher] ❌ Erreur ${processInfo.gameId}:`, error);
+      console.error(`[GameLauncher] Erreur ${processInfo.gameId}:`, error);
       this.cleanupProcess(processInfo.gameId);
 
       onStatusChange({
@@ -228,17 +184,13 @@ export class GameLauncher {
       });
     });
 
-    // Événement de fermeture (prioritaire)
     gameProcess.on("exit", async (code, signal) => {
-      console.log(
-        `[GameLauncher] 🛑 Event EXIT - Jeu ${processInfo.gameId} fermé (code: ${code}, signal: ${signal}, PID: ${gameProcess.pid})`
-      );
+      console.log(`[GameLauncher] Jeu ${processInfo.gameId} fermé (code: ${code}, signal: ${signal})`);
 
       const sessionDuration = processInfo.startTime
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
         : 0;
 
-      // 1️⃣ Mettre à jour l'UI immédiatement (changement de statut)
       onStatusChange({
         gameId: processInfo.gameId,
         status: "stopped",
@@ -247,26 +199,20 @@ export class GameLauncher {
         sessionDuration,
       });
 
-      // 2️⃣ Envoyer les stats au renderer AVANT le cleanup (important !)
       if (sessionDuration > 0) {
-        console.log(`[GameLauncher] 📊 Envoi des stats pour sauvegarde (${sessionDuration}s)`);
         this.sendStatsToBackend(processInfo.gameId);
       }
 
-      // 🎮 Remettre Discord en mode idle
-      discordRPC.setIdleActivity().catch(() => {});
+      if (this.discordRPC) {
+        this.discordRPC.setIdleActivity().catch(() => {});
+      }
 
-      // 3️⃣ Nettoyer les ressources APRÈS l'envoi des stats
       this.cleanupProcess(processInfo.gameId);
     });
 
-    // Événement close (backup au cas où exit ne se déclenche pas)
     gameProcess.on("close", async (code, signal) => {
-      // Vérifier si le processus est encore dans activeProcesses
       if (this.activeProcesses.has(processInfo.gameId)) {
-        console.log(
-          `[GameLauncher] 🛑 Event CLOSE - Nettoyage backup pour ${processInfo.gameId} (code: ${code}, signal: ${signal})`
-        );
+        console.log(`[GameLauncher] Nettoyage backup pour ${processInfo.gameId}`);
 
         const sessionDuration = processInfo.startTime
           ? Math.floor((Date.now() - processInfo.startTime) / 1000)
@@ -284,25 +230,25 @@ export class GameLauncher {
           this.sendStatsToBackend(processInfo.gameId);
         }
 
-        discordRPC.setIdleActivity().catch(() => {});
+        if (this.discordRPC) {
+          this.discordRPC.setIdleActivity().catch(() => {});
+        }
         this.cleanupProcess(processInfo.gameId);
       }
     });
 
-    // ✅ Capture centralisée des logs (plus de duplication)
     this._setupProcessLogging(gameProcess, processInfo.gameId);
   }
 
   /**
-   * ✅ NOUVEAU: Logging centralisé (supprime la duplication de capture de logs)
+   * Configure la capture des logs du processus
    */
   _setupProcessLogging(gameProcess, gameId) {
     if (gameProcess.stdout) {
       gameProcess.stdout.on("data", (data) => {
-        console.log(`[${gameId}] STDOUT: ${data.toString().trim()}`);
+        console.log(`[${gameId}] ${data.toString().trim()}`);
       });
 
-      // Gérer les erreurs de pipe pour éviter EPIPE
       gameProcess.stdout.on("error", (err) => {
         if (err.code !== 'EPIPE') {
           console.warn(`[${gameId}] Erreur stdout:`, err.message);
@@ -312,10 +258,9 @@ export class GameLauncher {
 
     if (gameProcess.stderr) {
       gameProcess.stderr.on("data", (data) => {
-        console.log(`[${gameId}] STDERR: ${data.toString().trim()}`);
+        console.error(`[${gameId}] ${data.toString().trim()}`);
       });
 
-      // Gérer les erreurs de pipe pour éviter EPIPE
       gameProcess.stderr.on("error", (err) => {
         if (err.code !== 'EPIPE') {
           console.warn(`[${gameId}] Erreur stderr:`, err.message);
@@ -325,7 +270,7 @@ export class GameLauncher {
   }
 
   /**
-   * Arrête un jeu en cours (multiplateforme)
+   * Arrête un jeu
    */
   async stopGame(gameId, force = false) {
     const processInfo = this.activeProcesses.get(gameId);
@@ -339,35 +284,23 @@ export class GameLauncher {
 
     try {
       const { process: gameProcess } = processInfo;
-
-      console.log(
-        `[GameLauncher] Arrêt du jeu ${gameId} (PID: ${gameProcess.pid})`
-      );
+      console.log(`[GameLauncher] Arrêt du jeu ${gameId} (PID: ${gameProcess.pid})`);
 
       if (process.platform === 'win32') {
-        // Sur Windows: utiliser le comportement natif de Node.js
         if (force) {
-          // Force kill sur Windows
           try {
             gameProcess.kill();
-            console.log(`[GameLauncher] Jeu ${gameId} arrêté de force (Windows)`);
           } catch (err) {
-            // Si kill() échoue, essayer taskkill
             const { exec } = await import("child_process");
             const { promisify } = await import("util");
             const execAsync = promisify(exec);
             await execAsync(`taskkill /PID ${gameProcess.pid} /F /T`);
-            console.log(`[GameLauncher] Jeu ${gameId} arrêté via taskkill`);
           }
         } else {
-          // Arrêt gracieux sur Windows
           gameProcess.kill();
-          console.log(`[GameLauncher] Demande d'arrêt gracieux pour ${gameId} (Windows)`);
 
-          // Timeout pour arrêt forcé si nécessaire
           setTimeout(async () => {
             if (this.activeProcesses.has(gameId) && !gameProcess.killed) {
-              console.log(`[GameLauncher] Timeout atteint, arrêt forcé de ${gameId}`);
               try {
                 const { exec } = await import("child_process");
                 const { promisify } = await import("util");
@@ -380,20 +313,13 @@ export class GameLauncher {
           }, 10000);
         }
       } else {
-        // Sur Unix (Linux/macOS): utiliser les signaux POSIX
         if (force) {
           gameProcess.kill("SIGKILL");
-          console.log(`[GameLauncher] Jeu ${gameId} arrêté de force (SIGKILL)`);
         } else {
           gameProcess.kill("SIGTERM");
-          console.log(`[GameLauncher] Demande d'arrêt gracieux pour ${gameId} (SIGTERM)`);
 
-          // Timeout pour arrêt forcé si nécessaire
           setTimeout(() => {
             if (this.activeProcesses.has(gameId) && !gameProcess.killed) {
-              console.log(
-                `[GameLauncher] Timeout atteint, arrêt forcé de ${gameId}`
-              );
               gameProcess.kill("SIGKILL");
             }
           }, 10000);
@@ -405,10 +331,7 @@ export class GameLauncher {
         message: `Arrêt de ${gameId} en cours`,
       };
     } catch (error) {
-      console.error(
-        `[GameLauncher] Erreur lors de l'arrêt de ${gameId}:`,
-        error
-      );
+      console.error(`[GameLauncher] Erreur lors de l'arrêt de ${gameId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -417,10 +340,9 @@ export class GameLauncher {
   }
 
   /**
-   * Démarre le tracking de session pour un jeu
+   * Démarre le tracking de session
    */
   startSessionTracking(gameId, onStatusChange) {
-    // Nettoyer un éventuel tracker existant
     if (this.sessionTrackers.has(gameId)) {
       clearInterval(this.sessionTrackers.get(gameId));
     }
@@ -439,13 +361,13 @@ export class GameLauncher {
         clearInterval(interval);
         this.sessionTrackers.delete(gameId);
       }
-    }, 30000); // Mise à jour toutes les 30 secondes
+    }, 30000);
 
     this.sessionTrackers.set(gameId, interval);
   }
 
   /**
-   * Envoie un signal au renderer pour sauvegarder les stats
+   * Envoie les statistiques au renderer
    */
   async sendStatsToBackend(gameId) {
     try {
@@ -477,14 +399,21 @@ export class GameLauncher {
     }
   }
 
+  /**
+   * Met à jour l'activité Discord
+   */
   async updateDiscordActivity(processInfo) {
+    if (!this.discordRPC) {
+      return;
+    }
+
     try {
       const cachedGames = processInfo.store?.get("installedGamesCache", {});
       const gameData = cachedGames?.[processInfo.gameId];
 
       const gameName = gameData?.name || processInfo.executableName.replace(/\.(exe|sh|app)$/i, "");
 
-      await discordRPC.setGameActivity({
+      await this.discordRPC.setGameActivity({
         gameId: processInfo.gameId,
         gameName,
         startTime: processInfo.startTime,
@@ -496,13 +425,12 @@ export class GameLauncher {
   }
 
   /**
-   * Nettoie les ressources pour un jeu spécifique
+   * Nettoie les ressources d'un jeu
    */
   async cleanupProcess(gameId) {
     const processInfo = this.activeProcesses.get(gameId);
 
     if (processInfo?.usesWine && process.platform !== 'win32') {
-      console.log(`[GameLauncher] Nettoyage Wine pour ${gameId}`);
       try {
         const { exec } = await import("child_process");
         const { promisify } = await import("util");
@@ -510,17 +438,14 @@ export class GameLauncher {
 
         const winePrefix = path.join(processInfo.gamePath, '.wine');
 
-        // Utiliser env au lieu de WINEPREFIX= pour compatibilité shell
         await execAsync('wineserver -k', {
           env: {
             ...process.env,
             WINEPREFIX: winePrefix
           }
         }).catch(() => {});
-
-        console.log(`[GameLauncher] Wine server arrêté pour ${gameId}`);
       } catch (error) {
-        console.log(`[GameLauncher] Wine server cleanup ignoré (normal si déjà terminé)`);
+        // Wine cleanup est optionnel
       }
     }
 
@@ -531,25 +456,22 @@ export class GameLauncher {
       clearInterval(tracker);
       this.sessionTrackers.delete(gameId);
     }
-
-    console.log(`[GameLauncher] Ressources nettoyées pour ${gameId}`);
   }
 
   /**
-   * Nettoie toutes les ressources lors de la fermeture de l'application
+   * Nettoie toutes les ressources
    */
   cleanup() {
     console.log("[GameLauncher] Nettoyage de tous les jeux actifs...");
 
     this.activeProcesses.forEach((processInfo, gameId) => {
-      console.log(`[GameLauncher] Arrêt forcé de ${gameId}`);
       this.stopGame(gameId, true);
     });
 
     this.sessionTrackers.forEach((interval) => clearInterval(interval));
     this.sessionTrackers.clear();
 
-    console.log("[GameLauncher] ✅ Nettoyage terminé");
+    console.log("[GameLauncher] Nettoyage terminé");
   }
 
   /**
@@ -573,14 +495,14 @@ export class GameLauncher {
   }
 
   /**
-   * Vérifie si un jeu est en cours d'exécution
+   * Vérifie si un jeu est en cours
    */
   isGameRunning(gameId) {
     return this.activeProcesses.has(gameId);
   }
 
   /**
-   * Ouvre le dossier du jeu dans l'explorateur
+   * Ouvre le dossier du jeu
    */
   openGameFolder(gamePath) {
     if (fs.existsSync(gamePath)) {
@@ -592,7 +514,7 @@ export class GameLauncher {
   }
 
   /**
-   * Obtient les informations d'un processus actif
+   * Obtient les informations d'un processus
    */
   getGameProcess(gameId) {
     return this.activeProcesses.get(gameId) || null;

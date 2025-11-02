@@ -23,8 +23,12 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import iconPath from "../../resources/logo2.png?asset";
 
 import { GameLauncher } from "./gameLauncher.js";
-import { discordRPC } from "./utils/discordRPC.js";
+import { moduleLoader } from "./utils/moduleLoader.js";
+import { memoryManager } from "./utils/memoryManager.js";
 import store from "./store.js";
+
+// Discord RPC sera chargé dynamiquement selon les besoins
+let discordRPC = null;
 
 const execAsync = promisify(exec);
 
@@ -348,17 +352,38 @@ app.whenReady().then(() => {
 
   const mainWindow = createWindow();
 
-  // Initialiser Discord RPC avec le setting de l'utilisateur
+  // Initialiser le gestionnaire de mémoire
+  memoryManager.initialize();
+
+  // Charger Discord RPC uniquement si activé (lazy loading)
   const discordRPCEnabled = store.get("discordRPCEnabled", false);
-  discordRPC.isEnabled = discordRPCEnabled;
 
   if (discordRPCEnabled) {
-    console.log("[Discord RPC] Activé dans les settings, initialisation...");
-    discordRPC.initialize(true).catch((error) => {
-      console.error("[Discord RPC] Erreur lors de l'initialisation:", error);
-    });
+    console.log("[Main] Discord RPC activé, chargement du module...");
+
+    // Charger de manière asynchrone pour ne pas bloquer le démarrage
+    moduleLoader.loadDiscordRPC(true)
+      .then((rpc) => {
+        if (rpc) {
+          discordRPC = rpc;
+          discordRPC.isEnabled = true;
+
+          // Injecter Discord RPC dans gameLauncher
+          gameLauncher.setDiscordRPC(discordRPC);
+
+          return discordRPC.initialize(true);
+        }
+      })
+      .then((result) => {
+        if (result) {
+          console.log("[Discord RPC] Initialisé avec succès");
+        }
+      })
+      .catch((error) => {
+        console.error("[Discord RPC] Erreur lors du chargement/initialisation:", error);
+      });
   } else {
-    console.log("[Discord RPC] Désactivé dans les settings");
+    console.log("[Discord RPC] Désactivé dans les settings, module non chargé");
   }
 
   // Tray icon setup
@@ -410,13 +435,21 @@ app.on("window-all-closed", () => {
 // Nettoyage à la fermeture de l'application
 app.on("before-quit", async () => {
   console.log("[Main] Fermeture de l'application...");
+
+  // Nettoyer le gameLauncher
   gameLauncher.cleanup();
 
-  // Déconnecter Discord RPC proprement
-  if (discordRPC.isConnected) {
+  // Déconnecter Discord RPC proprement s'il est chargé
+  if (discordRPC && discordRPC.isConnected) {
     console.log("[Main] Déconnexion de Discord RPC...");
     await discordRPC.disconnect();
   }
+
+  // Nettoyer le gestionnaire de mémoire
+  await memoryManager.cleanup();
+
+  // Décharger tous les modules
+  moduleLoader.unloadAll();
 });
 
 // In this file you can include the rest of your app"s specific main process
@@ -1300,11 +1333,42 @@ ipcMain.handle("getDiskSpace", async () => {
 // === DISCORD RICH PRESENCE ===
 
 /**
+ * Charge Discord RPC à la demande s'il n'est pas déjà chargé
+ * @returns {Promise<DiscordRPCService>}
+ */
+async function ensureDiscordRPCLoaded() {
+  if (discordRPC) {
+    return discordRPC;
+  }
+
+  console.log("[Discord RPC] Chargement du module à la demande...");
+  const rpc = await moduleLoader.loadDiscordRPC(true);
+
+  if (!rpc) {
+    throw new Error("Impossible de charger le module Discord RPC");
+  }
+
+  discordRPC = rpc;
+  return discordRPC;
+}
+
+/**
  * Initialise Discord RPC
  */
 ipcMain.handle("discord-rpc:initialize", async (event, { enabled }) => {
   try {
-    const result = await discordRPC.initialize(enabled);
+    // Charger le module à la demande
+    const rpc = await ensureDiscordRPCLoaded();
+    rpc.isEnabled = enabled;
+
+    // Injecter dans gameLauncher
+    gameLauncher.setDiscordRPC(rpc);
+
+    const result = await rpc.initialize(enabled);
+
+    // Sauvegarder le setting
+    store.set("discordRPCEnabled", enabled);
+
     return result;
   } catch (error) {
     console.error("[Discord RPC] Erreur d'initialisation:", error);
@@ -1317,7 +1381,14 @@ ipcMain.handle("discord-rpc:initialize", async (event, { enabled }) => {
  */
 ipcMain.handle("discord-rpc:setEnabled", async (event, { enabled }) => {
   try {
-    const result = await discordRPC.setEnabled(enabled);
+    // Charger le module à la demande
+    const rpc = await ensureDiscordRPCLoaded();
+
+    const result = await rpc.setEnabled(enabled);
+
+    // Sauvegarder le setting
+    store.set("discordRPCEnabled", enabled);
+
     return result;
   } catch (error) {
     console.error("[Discord RPC] Erreur setEnabled:", error);
@@ -1328,8 +1399,19 @@ ipcMain.handle("discord-rpc:setEnabled", async (event, { enabled }) => {
 /**
  * Obtient le statut actuel de Discord RPC
  */
-ipcMain.handle("discord-rpc:getStatus", () => {
+ipcMain.handle("discord-rpc:getStatus", async () => {
   try {
+    // Si Discord RPC n'est pas chargé, retourner un statut désactivé
+    if (!discordRPC) {
+      return {
+        isConnected: false,
+        isEnabled: false,
+        currentActivity: null,
+        clientId: null,
+        user: null,
+      };
+    }
+
     return discordRPC.getStatus();
   } catch (error) {
     console.error("[Discord RPC] Erreur getStatus:", error);
@@ -1348,6 +1430,11 @@ ipcMain.handle("discord-rpc:getStatus", () => {
  */
 ipcMain.handle("discord-rpc:disconnect", async () => {
   try {
+    // Si Discord RPC n'est pas chargé, rien à faire
+    if (!discordRPC) {
+      return { success: true };
+    }
+
     await discordRPC.disconnect();
     return { success: true };
   } catch (error) {
