@@ -40,9 +40,9 @@ const GameDetails = ({
         <div className="text-center text-gray-400">
           <div className="text-6xl mb-4">🎮</div>
           <h2 className="text-xl font-semibold mb-2">
-            Sélectionnez un jeu
+            Select a game
           </h2>
-          <p>Choisissez un jeu dans la liste pour voir ses détails</p>
+          <p>Choose a game from the list to see its details</p>
         </div>
       </div>
     );
@@ -71,7 +71,7 @@ const GameDetails = ({
           <div className="flex items-center gap-4 text-gray-300">
             <span>
               {getGenresArray(game).slice(0, 3).join(" • ") ||
-                "Aucun genre"}
+                "No genre"}
             </span>
             {game.releaseDate && (
               <span>
@@ -85,11 +85,11 @@ const GameDetails = ({
         </div>
       </div>
 
-      
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <div className="lg:col-span-2">
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+
+          <div className="md:col-span-2 lg:col-span-2">
             
             <ActionButtons
               game={game}
@@ -113,13 +113,13 @@ const GameDetails = ({
               <GameStatistics stats={gameStats} isPlaying={isPlaying} />
             )}
 
-            
+
             <div className="mb-6 mt-6">
-              <h2 className="text-xl font-bold mb-3">À propos</h2>
+              <h2 className="text-xl font-bold mb-3">About</h2>
               <p className="text-gray-300 leading-relaxed">
                 {game.summary ||
                   game.storyline ||
-                  "Aucune description disponible."}
+                  "No description available."}
               </p>
             </div>
           </div>
@@ -183,15 +183,14 @@ const ActionButtons = ({
               </svg>
             </div>
             <div className="text-xl font-bold text-white mb-2">
-              Synchronisation en attente
+              Sync pending
             </div>
             <div className="text-sm text-slate-400 mb-3">
-              Ce jeu a été désinstallé mais attend la
-              synchronisation avec le serveur.
+              This game has been uninstalled but is waiting for
+              synchronization with the server.
             </div>
             <div className="text-xs text-yellow-400">
-              🚫 Le jeu ne peut pas être lancé jusqu'à ce que la
-              synchronisation soit terminée.
+              🚫 The game cannot be launched until synchronization is complete.
             </div>
           </div>
         </div>
@@ -210,10 +209,10 @@ const ActionButtons = ({
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-400 border-t-transparent"></div>
             </div>
             <div className="text-xl font-bold text-white mb-2">
-              Désinstallation en cours...
+              Uninstalling...
             </div>
             <div className="text-sm text-slate-400">
-              Suppression des fichiers du jeu
+              Removing game files
             </div>
           </div>
         </div>
@@ -225,12 +224,12 @@ const ActionButtons = ({
   if (!isInstalled) {
     return (
       <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             onClick={() => onInstall(game)}
             disabled={isInstalling}
-            className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border transition-all duration-300 ${
-              user?.role === "admin" ? "md:col-span-2 lg:col-span-3" : "md:col-span-2 lg:col-span-4"
+            className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 md:p-6 border transition-all duration-300 ${
+              user?.role === "admin" ? "sm:col-span-1 lg:col-span-3" : "sm:col-span-2 lg:col-span-4"
             } ${
               isInstalling
                 ? "border-blue-500/70 scale-95"
@@ -261,12 +260,12 @@ const ActionButtons = ({
                 )}
               </div>
               <div className="text-xl font-bold text-white mb-2">
-                {isInstalling ? "Démarrage..." : "Installer le jeu"}
+                {isInstalling ? "Starting..." : "Install game"}
               </div>
               <div className="text-sm text-slate-400">
                 {isInstalling
-                  ? "Redirection vers la page de téléchargements"
-                  : `Télécharger et installer (${game.sizeMB} MB)`}
+                  ? "Redirecting to downloads page"
+                  : `Download and install (${game.sizeMB} MB)`}
               </div>
             </div>
           </button>
@@ -283,10 +282,10 @@ const ActionButtons = ({
                   <FiTrash2 className="text-red-400 text-3xl" />
                 </div>
                 <div className="text-xl font-bold text-white mb-2">
-                  Supprimer du serveur
+                  Delete from server
                 </div>
                 <div className="text-sm text-slate-400">
-                  Admin uniquement
+                  Admin only
                 </div>
               </div>
             </button>
@@ -298,51 +297,51 @@ const ActionButtons = ({
 
   // Jeu installé
   return (
-    <div className="mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
-          <FiPlay className="text-white text-lg" />
+    <div className="mb-6 md:mb-8">
+      <div className="flex items-center gap-3 mb-4 md:mb-6">
+        <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
+          <FiPlay className="text-white text-base md:text-lg" />
         </div>
-        <h3 className="text-2xl font-bold text-white">
+        <h3 className="text-xl md:text-2xl font-bold text-white">
           Actions
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {isPlaying ? (
           <>
             <button
               onClick={() => onStop(game)}
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300"
+              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 md:p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10 text-center">
-                <div className="flex items-center justify-center w-12 h-12 bg-orange-500/20 rounded-xl mx-auto mb-3">
-                  <FiSquare className="text-orange-400 text-2xl" />
+                <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-orange-500/20 rounded-xl mx-auto mb-2 md:mb-3">
+                  <FiSquare className="text-orange-400 text-xl md:text-2xl" />
                 </div>
-                <div className="text-lg font-bold text-white mb-1">
-                  Arrêter
+                <div className="text-base md:text-lg font-bold text-white mb-1">
+                  Stop
                 </div>
-                <div className="text-sm text-slate-400">
-                  Terminer la session
+                <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
+                  End session
                 </div>
               </div>
             </button>
 
             <button
               onClick={() => onForceStop(game)}
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300"
+              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 md:p-6 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10 text-center">
-                <div className="flex items-center justify-center w-12 h-12 bg-red-500/20 rounded-xl mx-auto mb-3">
-                  <FiZap className="text-red-400 text-2xl" />
+                <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-red-500/20 rounded-xl mx-auto mb-2 md:mb-3">
+                  <FiZap className="text-red-400 text-xl md:text-2xl" />
                 </div>
-                <div className="text-lg font-bold text-white mb-1">
-                  Forcer l'arrêt
+                <div className="text-base md:text-lg font-bold text-white mb-1">
+                  Force stop
                 </div>
-                <div className="text-sm text-slate-400">
-                  Arrêt forcé
+                <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
+                  Force quit
                 </div>
               </div>
             </button>
@@ -350,18 +349,18 @@ const ActionButtons = ({
         ) : (
           <button
             onClick={() => onLaunch(game)}
-            className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300 md:col-span-2"
+            className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 md:p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300 col-span-2"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="relative z-10 text-center">
-              <div className="flex items-center justify-center w-16 h-16 bg-green-500/20 rounded-xl mx-auto mb-4">
-                <FiPlay className="text-green-400 text-3xl" />
+              <div className="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-green-500/20 rounded-xl mx-auto mb-3 md:mb-4">
+                <FiPlay className="text-green-400 text-2xl md:text-3xl" />
               </div>
-              <div className="text-xl font-bold text-white mb-2">
-                Jouer maintenant
+              <div className="text-lg md:text-xl font-bold text-white mb-2">
+                Play now
               </div>
-              <div className="text-sm text-slate-400">
-                Lancer le jeu
+              <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
+                Launch game
               </div>
             </div>
           </button>
@@ -369,36 +368,36 @@ const ActionButtons = ({
 
         <button
           onClick={() => onOpenFolder(game)}
-          className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
+          className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 md:p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative z-10 text-center">
-            <div className="flex items-center justify-center w-12 h-12 bg-blue-500/20 rounded-xl mx-auto mb-3">
-              <FiFolder className="text-blue-400 text-2xl" />
+            <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-blue-500/20 rounded-xl mx-auto mb-2 md:mb-3">
+              <FiFolder className="text-blue-400 text-xl md:text-2xl" />
             </div>
-            <div className="text-lg font-bold text-white mb-1">
-              Dossier
+            <div className="text-base md:text-lg font-bold text-white mb-1">
+              Folder
             </div>
-            <div className="text-sm text-slate-400">
-              Ouvrir le dossier
+            <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
+              Open folder
             </div>
           </div>
         </button>
 
         <button
           onClick={() => onUninstall(game)}
-          className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300"
+          className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 md:p-6 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative z-10 text-center">
-            <div className="flex items-center justify-center w-12 h-12 bg-red-500/20 rounded-xl mx-auto mb-3">
-              <FiTrash2 className="text-red-400 text-2xl" />
+            <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-red-500/20 rounded-xl mx-auto mb-2 md:mb-3">
+              <FiTrash2 className="text-red-400 text-xl md:text-2xl" />
             </div>
-            <div className="text-lg font-bold text-white mb-1">
-              Désinstaller
+            <div className="text-base md:text-lg font-bold text-white mb-1">
+              Uninstall
             </div>
-            <div className="text-sm text-slate-400">
-              Supprimer le jeu
+            <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
+              Remove game
             </div>
           </div>
         </button>
@@ -409,24 +408,24 @@ const ActionButtons = ({
 
 const GameStatistics = ({ stats, isPlaying }) => {
   return (
-    <div className="mt-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-          <FiBarChart2 className="text-white text-lg" />
+    <div className="mt-6 md:mt-8">
+      <div className="flex items-center gap-3 mb-4 md:mb-6">
+        <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+          <FiBarChart2 className="text-white text-base md:text-lg" />
         </div>
-        <h3 className="text-2xl font-bold text-white">
-          Statistiques de jeu
+        <h3 className="text-xl md:text-2xl font-bold text-white">
+          Game statistics
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
         
         <div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-400 text-sm font-medium">
-                Temps total
+                Total time
               </span>
               <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 rounded-lg">
                 <FiClock className="text-blue-400 text-lg" />
@@ -468,7 +467,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-400 text-sm font-medium">
-                Temps moyen
+                Average time
               </span>
               <div className="flex items-center justify-center w-8 h-8 bg-emerald-500/20 rounded-lg">
                 <FiTrendingUp className="text-emerald-400 text-lg" />
@@ -492,11 +491,11 @@ const GameStatistics = ({ stats, isPlaying }) => {
               <FiPlay className="text-white text-lg" />
             </div>
             <span className="text-slate-300 font-medium">
-              Premier lancement
+              First launch
             </span>
           </div>
           <div className="text-white font-semibold text-lg">
-            {stats.firstLaunchedFormatted || "Jamais"}
+            {stats.firstLaunchedFormatted || "Never"}
           </div>
         </div>
 
@@ -506,11 +505,11 @@ const GameStatistics = ({ stats, isPlaying }) => {
               <FiActivity className="text-white text-lg" />
             </div>
             <span className="text-slate-300 font-medium">
-              Dernière session
+              Last session
             </span>
           </div>
           <div className="text-white font-semibold text-lg">
-            {stats.lastPlayedFormatted || "Jamais"}
+            {stats.lastPlayedFormatted || "Never"}
           </div>
         </div>
       </div>
@@ -523,7 +522,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
               🎮
             </span>
             <span className="font-bold text-lg text-white">
-              Partie en cours...
+              Game in progress...
             </span>
           </div>
           <div className="flex gap-1">
@@ -556,25 +555,25 @@ const GameInformation = ({
   return (
     <div>
       <div className="bg-gray-800 rounded-lg p-4">
-        <h3 className="font-bold mb-4">Informations</h3>
+        <h3 className="font-bold mb-4">Information</h3>
 
         <div className="space-y-3 text-sm">
           <div>
-            <span className="text-gray-400">Développeur:</span>
-            <p className="text-white">{game.developer || "Inconnu"}</p>
+            <span className="text-gray-400">Developer:</span>
+            <p className="text-white">{game.developer || "Unknown"}</p>
           </div>
 
           <div>
-            <span className="text-gray-400">Éditeur:</span>
-            <p className="text-white">{game.publisher || "Inconnu"}</p>
+            <span className="text-gray-400">Publisher:</span>
+            <p className="text-white">{game.publisher || "Unknown"}</p>
           </div>
 
           <div>
-            <span className="text-gray-400">Date de sortie:</span>
+            <span className="text-gray-400">Release date:</span>
             <p className="text-white">
               {game.releaseDate
                 ? dayjs(game.releaseDate).format("DD/MM/YYYY")
-                : "Inconnue"}
+                : "Unknown"}
             </p>
           </div>
 
@@ -593,7 +592,7 @@ const GameInformation = ({
           </div>
 
           <div>
-            <span className="text-gray-400">Plateformes:</span>
+            <span className="text-gray-400">Platforms:</span>
             <div className="flex flex-wrap gap-1 mt-1">
               {getPlatformsArray(game).map((platform, index) => (
                 <span
@@ -610,18 +609,18 @@ const GameInformation = ({
             <>
               <div>
                 <span className="text-gray-400">
-                  Taille installée:
+                  Installed size:
                 </span>
                 <p className="text-white">
-                  {gameSize ? `${gameSize.sizeGB} GB` : "Calcul..."}
+                  {gameSize ? `${gameSize.sizeGB} GB` : "Calculating..."}
                 </p>
               </div>
 
               <div>
                 <span className="text-gray-400">
-                  Dernière session:
+                  Last session:
                 </span>
-                <p className="text-white">Jamais</p>
+                <p className="text-white">Never</p>
               </div>
             </>
           )}
@@ -629,7 +628,7 @@ const GameInformation = ({
           {!isInstalled && (
             <div>
               <span className="text-gray-400">
-                Taille téléchargement:
+                Download size:
               </span>
               <p className="text-white">{game.sizeMB} MB</p>
             </div>

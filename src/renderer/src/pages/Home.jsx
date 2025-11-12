@@ -155,7 +155,7 @@ const Home = () => {
     <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
       {/* Featured Games Carousel Hero Section */}
       {featuredGames.length > 0 ? (
-        <div className="relative w-full h-[60vh] md:h-[65vh] lg:h-[70vh] overflow-hidden">
+        <div className="relative w-full h-[55vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
@@ -193,7 +193,7 @@ const Home = () => {
                     <GameCover
                       src={currentGame.coverUrl}
                       alt={currentGame.name}
-                      className="relative w-48 md:w-64 lg:w-72 rounded-2xl shadow-2xl transform group-hover:scale-105 transition-transform duration-300 border border-white/10"
+                      className="relative w-40 md:w-56 lg:w-72 rounded-2xl shadow-2xl transform group-hover:scale-105 transition-transform duration-300 border border-white/10"
                       size="cover_big"
                     />
                   </div>
@@ -211,20 +211,20 @@ const Home = () => {
                     <span className="text-sm font-semibold text-blue-300">Featured Game</span>
                   </div>
 
-                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-4 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent drop-shadow-2xl">
+                  <h1 className="text-3xl md:text-5xl lg:text-7xl font-black leading-tight mb-3 md:mb-4 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent drop-shadow-2xl">
                     {currentGame.name}
                   </h1>
 
-                  <p className="text-base md:text-lg text-gray-300 mb-6 max-w-2xl leading-relaxed">
+                  <p className="text-sm md:text-base lg:text-lg text-gray-300 mb-4 md:mb-6 max-w-2xl leading-relaxed line-clamp-3 md:line-clamp-none">
                     {currentGame.summary || currentGame.storyline || "An amazing gaming experience awaits you."}
                   </p>
 
-                  <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                  <div className="flex flex-wrap gap-3 md:gap-4 justify-center md:justify-start">
                     <Link to="/games">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
+                        className="px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm md:text-base rounded-xl font-bold shadow-lg hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
                       >
                         <FaPlay /> Play Now
                       </motion.button>
@@ -233,7 +233,7 @@ const Home = () => {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-xl font-bold border border-white/20 hover:bg-white/20 transition-all duration-300"
+                        className="px-6 py-3 md:px-8 md:py-4 bg-white/10 backdrop-blur-sm text-white text-sm md:text-base rounded-xl font-bold border border-white/20 hover:bg-white/20 transition-all duration-300"
                       >
                         Learn More
                       </motion.button>

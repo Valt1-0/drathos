@@ -59,7 +59,6 @@ Icon
 *.tmp
 *.temp
 .cache/
-
 # Test coverage
 coverage/
 .nyc_output/
@@ -71,3 +70,4 @@ pnpm-lock.yaml
 
 # Electron specific
 *.asar
+.claude/

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FaBars,
   FaTrash,
@@ -12,6 +12,7 @@ import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmationModal from "./modals/ConfirmationModal";
+import syncQueue from "../utils/syncQueue";
 
 const menuItems = [
   { label: "Accueil", icon: FaHome, path: "/" },
@@ -23,8 +24,26 @@ const menuItems = [
 const Drawer = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingSyncs, setPendingSyncs] = useState(0);
   const { user } = useAuth();
   const location = useLocation();
+
+  // Listen to sync queue changes
+  useEffect(() => {
+    const updatePendingCount = (count) => {
+      setPendingSyncs(count);
+    };
+
+    // Initial load
+    setPendingSyncs(syncQueue.getPendingCount());
+
+    // Subscribe to changes
+    const listenerId = syncQueue.addListener(updatePendingCount);
+
+    return () => {
+      syncQueue.removeListener(listenerId);
+    };
+  }, []);
 
   const handlerDeleteUserData = async () => {
     await window.store.clear();
@@ -121,14 +140,22 @@ const Drawer = ({ children }) => {
                   <div className={`flex items-center py-3 transition-all duration-200 ${
                     isOpen ? "px-4" : "justify-center"
                   }`}>
-                    <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${
-                        isActive
-                          ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 text-blue-400"
-                          : "bg-slate-800/50 text-slate-400 group-hover:text-blue-400 group-hover:bg-slate-700/50"
-                      } transition-all duration-200`}
-                    >
-                      <Icon className="text-lg" />
+                    <div className="relative">
+                      <div
+                        className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${
+                          isActive
+                            ? "bg-gradient-to-br from-blue-500/30 to-purple-500/30 text-blue-400"
+                            : "bg-slate-800/50 text-slate-400 group-hover:text-blue-400 group-hover:bg-slate-700/50"
+                        } transition-all duration-200`}
+                      >
+                        <Icon className="text-lg" />
+                      </div>
+                      {/* Sync badge for Settings */}
+                      {item.path === "/settings" && pendingSyncs > 0 && (
+                        <div className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full animate-pulse">
+                          {pendingSyncs}
+                        </div>
+                      )}
                     </div>
 
                     <AnimatePresence>

@@ -1,6 +1,7 @@
 // drathos/src/renderer/src/contexts/connectionContext.jsx
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import syncQueue from "../utils/syncQueue";
 
 const ConnectionContext = createContext();
 
@@ -12,6 +13,21 @@ export function ConnectionProvider({ children }) {
 
   // Exposer le setter globalement
   globalSetOnline = setIsOnline;
+
+  // Détecter le passage en mode online et trigger la sync immédiatement
+  useEffect(() => {
+    if (isOnline) {
+      console.log("[ConnectionContext] 🌐 Connection restored - triggering immediate sync");
+      // Attendre un peu pour laisser le réseau se stabiliser
+      const timeout = setTimeout(() => {
+        syncQueue.processQueue();
+      }, 1000);
+
+      return () => clearTimeout(timeout);
+    } else {
+      console.log("[ConnectionContext] 📴 Connection lost - stats will be queued locally");
+    }
+  }, [isOnline]);
 
   return (
     <ConnectionContext.Provider value={{ isOnline }}>

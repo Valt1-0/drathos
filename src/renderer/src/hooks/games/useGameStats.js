@@ -7,6 +7,7 @@ import { toast } from "sonner";
 export const useGameStats = () => {
   const [gameStats, setGameStats] = useState({});
   const isProcessingStats = useRef(false);
+  const statsQueue = useRef([]);
 
   // Load initial stats from cache
   useEffect(() => {
@@ -24,20 +25,20 @@ export const useGameStats = () => {
     loadStatsFromCache();
   }, []);
 
-  // Handle save game stats event
-  useEffect(() => {
-    const handleSaveStats = async (data) => {
-      if (isProcessingStats.current) {
-        console.debug("[useGameStats] Stats update already in progress, skipping...");
-        return;
-      }
+  // Process stats queue sequentially
+  const processStatsQueue = async () => {
+    if (isProcessingStats.current || statsQueue.current.length === 0) {
+      return;
+    }
 
-      isProcessingStats.current = true;
+    isProcessingStats.current = true;
+
+    while (statsQueue.current.length > 0) {
+      const data = statsQueue.current.shift();
 
       if (!data || !data.sessionData) {
-        console.error("[useGameStats] Données de session invalides");
-        isProcessingStats.current = false;
-        return;
+        console.error("[useGameStats] Invalid session data");
+        continue;
       }
 
       const duration = data.sessionData.duration;
@@ -51,6 +52,7 @@ export const useGameStats = () => {
         try {
           if (saveResult.success && saveResult.stats) {
             await syncStatsToServer(data.gameId, saveResult.stats, data.sessionData.duration);
+            console.log(`[useGameStats] ✅ Stats synced successfully for ${data.gameId}`);
           } else {
             await stopGame(data.gameId);
           }
@@ -59,8 +61,8 @@ export const useGameStats = () => {
             await syncQueue.enqueue(data.gameId, saveResult.stats, data.sessionData.duration);
           }
 
-          toast.info("Statistiques sauvegardées localement", {
-            description: `Session de ${durationStr} sera synchronisée lors de la prochaine connexion`,
+          toast.info("Statistics saved locally", {
+            description: `Session of ${durationStr} will be synced when connection is restored`,
             duration: 4000,
           });
         }
@@ -76,17 +78,27 @@ export const useGameStats = () => {
         });
         setGameStats(stats);
       } catch (error) {
-        console.error("[useGameStats] Erreur lors de la sauvegarde des stats:", error);
+        console.error("[useGameStats] Error saving stats:", error);
 
-        toast.error("Erreur de sauvegarde des statistiques", {
-          description: "Impossible d'enregistrer les données de la session",
+        toast.error("Failed to save statistics", {
+          description: "Unable to record session data",
           duration: 5000,
         });
-      } finally {
-        setTimeout(() => {
-          isProcessingStats.current = false;
-        }, 2000);
       }
+    }
+
+    isProcessingStats.current = false;
+  };
+
+  // Handle save game stats event
+  useEffect(() => {
+    const handleSaveStats = async (data) => {
+      // Add to queue instead of skipping
+      statsQueue.current.push(data);
+      console.log(`[useGameStats] 📝 Stats event queued (queue size: ${statsQueue.current.length})`);
+
+      // Process the queue
+      processStatsQueue();
     };
 
     if (window.api.onSaveGameStats) {

@@ -60,6 +60,9 @@ class SyncQueue {
 
     console.log(`[SyncQueue] ➕ Sync ajoutée pour ${gameId} (queue: ${this.queue.length})`);
 
+    // Notifier les listeners
+    this.notifyListeners();
+
     // Tenter immédiatement la sync
     this.processQueue();
   }
@@ -74,6 +77,9 @@ class SyncQueue {
     if (this.queue.length < initialLength) {
       await this.saveQueue();
       console.log(`[SyncQueue] ➖ Sync retirée pour ${gameId} (queue: ${this.queue.length})`);
+
+      // Notifier les listeners
+      this.notifyListeners();
     }
   }
 
@@ -196,6 +202,46 @@ class SyncQueue {
         age: Date.now() - item.createdAt,
       })),
     };
+  }
+
+  /**
+   * Récupère le nombre de syncs en attente
+   */
+  getPendingCount() {
+    return this.queue.length;
+  }
+
+  /**
+   * Ajoute un listener pour les changements de queue
+   */
+  addListener(callback) {
+    if (!this.listeners) {
+      this.listeners = [];
+    }
+    this.listeners.push(callback);
+    return this.listeners.length - 1;
+  }
+
+  /**
+   * Supprime un listener
+   */
+  removeListener(id) {
+    if (this.listeners && this.listeners[id]) {
+      this.listeners[id] = null;
+    }
+  }
+
+  /**
+   * Notifie les listeners d'un changement
+   */
+  notifyListeners() {
+    if (this.listeners) {
+      this.listeners.forEach((callback) => {
+        if (callback) {
+          callback(this.getPendingCount());
+        }
+      });
+    }
   }
 }
 

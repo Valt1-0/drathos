@@ -1,8 +1,8 @@
 // Fichier: drathos/src/main/index.js
 
 // Désactiver les warnings de sécurité en développement (unsafe-eval nécessaire pour Vite HMR)
-if (process.env.NODE_ENV !== 'production') {
-  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+if (process.env.NODE_ENV !== "production") {
+  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 }
 
 import {
@@ -42,15 +42,17 @@ function getIconPath() {
   }
 
   // Fallback pour Linux (utilise l'icône système si disponible)
-  if (process.platform === 'linux') {
-    const systemIconPath = path.join(__dirname, '../../build/icon.png');
+  if (process.platform === "linux") {
+    const systemIconPath = path.join(__dirname, "../../build/icon.png");
     if (fs.existsSync(systemIconPath)) {
       return systemIconPath;
     }
   }
 
   // Si aucun chemin ne fonctionne, retourner undefined (Electron utilisera l'icône par défaut)
-  console.warn('[Icon] Impossible de trouver l\'icône, utilisation de l\'icône par défaut');
+  console.warn(
+    "[Icon] Impossible de trouver l'icône, utilisation de l'icône par défaut"
+  );
   return undefined;
 }
 
@@ -68,15 +70,27 @@ function isExecutableFile(fileName) {
   const lower = fileName.toLowerCase();
 
   switch (platform) {
-    case 'win32':
-      return lower.endsWith('.exe') || lower.endsWith('.bat') || lower.endsWith('.cmd');
+    case "win32":
+      return (
+        lower.endsWith(".exe") ||
+        lower.endsWith(".bat") ||
+        lower.endsWith(".cmd")
+      );
 
-    case 'linux':
-      return lower.endsWith('.sh') || lower.endsWith('.run') ||
-             lower.endsWith('.bin') || lower.endsWith('.appimage');
+    case "linux":
+      return (
+        lower.endsWith(".sh") ||
+        lower.endsWith(".run") ||
+        lower.endsWith(".bin") ||
+        lower.endsWith(".appimage")
+      );
 
-    case 'darwin':
-      return fileName.endsWith('.app') || lower.endsWith('.command') || lower.endsWith('.sh');
+    case "darwin":
+      return (
+        fileName.endsWith(".app") ||
+        lower.endsWith(".command") ||
+        lower.endsWith(".sh")
+      );
 
     default:
       return false;
@@ -93,7 +107,7 @@ function isSafeForExternalOpen(url) {
     const parsedUrl = new URL(url);
 
     // Liste blanche de protocoles sûrs
-    const safeProtocols = ['http:', 'https:', 'mailto:'];
+    const safeProtocols = ["http:", "https:", "mailto:"];
 
     if (!safeProtocols.includes(parsedUrl.protocol)) {
       console.warn(`[Security] Protocole non autorisé: ${parsedUrl.protocol}`);
@@ -101,7 +115,7 @@ function isSafeForExternalOpen(url) {
     }
 
     // Bloquer les URLs file:// et autres protocoles dangereux
-    if (parsedUrl.protocol === 'file:') {
+    if (parsedUrl.protocol === "file:") {
       console.warn(`[Security] Protocole file:// bloqué`);
       return false;
     }
@@ -128,12 +142,15 @@ function isValidSender(frame) {
     const frameUrl = new URL(frame.url);
 
     // Autoriser file:// pour notre application locale
-    if (frameUrl.protocol === 'file:') {
+    if (frameUrl.protocol === "file:") {
       return true;
     }
 
     // En développement, autoriser localhost
-    if (is.dev && (frameUrl.hostname === 'localhost' || frameUrl.hostname === '127.0.0.1')) {
+    if (
+      is.dev &&
+      (frameUrl.hostname === "localhost" || frameUrl.hostname === "127.0.0.1")
+    ) {
       return true;
     }
 
@@ -151,6 +168,8 @@ function createWindow() {
     title: "Drathos",
     width: 1280,
     height: 800,
+    minWidth: 400,
+    minHeight: 200,
     show: false,
     frame: false,
     autoHideMenuBar: true,
@@ -216,72 +235,88 @@ app.whenReady().then(() => {
       // En développement ET pour les applications Electron packagées,
       // autoriser toutes les connexions HTTP/HTTPS pour faciliter la configuration
       if (is.dev) {
-        return "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-               "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-               "style-src 'self' 'unsafe-inline'; " +
-               "img-src 'self' data: https: http: blob:; " +
-               "font-src 'self' data:; " +
-               "connect-src 'self' ws: http: https:; " +
-               "object-src 'none'; " +
-               "base-uri 'self'; " +
-               "form-action 'self';";
+        return (
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "img-src 'self' data: https: http: blob:; " +
+          "font-src 'self' data:; " +
+          "connect-src 'self' ws: http: https:; " +
+          "object-src 'none'; " +
+          "base-uri 'self'; " +
+          "form-action 'self';"
+        );
       }
 
       const igdb = "https://images.igdb.com";
 
       // Construire dynamiquement les URLs backend autorisées
       // Autoriser HTTP et HTTPS pour supporter les IPs locales et domaines
-      const backendHttp = serverAddress ? `http://${serverAddress.replace(/^https?:\/\//, '')}` : "";
-      const backendHttps = serverAddress ? `https://${serverAddress.replace(/^https?:\/\//, '')}` : "";
+      const backendHttp = serverAddress
+        ? `http://${serverAddress.replace(/^https?:\/\//, "")}`
+        : "";
+      const backendHttps = serverAddress
+        ? `https://${serverAddress.replace(/^https?:\/\//, "")}`
+        : "";
 
-      return "default-src 'self'; " +
-             "script-src 'self' 'unsafe-inline'; " +
-             "style-src 'self' 'unsafe-inline'; " +
-             `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps} http: https:; ` +
-             "font-src 'self' data:; " +
-             `connect-src 'self' ${igdb} ${backendHttp} ${backendHttps} http: https:; ` +
-             "object-src 'none'; " +
-             "base-uri 'self'; " +
-             "form-action 'self'; " +
-             "frame-ancestors 'none';";
+      return (
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps} http: https:; ` +
+        "font-src 'self' data:; " +
+        `connect-src 'self' ${igdb} ${backendHttp} ${backendHttps} http: https:; ` +
+        "object-src 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self'; " +
+        "frame-ancestors 'none';"
+      );
     };
 
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [buildCSP()],
-        'X-Content-Type-Options': ['nosniff'],
-        'X-Frame-Options': ['DENY'],
-        'X-XSS-Protection': ['1; mode=block'],
-        'Referrer-Policy': ['strict-origin-when-cross-origin']
-      }
+        "Content-Security-Policy": [buildCSP()],
+        "X-Content-Type-Options": ["nosniff"],
+        "X-Frame-Options": ["DENY"],
+        "X-XSS-Protection": ["1; mode=block"],
+        "Referrer-Policy": ["strict-origin-when-cross-origin"],
+      },
     });
   });
 
   // === SÉCURITÉ: Permission Request Handler ===
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    const parsedUrl = new URL(webContents.getURL());
+  session.defaultSession.setPermissionRequestHandler(
+    (webContents, permission, callback) => {
+      const parsedUrl = new URL(webContents.getURL());
 
-    // Refuser toutes les permissions par défaut sauf pour notre app locale
-    if (parsedUrl.protocol === 'file:') {
-      // Pour les fichiers locaux, n'autoriser que certaines permissions
-      const allowedPermissions = ['notifications'];
-      callback(allowedPermissions.includes(permission));
-    } else {
-      // Refuser toutes les permissions pour le contenu distant
-      console.warn(`[Security] Permission ${permission} refusée pour ${parsedUrl.href}`);
-      callback(false);
+      // Refuser toutes les permissions par défaut sauf pour notre app locale
+      if (parsedUrl.protocol === "file:") {
+        // Pour les fichiers locaux, n'autoriser que certaines permissions
+        const allowedPermissions = ["notifications"];
+        callback(allowedPermissions.includes(permission));
+      } else {
+        // Refuser toutes les permissions pour le contenu distant
+        console.warn(
+          `[Security] Permission ${permission} refusée pour ${parsedUrl.href}`
+        );
+        callback(false);
+      }
     }
-  });
+  );
 
   // === SÉCURITÉ: Limitation de la navigation ===
-  app.on('web-contents-created', (event, contents) => {
-    contents.on('will-navigate', (event, navigationUrl) => {
+  app.on("web-contents-created", (event, contents) => {
+    contents.on("will-navigate", (event, navigationUrl) => {
       const parsedUrl = new URL(navigationUrl);
 
       // Autoriser uniquement file:// et localhost en dev
-      if (parsedUrl.protocol !== 'file:') {
-        if (is.dev && (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1')) {
+      if (parsedUrl.protocol !== "file:") {
+        if (
+          is.dev &&
+          (parsedUrl.hostname === "localhost" ||
+            parsedUrl.hostname === "127.0.0.1")
+        ) {
           // OK en développement
           return;
         }
@@ -298,7 +333,7 @@ app.whenReady().then(() => {
           shell.openExternal(url);
         });
       }
-      return { action: 'deny' };
+      return { action: "deny" };
     });
   });
 
@@ -362,7 +397,8 @@ app.whenReady().then(() => {
     console.log("[Main] Discord RPC activé, chargement du module...");
 
     // Charger de manière asynchrone pour ne pas bloquer le démarrage
-    moduleLoader.loadDiscordRPC(true)
+    moduleLoader
+      .loadDiscordRPC(true)
       .then((rpc) => {
         if (rpc) {
           discordRPC = rpc;
@@ -380,7 +416,10 @@ app.whenReady().then(() => {
         }
       })
       .catch((error) => {
-        console.error("[Discord RPC] Erreur lors du chargement/initialisation:", error);
+        console.error(
+          "[Discord RPC] Erreur lors du chargement/initialisation:",
+          error
+        );
       });
   } else {
     console.log("[Discord RPC] Désactivé dans les settings, module non chargé");
@@ -476,14 +515,16 @@ ipcMain.handle("store-clear", () => {
 ipcMain.handle("shell:openExternal", async (event, url) => {
   // Valider le sender
   if (!isValidSender(event.senderFrame)) {
-    console.error(`[Security] shell:openExternal appelé par un sender non autorisé`);
-    throw new Error('Unauthorized sender');
+    console.error(
+      `[Security] shell:openExternal appelé par un sender non autorisé`
+    );
+    throw new Error("Unauthorized sender");
   }
 
   // Valider l'URL
   if (!isSafeForExternalOpen(url)) {
     console.error(`[Security] URL non sûre bloquée: ${url}`);
-    throw new Error('Unsafe URL blocked');
+    throw new Error("Unsafe URL blocked");
   }
 
   console.log(`[Security] Ouverture URL validée: ${url}`);
@@ -619,8 +660,8 @@ const get7zipPath = () => {
   let binPath = sevenBin.path7za;
 
   // En production, remplacer app.asar par app.asar.unpacked
-  if (binPath.includes('app.asar') && !binPath.includes('app.asar.unpacked')) {
-    binPath = binPath.replace('app.asar', 'app.asar.unpacked');
+  if (binPath.includes("app.asar") && !binPath.includes("app.asar.unpacked")) {
+    binPath = binPath.replace("app.asar", "app.asar.unpacked");
   }
 
   return binPath;
@@ -863,15 +904,15 @@ ipcMain.handle("listGameDirectory", async (event, { gamePath }) => {
 // === SCAN D'ARCHIVES ===
 
 const EXECUTABLE_PATTERNS = {
-  windows: ['.exe', '.bat', '.cmd'],
-  linux: ['.sh', '.run', '.bin', '.AppImage'],
-  mac: ['.app', '.command']
+  windows: [".exe", ".bat", ".cmd"],
+  linux: [".sh", ".run", ".bin", ".AppImage"],
+  mac: [".app", ".command"],
 };
 
 const detectExecutablePlatform = (filePath) => {
   const lowerPath = filePath.toLowerCase();
   for (const [platform, extensions] of Object.entries(EXECUTABLE_PATTERNS)) {
-    if (extensions.some(ext => lowerPath.endsWith(ext))) return platform;
+    if (extensions.some((ext) => lowerPath.endsWith(ext))) return platform;
   }
   return null;
 };
@@ -880,7 +921,7 @@ const scanArchiveForExecutables = async (filePath) => {
   const sevenZipPath = get7zipPath();
 
   if (!fs.existsSync(filePath)) {
-    return { success: false, error: 'Fichier introuvable', executables: [] };
+    return { success: false, error: "Fichier introuvable", executables: [] };
   }
 
   const allExtensions = Object.values(EXECUTABLE_PATTERNS).flat();
@@ -891,14 +932,21 @@ const scanArchiveForExecutables = async (filePath) => {
 
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        resolve({ success: false, error: 'Timeout lors du scan de l\'archive', executables: [] });
+        resolve({
+          success: false,
+          error: "Timeout lors du scan de l'archive",
+          executables: [],
+        });
       }, 30000);
 
-      stream.on('data', (data) => {
-        if (!data.file || data.file.endsWith('/') || data.file.endsWith('\\')) return;
+      stream.on("data", (data) => {
+        if (!data.file || data.file.endsWith("/") || data.file.endsWith("\\"))
+          return;
 
         const fileName = data.file.split(/[/\\]/).pop();
-        const isExecutable = allExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+        const isExecutable = allExtensions.some((ext) =>
+          fileName.toLowerCase().endsWith(ext)
+        );
 
         if (isExecutable) {
           const platform = detectExecutablePlatform(data.file);
@@ -907,25 +955,27 @@ const scanArchiveForExecutables = async (filePath) => {
               path: data.file,
               platform,
               name: fileName,
-              size: data.size || 0
+              size: data.size || 0,
             });
           }
         }
       });
 
-      stream.on('end', () => {
+      stream.on("end", () => {
         clearTimeout(timeout);
 
         const currentPlatformMap = {
-          'win32': 'windows',
-          'linux': 'linux',
-          'darwin': 'mac'
+          win32: "windows",
+          linux: "linux",
+          darwin: "mac",
         };
         const currentPlatform = currentPlatformMap[process.platform];
 
         executables.sort((a, b) => {
-          if (a.platform === currentPlatform && b.platform !== currentPlatform) return -1;
-          if (a.platform !== currentPlatform && b.platform === currentPlatform) return 1;
+          if (a.platform === currentPlatform && b.platform !== currentPlatform)
+            return -1;
+          if (a.platform !== currentPlatform && b.platform === currentPlatform)
+            return 1;
           return a.path.length - b.path.length;
         });
 
@@ -933,15 +983,26 @@ const scanArchiveForExecutables = async (filePath) => {
         resolve({ success: true, executables, count: executables.length });
       });
 
-      stream.on('error', (err) => {
+      stream.on("error", (err) => {
         clearTimeout(timeout);
         console.error(`[Main] ❌ Erreur lecture archive:`, err.message);
-        resolve({ success: false, error: err.message || 'Erreur inconnue lors du scan', executables: [] });
+        resolve({
+          success: false,
+          error: err.message || "Erreur inconnue lors du scan",
+          executables: [],
+        });
       });
     });
   } catch (error) {
-    console.error('[Main] ❌ Exception lors de la création du stream:', error.message);
-    return { success: false, error: error.message || 'Erreur lors de la création du stream', executables: [] };
+    console.error(
+      "[Main] ❌ Exception lors de la création du stream:",
+      error.message
+    );
+    return {
+      success: false,
+      error: error.message || "Erreur lors de la création du stream",
+      executables: [],
+    };
   }
 };
 
@@ -950,7 +1011,7 @@ ipcMain.handle("readArchiveFile", async (event, filePath) => {
     const buffer = await fs.promises.readFile(filePath);
     return { success: true, buffer };
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       return { success: false, error: "Fichier introuvable" };
     }
     return { success: false, error: error.message };
@@ -964,10 +1025,13 @@ ipcMain.handle("selectAndScanArchive", async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ["openFile"],
       filters: [
-        { name: "Archives", extensions: ["zip", "7z", "rar", "tar", "gz", "bz2", "xz"] },
-        { name: "Tous les fichiers", extensions: ["*"] }
+        {
+          name: "Archives",
+          extensions: ["zip", "7z", "rar", "tar", "gz", "bz2", "xz"],
+        },
+        { name: "Tous les fichiers", extensions: ["*"] },
       ],
-      title: "Sélectionner une archive"
+      title: "Sélectionner une archive",
     });
 
     if (result.canceled || !result.filePaths.length) {
@@ -980,10 +1044,10 @@ ipcMain.handle("selectAndScanArchive", async () => {
     return {
       ...scanResult,
       filePath,
-      fileName: path.basename(filePath)
+      fileName: path.basename(filePath),
     };
   } catch (error) {
-    console.error('[Main] ❌ Erreur dans selectAndScanArchive:', error);
+    console.error("[Main] ❌ Erreur dans selectAndScanArchive:", error);
     return { success: false, error: error.message, executables: [] };
   }
 });
@@ -1028,8 +1092,10 @@ ipcMain.handle(
   async (event, { gameId, gamePath, gameName }) => {
     // Validation de sécurité : opération critique
     if (!isValidSender(event.senderFrame)) {
-      console.error(`[Security] uninstallGame appelé par un sender non autorisé`);
-      throw new Error('Unauthorized sender');
+      console.error(
+        `[Security] uninstallGame appelé par un sender non autorisé`
+      );
+      throw new Error("Unauthorized sender");
     }
 
     console.log(`[Main] 🗑️ Désinstallation demandée: ${gameName} (${gameId})`);
@@ -1069,12 +1135,19 @@ ipcMain.handle(
             if (installedGames[gameId]) {
               delete installedGames[gameId];
               store.set("installedGamesCache", installedGames);
-              console.log(`[Main] 🗑️ Jeu ${gameId} supprimé de installedGamesCache`);
+              console.log(
+                `[Main] 🗑️ Jeu ${gameId} supprimé de installedGamesCache`
+              );
             } else {
-              console.warn(`[Main] ⚠️ Jeu ${gameId} non trouvé dans installedGamesCache`);
+              console.warn(
+                `[Main] ⚠️ Jeu ${gameId} non trouvé dans installedGamesCache`
+              );
             }
           } catch (cleanupError) {
-            console.error(`[Main] ⚠️ Erreur nettoyage installedGamesCache:`, cleanupError);
+            console.error(
+              `[Main] ⚠️ Erreur nettoyage installedGamesCache:`,
+              cleanupError
+            );
           }
 
           // Notifier le renderer après le nettoyage

@@ -11,6 +11,7 @@ import { checkServerStatus } from "../api/server";
 import gameManager from "../services/gameManager";
 import { useGameStats } from "../hooks/games/useGameStats";
 import { useGameModals } from "../hooks/games/useGameModals";
+import { useDebounce } from "../hooks/useDebounce";
 import GameLibrary from "../components/games/GameLibrary";
 import GameDetails from "../components/games/GameDetails";
 import UninstallModal from "../components/modals/UninstallModal";
@@ -27,6 +28,7 @@ const Games = () => {
   const [installedGames, setInstalledGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -588,6 +590,7 @@ const Games = () => {
         selectedGameId={selectedGame?._id}
         onSelectGame={setSelectedGame}
         searchTerm={searchTerm}
+        debouncedSearchTerm={debouncedSearchTerm}
         onSearchChange={setSearchTerm}
         selectedGenre={selectedGenre}
         onGenreChange={setSelectedGenre}
