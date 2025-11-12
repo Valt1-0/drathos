@@ -96,6 +96,20 @@ const api = {
     disconnect: () => ipcRenderer.invoke("discord-rpc:disconnect"),
   },
 
+  // Logger & Error Reporting
+  logger: {
+    log: ({ level, message, data }) =>
+      ipcRenderer.invoke("logger:log", { level, message, data }),
+    getLogs: ({ lines = 100 }) =>
+      ipcRenderer.invoke("logger:getLogs", { lines }),
+    getSystemInfo: () =>
+      ipcRenderer.invoke("logger:getSystemInfo"),
+    exportBugReport: ({ description, userEmail }) =>
+      ipcRenderer.invoke("logger:exportBugReport", { description, userEmail }),
+    openLogsFolder: () =>
+      ipcRenderer.invoke("logger:openLogsFolder"),
+  },
+
   // Contrôles de fenêtre
   windowMinimize: () => ipcRenderer.send("window-minimize"),
   windowMaximize: () => ipcRenderer.send("window-maximize"),

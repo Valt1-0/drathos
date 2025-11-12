@@ -13,10 +13,13 @@ import {
   FiCircle,
   FiImage,
   FiTrash2,
+  FiAlertTriangle,
 } from "react-icons/fi";
 import { SiDiscord } from "react-icons/si";
 import { useAuth } from "../contexts/authContext";
 import imageCacheService from "../services/imageCacheService";
+import logger from "../services/logger";
+import BugReportModal from "../components/modals/BugReportModal";
 
 const SettingsPage = () => {
   const [theme, setTheme] = useState("dark");
@@ -35,6 +38,9 @@ const SettingsPage = () => {
   const [cacheSize, setCacheSize] = useState(0);
   const [cacheLoading, setCacheLoading] = useState(false);
 
+  // Bug Report Modal State
+  const [isBugReportOpen, setIsBugReportOpen] = useState(false);
+
   // Change le thème (clair/sombre)
   const handleThemeChange = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -50,7 +56,7 @@ const SettingsPage = () => {
         window.store.set("downloadPath", newPath);
       }
     } catch (error) {
-      console.error("Error selecting/creating folder:", error);
+      logger.error("[Settings] Error selecting/creating folder", error);
       toast.error("Erreur", {
         description: "Impossible de sélectionner le dossier",
       });
@@ -97,7 +103,7 @@ const SettingsPage = () => {
         }
       }
     } catch (error) {
-      console.error("Discord RPC error:", error);
+      logger.error("[Settings] Discord RPC error", error);
       toast.error("Erreur Discord RPC", {
         description: error.message,
       });
@@ -131,7 +137,7 @@ const SettingsPage = () => {
         description: "Toutes les images en cache ont été supprimées",
       });
     } catch (error) {
-      console.error("Error clearing cache:", error);
+      logger.error("[Settings] Error clearing cache", error);
       toast.error("Erreur", {
         description: "Impossible de vider le cache",
       });
@@ -152,7 +158,7 @@ const SettingsPage = () => {
         description: `${deletedCount} image(s) expirée(s) supprimée(s)`,
       });
     } catch (error) {
-      console.error("Error cleaning cache:", error);
+      logger.error("[Settings] Error cleaning cache", error);
       toast.error("Erreur", {
         description: "Impossible de nettoyer le cache",
       });
@@ -174,7 +180,7 @@ const SettingsPage = () => {
           const status = await window.api.discordRPC.getStatus();
           setDiscordStatus(status);
         } catch (error) {
-          console.error("Error fetching Discord status:", error);
+          logger.error("[Settings] Error fetching Discord status", error);
         }
       }
 
@@ -183,7 +189,7 @@ const SettingsPage = () => {
         const size = await imageCacheService.getCacheSize();
         setCacheSize(size);
       } catch (error) {
-        console.error("Error fetching cache size:", error);
+        logger.error("[Settings] Error fetching cache size", error);
       }
     };
 
@@ -536,13 +542,21 @@ const SettingsPage = () => {
             </motion.div>
           </div>
 
-          {/* Bouton de sauvegarde */}
+          {/* Boutons d'action */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="mt-6 flex justify-end"
+            className="mt-6 flex justify-between items-center"
           >
+            <button
+              onClick={() => setIsBugReportOpen(true)}
+              className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-medium transition-all duration-300 border border-red-500/30 hover:border-red-500/50 flex items-center gap-2"
+            >
+              <FiAlertTriangle className="w-5 h-5" />
+              Report a Bug
+            </button>
+
             <button
               onClick={handleSaveSettings}
               className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/50 flex items-center gap-2"
@@ -553,6 +567,12 @@ const SettingsPage = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Bug Report Modal */}
+      <BugReportModal
+        isOpen={isBugReportOpen}
+        onClose={() => setIsBugReportOpen(false)}
+      />
     </div>
   );
 };

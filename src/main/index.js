@@ -26,6 +26,7 @@ import { GameLauncher } from "./gameLauncher.js";
 import { moduleLoader } from "./utils/moduleLoader.js";
 import { memoryManager } from "./utils/memoryManager.js";
 import store from "./store.js";
+import logger from "./utils/logger.js";
 
 // Discord RPC sera chargé dynamiquement selon les besoins
 let discordRPC = null;
@@ -224,7 +225,11 @@ Menu.setApplicationMenu(null);
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialiser le système de logging
+  await logger.initialize();
+  logger.info('[App] Starting Drathos...', { version: app.getVersion() });
+
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
@@ -1512,6 +1517,107 @@ ipcMain.handle("discord-rpc:disconnect", async () => {
     return { success: true };
   } catch (error) {
     console.error("[Discord RPC] Erreur disconnect:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// === LOGGER & ERROR REPORTING ===
+
+/**
+ * Log un message depuis le renderer
+ */
+ipcMain.handle("logger:log", async (event, { level, message, data }) => {
+  try {
+    switch (level) {
+      case 'debug':
+        logger.debug(message, data);
+        break;
+      case 'info':
+        logger.info(message, data);
+        break;
+      case 'warn':
+        logger.warn(message, data);
+        break;
+      case 'error':
+        logger.error(message, data?.error, data?.context);
+        break;
+      default:
+        logger.info(message, data);
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("[Logger] Failed to log from renderer:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Récupère les logs récents
+ */
+ipcMain.handle("logger:getLogs", async (event, { lines = 100 }) => {
+  try {
+    const logs = logger.getRecentLogs(lines);
+    return { success: true, logs };
+  } catch (error) {
+    console.error("[Logger] Failed to get logs:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Récupère les informations système
+ */
+ipcMain.handle("logger:getSystemInfo", async () => {
+  try {
+    const systemInfo = logger.getSystemInfo();
+    return { success: true, systemInfo };
+  } catch (error) {
+    console.error("[Logger] Failed to get system info:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Exporte un rapport de bug complet
+ */
+ipcMain.handle("logger:exportBugReport", async (event, { description, userEmail }) => {
+  try {
+    const reportPath = await logger.exportBugReport();
+
+    if (reportPath) {
+      // Ajouter les infos utilisateur au rapport
+      const fs = require('fs');
+      const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+      report.userDescription = description;
+      report.userEmail = userEmail;
+      fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
+
+      logger.info('[Logger] Bug report exported with user info', { reportPath });
+
+      return {
+        success: true,
+        reportPath,
+        message: 'Bug report created successfully'
+      };
+    }
+
+    return { success: false, error: 'Failed to create report' };
+  } catch (error) {
+    logger.error("[Logger] Failed to export bug report", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Ouvre le dossier de logs
+ */
+ipcMain.handle("logger:openLogsFolder", async () => {
+  try {
+    const { shell } = require('electron');
+    await shell.openPath(logger.logsDir);
+    return { success: true };
+  } catch (error) {
+    logger.error("[Logger] Failed to open logs folder", error);
     return { success: false, error: error.message };
   }
 });

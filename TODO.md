@@ -135,27 +135,28 @@
 
 - [x] **Gestion d'état**
 
-  - [x] ~~Freeze au clic sur Upload dans AddGameModal~~ ✅ CORRIGÉ
-  - [x] ~~Liste des jeux ne se rafraîchit pas après upload~~ ✅ CORRIGÉ
-  - [x] ~~Vérifier la synchronisation des stats en mode offline~~ ✅ CORRIGÉ
+  - [x] Freeze au clic sur Upload dans AddGameModal
+  - [x] Liste des jeux ne se rafraîchit pas après upload
+  - [x] Vérifier la synchronisation des stats en mode offline
 
   **Améliorations de synchronisation offline implémentées:**
-  - ✅ Détection automatique de reconnexion avec sync immédiate
-  - ✅ Queue d'événements pour éviter les race conditions (traitement séquentiel)
-  - ✅ Système de listeners pour notifier les changements de queue
-  - ✅ Badge UI indiquant le nombre de syncs en attente sur Settings
-  - ✅ Messages traduits en anglais pour cohérence
-  - ✅ Logs améliorés pour debugging
+
+  - [x] Détection automatique de reconnexion avec sync immédiate
+  - [x] Queue d'événements pour éviter les race conditions (traitement séquentiel)
+  - [x] Système de listeners pour notifier les changements de queue
+  - [x] Badge UI indiquant le nombre de syncs en attente sur Settings
+  - [x] Messages traduits en anglais pour cohérence
+  - [x] Logs améliorés pour debugging
 
 - [ ] **Discord RPC**
 
   - [x] ~~Rich Presence s'active même quand désactivé~~ ✅ CORRIGÉ
   - [ ] Gérer la reconnexion automatique si Discord redémarre
 
-- [ ] **Gestion des erreurs**
-  - [ ] Améliorer les messages d'erreur pour l'utilisateur
-  - [ ] Logger les erreurs dans un fichier de log
-  - [ ] Système de rapport de bugs intégré
+- [x] **Gestion des erreurs** ✅ **FAIT**
+  - [x] Améliorer les messages d'erreur pour l'utilisateur (logger.error avec contexte)
+  - [x] Logger les erreurs dans un fichier de log (rotation 7 jours, max 10MB)
+  - [x] Système de rapport de bugs intégré (BugReportModal + export JSON)
 
 ### Stabilité
 
@@ -456,9 +457,12 @@
 
 ## ✅ Récemment Complété
 
-### 2025-11-12 - Optimisations de performance
+### 2025-11-12 - Optimisations de performance & Gestion des erreurs
+
+#### **Optimisations de Performance**
 
 - [x] **Débounce sur la recherche (300ms)** - Hook `useDebounce` créé
+
   - Évite les re-renders constants lors de la frappe
   - Performance améliorée de 70% lors de la recherche dans de grandes bibliothèques
   - Implémentation : `src/renderer/src/hooks/useDebounce.js`
@@ -469,6 +473,44 @@
   - Réduction drastique de l'empreinte mémoire
   - Scroll performant même avec images
   - Implémentation : `src/renderer/src/components/games/GameLibrary.jsx`
+  - Import dynamique pour compatibilité Vite
+
+#### **Système de Gestion des Erreurs**
+
+- [x] **Logger Main Process** - `src/main/utils/logger.js` (223 lignes)
+
+  - Logs dans fichiers avec rotation (garde 7 jours, max 10MB par fichier)
+  - Niveaux : DEBUG, INFO, WARN, ERROR
+  - Export de rapports de bugs complets
+  - Collecte d'infos système automatique
+
+- [x] **Logger Renderer** - `src/renderer/src/services/logger.js`
+
+  - Service singleton côté React
+  - Envoie logs au main process via IPC
+  - Interface identique (debug, info, warn, error)
+
+- [x] **IPC Handlers pour Logging**
+
+  - `logger:log` - Log depuis renderer
+  - `logger:getLogs` - Récupérer logs récents
+  - `logger:getSystemInfo` - Infos système
+  - `logger:exportBugReport` - Créer rapport complet
+  - `logger:openLogsFolder` - Ouvrir dossier logs
+
+- [x] **BugReportModal** - `src/renderer/src/components/modals/BugReportModal.jsx`
+
+  - Interface utilisateur pour signaler bugs
+  - Champs : description (obligatoire), email (optionnel)
+  - Affichage infos système (version, OS, mémoire, CPU)
+  - Export rapport JSON avec logs + infos système
+  - Bouton "Open Logs Folder"
+  - Intégré dans Settings avec bouton "Report a Bug"
+
+- [x] **Remplacement console.error par logger.error**
+  - Settings.jsx entièrement migré
+  - Logs contextualisés avec préfixes ([Settings], [API], etc.)
+  - Meilleure traçabilité des erreurs
 
 ### 2025-01-11 - Corrections & Refactoring
 
