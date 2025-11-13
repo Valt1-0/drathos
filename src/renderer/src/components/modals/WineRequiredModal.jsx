@@ -20,10 +20,10 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
           </div>
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-white mb-2">
-              Wine requis
+              Wine Required
             </h2>
             <p className="text-gray-300">
-              Ce jeu est un exécutable Windows (.exe). Pour le lancer sur {instructions.platform}, vous devez installer Wine.
+              This game is a Windows executable (.exe). To run it on {instructions.platform}, you need to install Wine.
             </p>
           </div>
         </div>
@@ -31,12 +31,12 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
         <div className="bg-gray-900 rounded-lg p-4 mb-6">
           <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
             <FiTerminal className="w-5 h-5" />
-            Installation recommandée
+            Recommended Installation
           </h3>
 
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-400 mb-2">Méthode : {instructions.method}</p>
+              <p className="text-sm text-gray-400 mb-2">Method: {instructions.method}</p>
               <div className="bg-gray-800 rounded p-3 flex items-center justify-between">
                 <code className="text-green-400 text-sm font-mono flex-1">
                   {instructions.command}
@@ -45,20 +45,20 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
                   onClick={handleCopyCommand}
                   className="ml-3 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm text-white transition"
                 >
-                  Copier
+                  Copy
                 </button>
               </div>
             </div>
 
             <div className="pt-3 border-t border-gray-700">
               <p className="text-sm text-gray-400 mb-2">
-                Pour plus d'informations sur l'installation :
+                For more information about installation:
               </p>
               <button
                 onClick={handleOpenUrl}
                 className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition"
               >
-                <span>Guide d'installation officiel Wine</span>
+                <span>Wine Official Installation Guide</span>
                 <FiExternalLink className="w-4 h-4" />
               </button>
             </div>
@@ -67,10 +67,10 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
 
         <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4 mb-6">
           <h4 className="text-sm font-semibold text-blue-400 mb-2">
-            Après l'installation
+            After Installation
           </h4>
           <p className="text-sm text-gray-300">
-            Une fois Wine installé, redémarrez Drathos et relancez le jeu. Wine sera automatiquement détecté et utilisé pour exécuter les jeux Windows.
+            Once Wine is installed, restart Drathos and launch the game again. Wine will be automatically detected and used to run Windows games.
           </p>
         </div>
 
@@ -79,13 +79,13 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
             onClick={onClose}
             className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
           >
-            Fermer
+            Close
           </button>
           <button
             onClick={handleOpenUrl}
             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2"
           >
-            <span>Voir le guide</span>
+            <span>View Guide</span>
             <FiExternalLink className="w-4 h-4" />
           </button>
         </div>

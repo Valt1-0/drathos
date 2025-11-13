@@ -288,7 +288,7 @@ const Games = () => {
     try {
       if (isPendingUninstall(game._id)) {
         alert(
-          `❌ Impossible de lancer "${game.name}".\n\nCe jeu a été désinstallé mais la synchronisation avec le serveur est en attente.\n\nVeuillez vous reconnecter au serveur pour terminer la synchronisation.`
+          `Cannot launch "${game.name}".\n\nThis game has been uninstalled but synchronization with the server is pending.\n\nPlease reconnect to the server to complete the synchronization.`
         );
         return;
       }
@@ -329,8 +329,8 @@ const Games = () => {
             console.error("Error parsing Wine instructions:", e);
           }
         } else {
-          toast.error("Échec du lancement", {
-            description: `Impossible de lancer "${game.name}". Vérifiez que le jeu est correctement installé.`,
+          toast.error("Launch Failed", {
+            description: `Unable to launch "${game.name}". Please verify the game is properly installed.`,
           });
         }
 
@@ -342,8 +342,8 @@ const Games = () => {
       }
     } catch (error) {
       console.error("Error launching", game.name, ":", error);
-      toast.error("Erreur de lancement", {
-        description: `Une erreur est survenue lors du lancement de "${game.name}"`,
+      toast.error("Launch Error", {
+        description: `An error occurred while launching "${game.name}"`,
       });
       setPlayingGames((prev) => {
         const newSet = new Set(prev);
@@ -477,8 +477,8 @@ const Games = () => {
 
       if (!result.success) {
         console.error("Uninstall failed:", result.error);
-        toast.error("Désinstallation échouée", {
-          description: `Impossible de désinstaller "${game.name}". ${result.error || ''}`,
+        toast.error("Uninstallation Failed", {
+          description: `Unable to uninstall "${game.name}". ${result.error || ''}`,
           duration: 5000,
         });
         setUninstalling((prev) => {
@@ -487,15 +487,15 @@ const Games = () => {
           return newSet;
         });
       } else {
-        toast.success("Désinstallation réussie", {
-          description: `"${game.name}" a été désinstallé avec succès`,
+        toast.success("Uninstallation Successful", {
+          description: `"${game.name}" has been uninstalled successfully`,
           duration: 4000,
         });
       }
     } catch (error) {
       console.error("Uninstall error:", error);
-      toast.error("Erreur de désinstallation", {
-        description: `Une erreur est survenue lors de la désinstallation de "${game.name}"`,
+      toast.error("Uninstallation Error", {
+        description: `An error occurred while uninstalling "${game.name}"`,
         duration: 5000,
       });
       setUninstalling((prev) => {
@@ -511,7 +511,7 @@ const Games = () => {
     if (installedData && installedData.path) {
       await gameManager.openGameFolder(installedData.path);
     } else {
-      alert("Pas de chemin trouvé pour ce jeu");
+      alert("No path found for this game");
     }
   };
 
@@ -561,7 +561,7 @@ const Games = () => {
       <div className="h-full flex items-center justify-center bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Chargement de votre bibliothèque...</p>
+          <p className="text-gray-400">Loading your library...</p>
         </div>
       </div>
     );
@@ -576,7 +576,7 @@ const Games = () => {
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
           >
-            Réessayer
+            Retry
           </button>
         </div>
       </div>

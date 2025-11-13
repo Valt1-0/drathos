@@ -26,6 +26,6 @@ const apiCall = async (endpoint, body) => {
     }
     return { success: false, error: data.msg };
   } catch (error) {
-    return { success: false, error: "Erreur de connexion au serveur" };
+    return { success: false, error: "Server connection error" };
   }
 };

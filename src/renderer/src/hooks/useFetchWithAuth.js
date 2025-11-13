@@ -63,7 +63,7 @@ export function useFetchWithAuth() {
       if (!response.ok) {
         return {
           data,
-          error: data?.message || "Erreur lors de la requête",
+          error: data?.message || "Request error",
           status: response.status,
         };
       }
@@ -72,7 +72,7 @@ export function useFetchWithAuth() {
     } catch (err) {
       return {
         data: null,
-        error: err.message || "Erreur inconnue",
+        error: err.message || "Unknown error",
         status: 0,
       };
     }

@@ -41,7 +41,7 @@ const SettingsPage = () => {
   // Bug Report Modal State
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
 
-  // Change le thème (clair/sombre)
+  // Change theme (light/dark)
   const handleThemeChange = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
@@ -57,8 +57,8 @@ const SettingsPage = () => {
       }
     } catch (error) {
       logger.error("[Settings] Error selecting/creating folder", error);
-      toast.error("Erreur", {
-        description: "Impossible de sélectionner le dossier",
+      toast.error("Error", {
+        description: "Unable to select folder",
       });
     }
   };
@@ -69,16 +69,16 @@ const SettingsPage = () => {
 
     try {
       if (discordEnabled) {
-        // Désactiver Discord RPC
+        // Disable Discord RPC
         await window.api.discordRPC.setEnabled({ enabled: false });
         setDiscordEnabled(false);
         await window.store.set("discordRPCEnabled", false);
 
-        toast.success("Discord RPC désactivé", {
-          description: "Votre activité ne sera plus affichée sur Discord",
+        toast.success("Discord RPC disabled", {
+          description: "Your activity will no longer be displayed on Discord",
         });
       } else {
-        // Activer Discord RPC
+        // Enable Discord RPC
         const result = await window.api.discordRPC.initialize({
           enabled: true,
         });
@@ -87,24 +87,24 @@ const SettingsPage = () => {
           setDiscordEnabled(true);
           await window.store.set("discordRPCEnabled", true);
 
-          // Récupérer le statut
+          // Get status
           const status = await window.api.discordRPC.getStatus();
           setDiscordStatus(status);
 
-          toast.success("Discord RPC activé", {
+          toast.success("Discord RPC enabled", {
             description: result.connected
-              ? `Connecté à Discord${status.user ? ` (${status.user.username})` : ""}`
-              : "Discord n'est pas lancé, sera disponible au prochain démarrage",
+              ? `Connected to Discord${status.user ? ` (${status.user.username})` : ""}`
+              : "Discord is not running, will be available on next launch",
           });
         } else {
-          toast.error("Erreur Discord RPC", {
-            description: result.error || "Impossible de se connecter à Discord",
+          toast.error("Discord RPC error", {
+            description: result.error || "Unable to connect to Discord",
           });
         }
       }
     } catch (error) {
       logger.error("[Settings] Discord RPC error", error);
-      toast.error("Erreur Discord RPC", {
+      toast.error("Discord RPC error", {
         description: error.message,
       });
     } finally {
@@ -112,15 +112,15 @@ const SettingsPage = () => {
     }
   };
 
-  // Sauvegarder les paramètres
+  // Save settings
   const handleSaveSettings = async () => {
     try {
-      toast.success("Paramètres sauvegardés", {
-        description: "Vos modifications ont été enregistrées avec succès",
+      toast.success("Settings saved", {
+        description: "Your changes have been saved successfully",
       });
     } catch (error) {
-      toast.error("Erreur de sauvegarde", {
-        description: "Impossible de sauvegarder les paramètres",
+      toast.error("Save error", {
+        description: "Unable to save settings",
       });
     }
   };
@@ -133,13 +133,13 @@ const SettingsPage = () => {
       const newSize = await imageCacheService.getCacheSize();
       setCacheSize(newSize);
 
-      toast.success("Cache vidé", {
-        description: "Toutes les images en cache ont été supprimées",
+      toast.success("Cache cleared", {
+        description: "All cached images have been deleted",
       });
     } catch (error) {
       logger.error("[Settings] Error clearing cache", error);
-      toast.error("Erreur", {
-        description: "Impossible de vider le cache",
+      toast.error("Error", {
+        description: "Unable to clear cache",
       });
     } finally {
       setCacheLoading(false);
@@ -154,13 +154,13 @@ const SettingsPage = () => {
       const newSize = await imageCacheService.getCacheSize();
       setCacheSize(newSize);
 
-      toast.success("Nettoyage terminé", {
-        description: `${deletedCount} image(s) expirée(s) supprimée(s)`,
+      toast.success("Cleanup complete", {
+        description: `${deletedCount} expired image(s) deleted`,
       });
     } catch (error) {
       logger.error("[Settings] Error cleaning cache", error);
-      toast.error("Erreur", {
-        description: "Impossible de nettoyer le cache",
+      toast.error("Error", {
+        description: "Unable to clean cache",
       });
     } finally {
       setCacheLoading(false);
@@ -175,7 +175,7 @@ const SettingsPage = () => {
       if (storedPath) setDownloadPath(storedPath);
       if (storedEnabled) {
         setDiscordEnabled(storedEnabled);
-        // Récupérer le statut Discord
+        // Get Discord status
         try {
           const status = await window.api.discordRPC.getStatus();
           setDiscordStatus(status);
@@ -184,7 +184,7 @@ const SettingsPage = () => {
         }
       }
 
-      // Récupérer la taille du cache d'images
+      // Get image cache size
       try {
         const size = await imageCacheService.getCacheSize();
         setCacheSize(size);
@@ -211,16 +211,16 @@ const SettingsPage = () => {
                 <FiSettings className="text-white text-xl" />
               </div>
               <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                Paramètres
+                Settings
               </h1>
             </div>
             <p className="text-gray-400 text-sm ml-13">
-              Configurez votre expérience Drathos
+              Configure your Drathos experience
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Section Compte */}
+            {/* Account Section */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -233,27 +233,27 @@ const SettingsPage = () => {
                   <div className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg">
                     <FiUser className="text-blue-400 text-xl" />
                   </div>
-                  <h3 className="text-xl font-bold text-white">Compte</h3>
+                  <h3 className="text-xl font-bold text-white">Account</h3>
                 </div>
 
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-sm text-gray-400 mb-2 block">
-                      Nom d'utilisateur
+                      Username
                     </span>
                     <input
                       type="text"
                       value={user.username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                      placeholder="Votre nom d'utilisateur"
+                      placeholder="Your username"
                     />
                   </label>
                 </div>
               </div>
             </motion.div>
 
-            {/* Section Apparence */}
+            {/* Appearance Section */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -270,13 +270,13 @@ const SettingsPage = () => {
                       <FiSun className="text-purple-400 text-xl" />
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-white">Apparence</h3>
+                  <h3 className="text-xl font-bold text-white">Appearance</h3>
                 </div>
 
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-sm text-gray-400 mb-2 block">
-                      Thème de l'application
+                      Application theme
                     </span>
                     <button
                       onClick={handleThemeChange}
@@ -286,17 +286,17 @@ const SettingsPage = () => {
                         {theme === "dark" ? (
                           <>
                             <FiMoon className="text-purple-400" />
-                            <span>Mode sombre</span>
+                            <span>Dark mode</span>
                           </>
                         ) : (
                           <>
                             <FiSun className="text-yellow-400" />
-                            <span>Mode clair</span>
+                            <span>Light mode</span>
                           </>
                         )}
                       </span>
                       <span className="text-sm text-gray-400">
-                        Cliquer pour changer
+                        Click to change
                       </span>
                     </button>
                   </label>
@@ -304,7 +304,7 @@ const SettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Section Discord Rich Presence - Full width */}
+            {/* Discord Rich Presence Section - Full width */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -320,7 +320,7 @@ const SettingsPage = () => {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-white">Discord Rich Presence</h3>
-                      <p className="text-xs text-gray-400">Affichez votre activité de jeu sur Discord</p>
+                      <p className="text-xs text-gray-400">Display your game activity on Discord</p>
                     </div>
                   </div>
 
@@ -336,8 +336,8 @@ const SettingsPage = () => {
                       }`} />
                       <span className="text-xs font-medium">
                         {discordStatus.isConnected
-                          ? `Connecté${discordStatus.user ? ` · ${discordStatus.user.username}` : ''}`
-                          : 'En attente de Discord'}
+                          ? `Connected${discordStatus.user ? ` · ${discordStatus.user.username}` : ''}`
+                          : 'Waiting for Discord'}
                       </span>
                     </div>
                   )}
@@ -346,15 +346,15 @@ const SettingsPage = () => {
                 <div className="space-y-4">
                   {/* Description */}
                   <p className="text-sm text-gray-400">
-                    Activez cette option pour afficher automatiquement "Drathos" et le jeu en cours sur votre profil Discord.
-                    Assurez-vous que Discord Desktop est lancé.
+                    Enable this option to automatically display "Drathos" and the current game on your Discord profile.
+                    Make sure Discord Desktop is running.
                   </p>
 
                   {/* Toggle Button */}
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                       <FiActivity className="text-indigo-400" />
-                      <span>Afficher mon activité de jeu sur Discord</span>
+                      <span>Show my game activity on Discord</span>
                     </div>
                     <button
                       onClick={handleDiscordToggle}
@@ -373,32 +373,32 @@ const SettingsPage = () => {
                     </button>
                   </div>
 
-                  {/* Info Box - Activité actuelle */}
+                  {/* Info Box - Current Activity */}
                   {discordEnabled && discordStatus.currentActivity && (
                     <div className="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
                       <div className="flex items-start gap-3">
                         <FiActivity className="text-indigo-400 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-indigo-300">Activité actuelle</p>
+                          <p className="text-sm font-medium text-indigo-300">Current activity</p>
                           <p className="text-xs text-gray-400 mt-1">
                             {discordStatus.currentActivity.type === "game"
-                              ? `En train de jouer à ${discordStatus.currentActivity.gameName}`
-                              : "En navigation dans Drathos"}
+                              ? `Playing ${discordStatus.currentActivity.gameName}`
+                              : "Browsing in Drathos"}
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Info - Discord requis */}
+                  {/* Info - Discord required */}
                   {!discordStatus.isConnected && discordEnabled && (
                     <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                       <div className="flex items-start gap-3">
                         <FiCircle className="text-yellow-400 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-yellow-300">Discord non détecté</p>
+                          <p className="text-sm font-medium text-yellow-300">Discord not detected</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Lancez Discord Desktop pour voir votre activité apparaître
+                            Launch Discord Desktop to see your activity appear
                           </p>
                         </div>
                       </div>
@@ -408,7 +408,7 @@ const SettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Section Cache d'Images - Full width */}
+            {/* Image Cache Section - Full width */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -423,8 +423,8 @@ const SettingsPage = () => {
                       <FiImage className="text-orange-400 text-xl" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">Cache d'Images</h3>
-                      <p className="text-xs text-gray-400">Gestion du cache local des covers de jeux</p>
+                      <h3 className="text-xl font-bold text-white">Image Cache</h3>
+                      <p className="text-xs text-gray-400">Management of local game cover cache</p>
                     </div>
                   </div>
 
@@ -432,7 +432,7 @@ const SettingsPage = () => {
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400">
                     <FiImage className="text-xs" />
                     <span className="text-xs font-medium">
-                      {cacheSize} image{cacheSize > 1 ? 's' : ''} en cache
+                      {cacheSize} cached image{cacheSize > 1 ? 's' : ''}
                     </span>
                   </div>
                 </div>
@@ -440,8 +440,8 @@ const SettingsPage = () => {
                 <div className="space-y-4">
                   {/* Description */}
                   <p className="text-sm text-gray-400">
-                    Les covers de jeux sont automatiquement mises en cache localement pour améliorer les performances.
-                    Le cache est automatiquement nettoyé après 7 jours.
+                    Game covers are automatically cached locally to improve performance.
+                    The cache is automatically cleaned after 7 days.
                   </p>
 
                   {/* Cache Actions */}
@@ -454,7 +454,7 @@ const SettingsPage = () => {
                       }`}
                     >
                       <FiActivity className="text-orange-400" />
-                      <span>Nettoyer images expirées</span>
+                      <span>Clean expired images</span>
                     </button>
 
                     <button
@@ -465,7 +465,7 @@ const SettingsPage = () => {
                       }`}
                     >
                       <FiTrash2 className="text-red-400" />
-                      <span>Vider tout le cache</span>
+                      <span>Clear entire cache</span>
                     </button>
                   </div>
 
@@ -474,12 +474,12 @@ const SettingsPage = () => {
                     <div className="flex items-start gap-3">
                       <FiImage className="text-orange-400 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-300">Optimisations actives</p>
+                        <p className="text-sm font-medium text-orange-300">Active optimizations</p>
                         <ul className="text-xs text-gray-400 mt-1 space-y-1">
-                          <li>• Lazy loading des images</li>
-                          <li>• Compression automatique des covers IGDB</li>
-                          <li>• Cache local avec IndexedDB</li>
-                          <li>• Placeholders animés pendant le chargement</li>
+                          <li>• Lazy loading of images</li>
+                          <li>• Automatic compression of IGDB covers</li>
+                          <li>• Local cache with IndexedDB</li>
+                          <li>• Animated placeholders during loading</li>
                         </ul>
                       </div>
                     </div>
@@ -488,7 +488,7 @@ const SettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Section Téléchargement - Full width */}
+            {/* Downloads Section - Full width */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -502,14 +502,14 @@ const SettingsPage = () => {
                     <FiDownload className="text-green-400 text-xl" />
                   </div>
                   <h3 className="text-xl font-bold text-white">
-                    Téléchargements
+                    Downloads
                   </h3>
                 </div>
 
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-sm text-gray-400 mb-2 block">
-                      Chemin d'installation des jeux
+                      Game installation path
                     </span>
                     <div className="flex gap-3">
                       <div className="flex-1 relative">
@@ -518,7 +518,7 @@ const SettingsPage = () => {
                         </div>
                         <input
                           type="text"
-                          value={downloadPath || "Aucun chemin sélectionné"}
+                          value={downloadPath || "No path selected"}
                           readOnly
                           className="w-full pl-10 pr-3 py-3 rounded-lg bg-gray-700/50 border border-gray-600 text-gray-300 cursor-not-allowed"
                         />
@@ -528,12 +528,12 @@ const SettingsPage = () => {
                         className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-green-500/50 flex items-center gap-2"
                       >
                         <FiFolder />
-                        Parcourir
+                        Browse
                       </button>
                     </div>
                     {downloadPath && (
                       <p className="text-xs text-gray-500 mt-2">
-                        Les jeux seront installés dans ce dossier
+                        Games will be installed in this folder
                       </p>
                     )}
                   </label>
@@ -542,7 +542,7 @@ const SettingsPage = () => {
             </motion.div>
           </div>
 
-          {/* Boutons d'action */}
+          {/* Action buttons */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -562,7 +562,7 @@ const SettingsPage = () => {
               className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/50 flex items-center gap-2"
             >
               <FiCheck />
-              Sauvegarder les paramètres
+              Save settings
             </button>
           </motion.div>
         </motion.div>

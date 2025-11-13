@@ -11,7 +11,7 @@ import {
 
 // Fonction pour formater la vitesse
 const formatSpeed = (bytesPerSecond) => {
-  if (bytesPerSecond === 0) return "Calcul...";
+  if (bytesPerSecond === 0) return "Calculating...";
   const mbps = bytesPerSecond / (1024 * 1024);
   if (mbps >= 1) {
     return `${mbps.toFixed(2)} MB/s`;
@@ -22,7 +22,7 @@ const formatSpeed = (bytesPerSecond) => {
 
 // Fonction pour formater le temps restant
 const formatETA = (seconds) => {
-  if (seconds === 0 || !isFinite(seconds)) return "Calcul...";
+  if (seconds === 0 || !isFinite(seconds)) return "Calculating...";
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
@@ -110,9 +110,9 @@ const UploadNotification = () => {
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-white text-sm truncate">
-                  {uploadState === "uploading" && "Upload en cours"}
-                  {uploadState === "success" && "Upload terminé"}
-                  {uploadState === "error" && "Erreur d'upload"}
+                  {uploadState === "uploading" && "Upload in progress"}
+                  {uploadState === "success" && "Upload complete"}
+                  {uploadState === "error" && "Upload error"}
                 </h3>
                 <p className="text-xs text-slate-400 truncate">{uploadGameName}</p>
               </div>
@@ -133,10 +133,10 @@ const UploadNotification = () => {
           <div className="p-4">
             {uploadState === "uploading" && (
               <>
-                {/* Barre de progression */}
+                {/* Progress Bar */}
                 <div className="mb-4">
                   <div className="flex justify-between text-xs mb-2">
-                    <span className="text-slate-400">Progression</span>
+                    <span className="text-slate-400">Progress</span>
                     <span className="text-blue-400 font-bold">{uploadProgress}%</span>
                   </div>
                   <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -149,24 +149,24 @@ const UploadNotification = () => {
                   </div>
                 </div>
 
-                {/* Statistiques */}
+                {/* Statistics */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  {/* Vitesse */}
+                  {/* Speed */}
                   <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
                     <div className="flex items-center gap-2 mb-1">
                       <FiZap className="text-blue-400 text-sm" />
-                      <span className="text-xs text-slate-400">Vitesse</span>
+                      <span className="text-xs text-slate-400">Speed</span>
                     </div>
                     <p className="text-sm font-bold text-white">
                       {formatSpeed(uploadSpeed)}
                     </p>
                   </div>
 
-                  {/* Temps restant */}
+                  {/* Time Remaining */}
                   <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
                     <div className="flex items-center gap-2 mb-1">
                       <FiClock className="text-purple-400 text-sm" />
-                      <span className="text-xs text-slate-400">Restant</span>
+                      <span className="text-xs text-slate-400">Remaining</span>
                     </div>
                     <p className="text-sm font-bold text-white">
                       {formatETA(uploadETA)}
@@ -174,10 +174,10 @@ const UploadNotification = () => {
                   </div>
                 </div>
 
-                {/* Taille uploadée */}
+                {/* Upload Size */}
                 <div className="bg-slate-800/30 rounded-lg p-2 border border-slate-700/30">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-400">Envoyé</span>
+                    <span className="text-xs text-slate-400">Sent</span>
                     <span className="text-xs font-semibold text-white">
                       {formatBytes(uploadLoaded)} / {formatBytes(uploadTotal)}
                     </span>
@@ -189,10 +189,10 @@ const UploadNotification = () => {
             {uploadState === "success" && (
               <div className="text-center py-2">
                 <p className="text-green-400 font-semibold text-sm mb-1">
-                  Jeu ajouté avec succès !
+                  Game added successfully!
                 </p>
                 <p className="text-slate-400 text-xs">
-                  Cette notification va se fermer automatiquement
+                  This notification will close automatically
                 </p>
               </div>
             )}
@@ -200,10 +200,10 @@ const UploadNotification = () => {
             {uploadState === "error" && (
               <div className="text-center py-2">
                 <p className="text-red-400 font-semibold text-sm mb-2">
-                  Échec de l'upload
+                  Upload failed
                 </p>
                 <p className="text-slate-300 text-xs break-words">
-                  {uploadError || "Une erreur est survenue"}
+                  {uploadError || "An error occurred"}
                 </p>
               </div>
             )}

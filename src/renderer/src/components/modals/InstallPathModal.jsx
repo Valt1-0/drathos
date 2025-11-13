@@ -80,10 +80,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-white">
-                      Avant d'installer {gameName}
+                      Before installing {gameName}
                     </h2>
                     <p className="text-blue-100 text-sm mt-1">
-                      Choisissez où installer vos jeux
+                      Choose where to install your games
                     </p>
                   </div>
                 </div>
@@ -106,13 +106,13 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   </div>
                   <div>
                     <h3 className="text-blue-300 font-bold mb-1">
-                      Configuration du dossier d'installation
+                      Installation folder configuration
                     </h3>
                     <p className="text-slate-300 text-sm leading-relaxed">
-                      Vous devez sélectionner un dossier où tous vos jeux seront
-                      installés. Assurez-vous de choisir un disque avec suffisamment
-                      d'espace libre. Un sous-dossier "DrathosGames" sera créé
-                      automatiquement.
+                      You must select a folder where all your games will be
+                      installed. Make sure to choose a disk with enough free
+                      space. A "DrathosGames" subfolder will be created
+                      automatically.
                     </p>
                   </div>
                 </div>
@@ -122,17 +122,17 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
               <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50 mb-4">
                 <label className="block">
                   <span className="text-white font-semibold text-base mb-3 block">
-                    Sélectionnez votre dossier d'installation
+                    Select your installation folder
                   </span>
                   <div className="flex gap-3">
                     <div className="flex-1 relative">
                       <FiFolder className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                       <input
                         type="text"
-                        value={downloadPath || "Aucun dossier sélectionné"}
+                        value={downloadPath || "No folder selected"}
                         readOnly
                         className="w-full pl-10 pr-3 py-3 rounded-lg bg-slate-900/50 border border-slate-600 text-slate-300 text-sm cursor-not-allowed"
-                        placeholder="Cliquez sur Parcourir..."
+                        placeholder="Click Browse..."
                       />
                     </div>
                     <button
@@ -143,12 +143,12 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                       {isSelecting ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                          <span>Sélection...</span>
+                          <span>Selecting...</span>
                         </>
                       ) : (
                         <>
                           <FiFolder className="text-lg" />
-                          <span>Parcourir</span>
+                          <span>Browse</span>
                         </>
                       )}
                     </button>
@@ -167,13 +167,13 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                         <FiHardDrive className="text-green-400 text-lg" />
                       </div>
                       <h4 className="text-white font-semibold text-sm">
-                        Espace disque disponible
+                        Available disk space
                       </h4>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Espace libre</span>
+                        <span className="text-slate-400">Free space</span>
                         <span className="text-green-400 font-bold">
                           {diskSpace.freeGB} GB
                         </span>
@@ -194,10 +194,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500">
-                          {diskSpace.usedGB} GB utilisés
+                          {diskSpace.usedGB} GB used
                         </span>
                         <span className="text-slate-500">
-                          {diskSpace.usedPercent}% utilisé
+                          {diskSpace.usedPercent}% used
                         </span>
                       </div>
                     </div>
@@ -207,11 +207,11 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                         <FiAlertCircle className="text-red-400 text-base flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-red-300 text-xs font-semibold mb-0.5">
-                            Attention : Espace disque faible
+                            Warning: Low disk space
                           </p>
                           <p className="text-red-200/80 text-xs">
-                            Votre disque est presque plein. Assurez-vous d'avoir
-                            suffisamment d'espace pour installer vos jeux.
+                            Your disk is almost full. Make sure you have
+                            enough space to install your games.
                           </p>
                         </div>
                       </div>
@@ -226,7 +226,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   onClick={handleClose}
                   className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all duration-200"
                 >
-                  Annuler
+                  Cancel
                 </button>
                 <button
                   onClick={handleConfirm}
@@ -234,7 +234,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-green-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center gap-2"
                 >
                   <FiDownload className="text-lg" />
-                  <span>Continuer l'installation</span>
+                  <span>Continue installation</span>
                 </button>
               </div>
             </div>

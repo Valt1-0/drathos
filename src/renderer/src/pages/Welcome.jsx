@@ -214,7 +214,7 @@ const Welcome = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
-                Bienvenue sur Drathos
+                Welcome to Drathos
               </motion.h1>
 
               {/* Subtitle */}
@@ -224,7 +224,7 @@ const Welcome = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                Votre nouvelle bibliothèque de jeux personnalisée. Commençons la configuration !
+                Your new personalized game library. Let's start the setup!
               </motion.p>
             </motion.div>
 
@@ -236,9 +236,9 @@ const Welcome = () => {
               transition={{ duration: 0.6, delay: 0.5 }}
             >
               {[
-                { icon: FiServer, color: "blue", title: "Serveur distribué", desc: "Hébergez vos jeux sur votre propre serveur", delay: 0.6 },
-                { icon: FiCheckCircle, color: "purple", title: "Installation facile", desc: "Téléchargez et installez en quelques clics", delay: 0.7 },
-                { icon: FiPlay, color: "green", title: "Lancez en 1 clic", desc: "Démarrez vos jeux instantanément", delay: 0.8 }
+                { icon: FiServer, color: "blue", title: "Distributed Server", desc: "Host your games on your own server", delay: 0.6 },
+                { icon: FiCheckCircle, color: "purple", title: "Easy Installation", desc: "Download and install in just a few clicks", delay: 0.7 },
+                { icon: FiPlay, color: "green", title: "Launch in 1 Click", desc: "Start your games instantly", delay: 0.8 }
               ].map((feature, index) => (
                 <motion.div
                   key={index}

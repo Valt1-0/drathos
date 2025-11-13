@@ -49,9 +49,9 @@ const DeleteGameModal = ({
                   <FiLoader className="text-4xl text-red-500" />
                 </motion.div>
                 <h2 className="text-xl font-bold text-white mb-2">
-                  Suppression en cours...
+                  Deletion in progress...
                 </h2>
-                <p className="text-gray-400">Veuillez patienter</p>
+                <p className="text-gray-400">Please wait</p>
               </div>
             )}
 
@@ -67,7 +67,7 @@ const DeleteGameModal = ({
                   <FiCheckCircle className="text-5xl text-green-500" />
                 </motion.div>
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent mb-4">
-                  Suppression réussie
+                  Deletion Successful
                 </h2>
 
                 <div className="bg-gray-700/30 rounded-lg p-4 text-left text-sm text-gray-300 mb-4 space-y-2 max-h-48 overflow-y-auto border border-gray-600/50">
@@ -77,7 +77,7 @@ const DeleteGameModal = ({
                       <span className="text-white font-semibold">
                         {result.cleanup?.reviewsDeleted || 0}
                       </span>{" "}
-                      avis supprimés
+                      reviews deleted
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ const DeleteGameModal = ({
                       <span className="text-white font-semibold">
                         {result.cleanup?.installationsDeleted || 0}
                       </span>{" "}
-                      installations supprimées
+                      installations deleted
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -94,11 +94,11 @@ const DeleteGameModal = ({
                       {result.cleanup?.fileDeleted ? "✓" : "⚠"}
                     </span>
                     <span>
-                      Fichier ZIP{" "}
+                      ZIP File{" "}
                       <span className="text-white font-semibold">
                         {result.cleanup?.fileDeleted
-                          ? "supprimé"
-                          : result.cleanup?.fileError || "statut inconnu"}
+                          ? "deleted"
+                          : result.cleanup?.fileError || "unknown status"}
                       </span>
                     </span>
                   </div>
@@ -108,7 +108,7 @@ const DeleteGameModal = ({
                   onClick={onClose}
                   className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-green-500/50"
                 >
-                  Fermer
+                  Close
                 </button>
               </div>
             )}
@@ -125,7 +125,7 @@ const DeleteGameModal = ({
                   <FiAlertTriangle className="text-5xl text-red-500" />
                 </motion.div>
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-red-300 to-orange-300 bg-clip-text text-transparent mb-4">
-                  Erreur
+                  Error
                 </h2>
 
                 <div className="bg-red-500/10 rounded-lg p-4 text-left text-sm text-gray-300 mb-4 max-h-48 overflow-y-auto border border-red-500/30">
@@ -139,7 +139,7 @@ const DeleteGameModal = ({
                   onClick={onClose}
                   className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-red-500/50"
                 >
-                  Fermer
+                  Close
                 </button>
               </div>
             )}
@@ -153,24 +153,24 @@ const DeleteGameModal = ({
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-red-100 to-orange-200 bg-clip-text text-transparent">
-                      Supprimer du serveur
+                      Delete from Server
                     </h2>
                     <p className="text-sm text-gray-400">
-                      Cette action est irréversible
+                      This action is irreversible
                     </p>
                   </div>
                 </div>
 
-                {/* Bannière d'avertissement */}
+                {/* Warning Banner */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-xl">
                   <div className="flex items-start gap-3">
                     <FiAlertTriangle className="text-orange-400 text-xl flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-orange-200 font-medium mb-1">
-                        Attention
+                        Warning
                       </p>
                       <p className="text-sm text-orange-100/80">
-                        Toutes les données seront supprimées définitivement pour tous les utilisateurs.
+                        All data will be permanently deleted for all users.
                       </p>
                     </div>
                   </div>
@@ -178,7 +178,7 @@ const DeleteGameModal = ({
 
                 {/* Informations du jeu */}
                 <div className="space-y-3 mb-6">
-                  {/* Nom du jeu */}
+                  {/* Game Name */}
                   <div className="p-4 bg-gray-700/30 rounded-lg border border-gray-600">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gray-700 rounded-lg flex-shrink-0 overflow-hidden">
@@ -194,7 +194,7 @@ const DeleteGameModal = ({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-400">Jeu à supprimer</p>
+                        <p className="text-sm text-gray-400">Game to delete</p>
                         <p className="font-bold text-white text-lg truncate">
                           {game.name}
                         </p>
@@ -202,15 +202,15 @@ const DeleteGameModal = ({
                     </div>
                   </div>
 
-                  {/* Informations de suppression */}
+                  {/* Deletion Information */}
                   <div className="p-4 bg-gray-700/20 rounded-lg border border-gray-600/50">
-                    <p className="text-sm text-gray-400 mb-2">Seront supprimés:</p>
+                    <p className="text-sm text-gray-400 mb-2">Will be deleted:</p>
                     <ul className="text-sm text-gray-300 space-y-1">
-                      <li>• Avis et commentaires</li>
-                      <li>• Enregistrements d'installation</li>
-                      <li>• Statistiques associées</li>
+                      <li>• Reviews and comments</li>
+                      <li>• Installation records</li>
+                      <li>• Associated statistics</li>
                       <li>
-                        • Fichier ZIP (
+                        • ZIP File (
                         <span className="text-white font-semibold">
                           {game.sizeMB} MB
                         </span>
@@ -220,29 +220,29 @@ const DeleteGameModal = ({
                   </div>
                 </div>
 
-                {/* Message de confirmation */}
+                {/* Confirmation Message */}
                 <div className="mb-6 p-4 bg-gray-700/20 rounded-lg border border-gray-600/50">
                   <p className="text-center text-gray-300 text-sm">
-                    Êtes-vous sûr de vouloir supprimer{" "}
-                    <span className="font-bold text-white">"{game.name}"</span> du serveur ?
+                    Are you sure you want to delete{" "}
+                    <span className="font-bold text-white">"{game.name}"</span> from the server?
                   </p>
                 </div>
 
-                {/* Boutons d'action */}
+                {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={onClose}
                     className="w-full sm:flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <FiX />
-                    Annuler
+                    Cancel
                   </button>
                   <button
                     onClick={onConfirm}
                     className="w-full sm:flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-red-500/50 flex items-center justify-center gap-2"
                   >
                     <FiTrash2 />
-                    Supprimer
+                    Delete
                   </button>
                 </div>
               </div>

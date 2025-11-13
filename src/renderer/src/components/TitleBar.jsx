@@ -7,7 +7,7 @@ const TitleBar = () => {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    // Vérifier l'état initial
+    // Check initial state
     window.api.windowIsMaximized().then(setIsMaximized);
   }, []);
 
@@ -29,32 +29,32 @@ const TitleBar = () => {
       className="flex items-center justify-between h-8 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800/50 select-none"
       style={{ WebkitAppRegion: 'drag' }}
     >
-      {/* Logo et titre - zone draggable */}
+      {/* Logo and Title - Draggable Area */}
       <div className="flex items-center gap-2 px-4 flex-1 h-full">
         <span className="text-xs font-semibold text-slate-300">Drathos</span>
       </div>
 
-      {/* Indicateur de connexion */}
+      {/* Connection Indicator */}
       <div className="mr-2" style={{ WebkitAppRegion: 'no-drag' }}>
         <ConnectionIndicator />
       </div>
 
-      {/* Boutons de contrôle */}
+      {/* Control Buttons */}
       <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' }}>
-        {/* Minimiser */}
+        {/* Minimize */}
         <button
           onClick={handleMinimize}
           className="group w-12 h-full flex items-center justify-center hover:bg-slate-800 transition-colors"
-          aria-label="Minimiser"
+          aria-label="Minimize"
         >
           <FiMinus className="text-slate-400 group-hover:text-white transition-colors" size={16} />
         </button>
 
-        {/* Agrandir/Restaurer */}
+        {/* Maximize/Restore */}
         <button
           onClick={handleMaximize}
           className="group w-12 h-full flex items-center justify-center hover:bg-slate-800 transition-colors"
-          aria-label={isMaximized ? "Restaurer" : "Agrandir"}
+          aria-label={isMaximized ? "Restore" : "Maximize"}
         >
           {isMaximized ? (
             <FiMinimize className="text-slate-400 group-hover:text-white transition-colors" size={14} />
@@ -63,11 +63,11 @@ const TitleBar = () => {
           )}
         </button>
 
-        {/* Fermer */}
+        {/* Close */}
         <button
           onClick={handleClose}
           className="group w-12 h-full flex items-center justify-center hover:bg-red-600 transition-colors"
-          aria-label="Fermer"
+          aria-label="Close"
         >
           <FiX className="text-slate-400 group-hover:text-white transition-colors" size={18} />
         </button>

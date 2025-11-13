@@ -13,8 +13,8 @@ const ConfirmationModal = ({
   onConfirm,
   title,
   message,
-  confirmText = "Confirmer",
-  cancelText = "Annuler",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
   confirmColor = "blue",
   icon: Icon = FiAlertTriangle,
   loading = false,
@@ -136,10 +136,10 @@ const ConfirmationModal = ({
                       <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-red-400 font-semibold text-sm mb-1">
-                          Erreur
+                          Error
                         </p>
                         <p className="text-slate-300 text-sm break-words">
-                          {typeof error === "string" ? error : error.message || "Une erreur est survenue"}
+                          {typeof error === "string" ? error : error.message || "An error occurred"}
                         </p>
                       </div>
                     </div>
@@ -170,7 +170,7 @@ const ConfirmationModal = ({
                   >
                     <div className="flex items-center justify-center gap-2 text-red-400">
                       <FiLock className="text-lg" />
-                      <span className="font-semibold text-sm">Le jeu est maintenant bloqué</span>
+                      <span className="font-semibold text-sm">The game is now locked</span>
                     </div>
                   </motion.div>
                 )}

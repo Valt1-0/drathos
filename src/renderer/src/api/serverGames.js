@@ -9,7 +9,7 @@ export const getAllServerGames = async () => {
     );
     if (!response.ok) {
       throw new Error(
-        `Erreur lors de la récupération des jeux : ${response.status}`,
+        `Error fetching games: ${response.status}`,
       );
     }
     const data = await response.json();
@@ -88,21 +88,21 @@ export const addGameToServer = async (
             const responseData = JSON.parse(xhr.responseText);
             resolve(responseData);
           } catch (err) {
-            reject(new Error("Réponse invalide du serveur"));
+            reject(new Error("Invalid server response"));
           }
         } else {
-          reject(new Error(`Erreur HTTP ${xhr.status}: ${xhr.statusText}`));
+          reject(new Error(`HTTP Error ${xhr.status}: ${xhr.statusText}`));
         }
       };
 
       xhr.onerror = () => {
-        reject(new Error("Erreur réseau lors de l'upload"));
+        reject(new Error("Network error during upload"));
       };
 
       xhr.send(formData);
     });
   } catch (error) {
-    console.error("Erreur lors de l'ajout du jeu :", error.message);
+    console.error("Error adding game:", error.message);
     return null;
   }
 };
@@ -130,7 +130,7 @@ export const deleteServerGame = async (gameId) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `Erreur HTTP ${response.status}`);
+      throw new Error(errorData.message || `HTTP Error ${response.status}`);
     }
 
     return await response.json();

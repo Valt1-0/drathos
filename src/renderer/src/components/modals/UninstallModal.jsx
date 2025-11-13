@@ -36,10 +36,10 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
               </div>
               <div>
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-red-100 to-orange-200 bg-clip-text text-transparent">
-                  Désinstaller le jeu
+                  Uninstall game
                 </h2>
                 <p className="text-sm text-gray-400">
-                  Cette action est irréversible
+                  This action is irreversible
                 </p>
               </div>
             </div>
@@ -50,11 +50,11 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                 <FiAlertTriangle className="text-orange-400 text-xl flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-orange-200 font-medium mb-1">
-                    Attention
+                    Warning
                   </p>
                   <p className="text-sm text-orange-100/80">
-                    Tous les fichiers du jeu seront supprimés définitivement de
-                    votre ordinateur.
+                    All game files will be permanently deleted from
+                    your computer.
                   </p>
                 </div>
               </div>
@@ -78,7 +78,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-400">Jeu à désinstaller</p>
+                    <p className="text-sm text-gray-400">Game to uninstall</p>
                     <p className="font-bold text-white text-lg truncate">
                       {game.name}
                     </p>
@@ -91,7 +91,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                 <div className="p-4 bg-gray-700/20 rounded-lg border border-gray-600/50">
                   <div className="flex items-center gap-2 mb-1">
                     <FiHardDrive className="text-blue-400 text-lg" />
-                    <span className="text-sm text-gray-400">Espace à libérer</span>
+                    <span className="text-sm text-gray-400">Space to free up</span>
                   </div>
                   <p className="text-white font-bold text-xl">{gameSize.sizeGB} GB</p>
                 </div>
@@ -101,8 +101,8 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
             {/* Message de confirmation */}
             <div className="mb-6 p-4 bg-gray-700/20 rounded-lg border border-gray-600/50">
               <p className="text-center text-gray-300 text-sm">
-                Êtes-vous sûr de vouloir désinstaller{" "}
-                <span className="font-bold text-white">"{game.name}"</span> ?
+                Are you sure you want to uninstall{" "}
+                <span className="font-bold text-white">"{game.name}"</span>?
               </p>
             </div>
 
@@ -113,7 +113,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                 className="w-full sm:flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FiX />
-                Annuler
+                Cancel
               </button>
               <button
                 onClick={() => {
@@ -123,7 +123,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                 className="w-full sm:flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-red-500/50 flex items-center justify-center gap-2"
               >
                 <FiTrash2 />
-                Désinstaller
+                Uninstall
               </button>
             </div>
           </motion.div>

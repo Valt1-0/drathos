@@ -172,7 +172,7 @@ const Download = () => {
                 ) : (
                   <div className="space-y-3">
                     <p className="text-gray-300 text-sm leading-relaxed">
-                      Aucun emplacement de téléchargement sélectionné
+                      No download location selected
                     </p>
                     <Link to="/settings">
                       <motion.button
@@ -181,7 +181,7 @@ const Download = () => {
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-yellow-500/30"
                       >
                         <FiSettings className="text-lg" />
-                        <span>Configurer</span>
+                        <span>Configure</span>
                       </motion.button>
                     </Link>
                   </div>

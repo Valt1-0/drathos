@@ -68,11 +68,11 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
         onSave(config);
         onClose();
       } else {
-        alert("Erreur lors de la sauvegarde");
+        alert("Error saving");
       }
     } catch (error) {
       console.error("Error saving executable config:", error);
-      alert("Erreur lors de la sauvegarde");
+      alert("Error saving");
     }
   };
 

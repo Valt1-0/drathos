@@ -78,7 +78,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
       if (result.canceled) return;
 
       if (!result.success) {
-        setErrorMessage(result.error || "Erreur lors du scan de l'archive");
+        setErrorMessage(result.error || "Error scanning archive");
         setUploadState("error");
         return;
       }
@@ -96,7 +96,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
     } catch (error) {
       console.error("[AddGameModal] Erreur scan archive:", error);
       setAvailableExecutables([]);
-      setErrorMessage("Erreur lors de la sélection du fichier");
+      setErrorMessage("Error selecting file");
       setUploadState("error");
     } finally {
       setIsLoadingExecutables(false);
@@ -105,7 +105,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleUpload = async () => {
     if (!selectedGame || !zipFile) {
-      setErrorMessage("Veuillez sélectionner un jeu et un fichier");
+      setErrorMessage("Please select a game and a file");
       return;
     }
 
@@ -231,10 +231,10 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-white">
-                        Ajouter un jeu
+                        Add a Game
                       </h2>
                       <p className="text-slate-400 text-sm">
-                        Recherchez et uploadez un nouveau jeu
+                        Search and upload a new game
                       </p>
                     </div>
                   </div>
@@ -250,7 +250,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <p className="text-red-400 font-semibold text-sm mb-1">
-                            Erreur
+                            Error
                           </p>
                           <p className="text-slate-300 text-sm break-words">
                             {errorMessage}
@@ -263,7 +263,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                   {/* Search Input */}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Rechercher un jeu IGDB
+                      Search for IGDB Game
                     </label>
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2">
@@ -276,7 +276,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           setQuery(e.target.value);
                           setSelectedGame(null);
                         }}
-                        placeholder="Rechercher un jeu par nom..."
+                        placeholder="Search for a game by name..."
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white placeholder-slate-500"
                       />
                     </div>
@@ -288,7 +288,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       {loading && (
                         <div className="flex items-center justify-center py-8">
                           <FiLoader className="text-3xl text-blue-400 animate-spin" />
-                          <span className="ml-3 text-slate-400">Recherche en cours...</span>
+                          <span className="ml-3 text-slate-400">Searching...</span>
                         </div>
                       )}
 
@@ -315,7 +315,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                                   <div className="text-sm text-slate-400">
                                     {game.first_release_date
                                       ? new Date(game.first_release_date * 1000).getFullYear()
-                                      : "Date inconnue"}
+                                      : "Unknown Date"}
                                   </div>
                                 </div>
                                 <FiCheck className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -333,7 +333,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           className="text-center py-8 text-slate-400"
                         >
                           <FiSearch className="text-4xl mx-auto mb-2 opacity-50" />
-                          <p>Aucun jeu trouvé pour "{query}"</p>
+                          <p>No games found for "{query}"</p>
                         </motion.div>
                       )}
                     </div>
@@ -353,7 +353,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             <FiCheck className="text-green-400 text-xl" />
                           </div>
                           <div>
-                            <p className="text-sm text-slate-400">Jeu sélectionné</p>
+                            <p className="text-sm text-slate-400">Selected Game</p>
                             <p className="font-bold text-white text-lg">{selectedGame.name}</p>
                           </div>
                         </div>
@@ -362,7 +362,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       {/* File Upload */}
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Fichier du jeu
+                          Game File
                         </label>
                         <div className="relative">
                           <button
@@ -386,10 +386,10 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                               zipFile ? "text-white" : "text-slate-400 group-hover:text-white"
                             }`}>
                               {isLoadingExecutables
-                                ? "Analyse en cours..."
+                                ? "Analyzing..."
                                 : zipFile
                                   ? zipFile.name
-                                  : "Choisir un fichier (.zip, .7z, .rar, .tar, .gz)"}
+                                  : "Choose a file (.zip, .7z, .rar, .tar, .gz)"}
                             </span>
                           </button>
                         </div>
@@ -399,7 +399,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                           <FiFileText />
-                          Version du jeu
+                          Game Version
                         </label>
                         <input
                           type="text"
@@ -414,7 +414,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                           <FiCpu />
-                          Exécutable à lancer (optionnel)
+                          Executable to launch (optional)
                         </label>
 
 
@@ -424,7 +424,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             <div className="flex items-center justify-between">
                               <p className="text-xs text-green-400 flex items-center gap-1">
                                 <FiCheck className="text-sm" />
-                                {availableExecutables.length} exécutable(s) trouvé(s)
+                                {availableExecutables.length} executable(s) found
                               </p>
                               {executableName && (
                                 <button
@@ -432,7 +432,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                                   onClick={() => setExecutableName("")}
                                   className="text-xs text-slate-400 hover:text-white transition-colors"
                                 >
-                                  Effacer la sélection
+                                  Clear Selection
                                 </button>
                               )}
                             </div>
@@ -486,12 +486,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                               type="text"
                               value={executableName}
                               onChange={(e) => setExecutableName(e.target.value)}
-                              placeholder="ex: game.exe ou bin/server.exe"
+                              placeholder="ex: game.exe or bin/server.exe"
                               className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white placeholder-slate-500"
                             />
                             <p className="text-xs text-amber-400 flex items-center gap-1">
                               <FiAlertTriangle className="text-sm" />
-                              Aucun exécutable trouvé automatiquement
+                              No executables found automatically
                             </p>
                           </div>
                         )}
@@ -499,12 +499,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         {/* No File Selected Yet */}
                         {!zipFile && (
                           <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-500 text-sm">
-                            Sélectionnez d'abord un fichier pour détecter les exécutables
+                            Select a file first to detect executables
                           </div>
                         )}
 
                         <p className="text-xs text-slate-400 mt-2">
-                          Si vide, le jeu détectera automatiquement l'exécutable au lancement
+                          If empty, the game will automatically detect the executable on launch
                         </p>
                       </div>
 
@@ -522,12 +522,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           )}
                           <div>
                             <p className="font-medium text-white">
-                              {isPublic ? "Jeu Public" : "Jeu Privé"}
+                              {isPublic ? "Public Game" : "Private Game"}
                             </p>
                             <p className="text-xs text-slate-400">
                               {isPublic
-                                ? "Visible par tous les utilisateurs"
-                                : "Visible uniquement par vous"}
+                                ? "Visible to all users"
+                                : "Visible only to you"}
                             </p>
                           </div>
                         </div>
@@ -556,7 +556,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           }}
                           className="flex-1 px-6 py-3 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-200 border border-slate-700/50"
                         >
-                          Retour
+                          Back
                         </button>
                         <button
                           onClick={handleUpload}
@@ -564,7 +564,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                         >
                           <FiUpload />
-                          Uploader
+                          Upload
                         </button>
                       </div>
                     </motion.div>

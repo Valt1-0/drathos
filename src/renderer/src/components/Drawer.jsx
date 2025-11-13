@@ -15,10 +15,10 @@ import ConfirmationModal from "./modals/ConfirmationModal";
 import syncQueue from "../utils/syncQueue";
 
 const menuItems = [
-  { label: "Accueil", icon: FaHome, path: "/" },
-  { label: "Bibliothèque", icon: FaGamepad, path: "/games" },
-  { label: "Téléchargements", icon: FaDownload, path: "/download" },
-  { label: "Paramètres", icon: FaGear, path: "/settings" },
+  { label: "Home", icon: FaHome, path: "/" },
+  { label: "Library", icon: FaGamepad, path: "/games" },
+  { label: "Downloads", icon: FaDownload, path: "/download" },
+  { label: "Settings", icon: FaGear, path: "/settings" },
 ];
 
 const Drawer = ({ children }) => {
@@ -228,7 +228,7 @@ const Drawer = ({ children }) => {
                     transition={{ duration: 0.2 }}
                     className="ml-4 font-medium text-slate-300 group-hover:text-red-400"
                   >
-                    Effacer données
+                    Clear Data
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -283,7 +283,7 @@ const Drawer = ({ children }) => {
                       <p className="text-sm font-semibold text-white truncate">
                         {user.username}
                       </p>
-                      <p className="text-xs text-slate-400">En ligne</p>
+                      <p className="text-xs text-slate-400">Online</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -303,10 +303,10 @@ const Drawer = ({ children }) => {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handlerDeleteUserData}
-        title="Effacer toutes les données"
-        message="Êtes-vous sûr de vouloir supprimer toutes vos données locales ? Cette action est irréversible."
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        title="Clear All Data"
+        message="Are you sure you want to delete all your local data? This action is irreversible."
+        confirmText="Delete"
+        cancelText="Cancel"
         confirmColor="red"
         icon={FaTrash}
       />
