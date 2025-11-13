@@ -1,5 +1,6 @@
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
+import uploadManager from "../services/uploadManager";
 
 export const getAllServerGames = async () => {
   try {
@@ -27,83 +28,86 @@ export const addGameToServer = async (
   igdbId,
   onProgress = null,
   executableName = null,
+  options = {}
 ) => {
   try {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
     const url = buildServerUrl(serverAddress, '/api/serverGame/addGame');
 
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      const formData = new FormData();
-      formData.append("zipFile", zipFile);
-      formData.append("version", version);
-      formData.append("isPublic", isPublic);
-      formData.append("igdbId", igdbId);
-      if (executableName) {
-        formData.append("executableName", executableName);
+    // Verify file size before upload
+    const sizeCheck = uploadManager.verifyFileSize(zipFile);
+    if (!sizeCheck.valid) {
+      throw new Error(sizeCheck.error);
+    }
+
+    // Queue the upload with uploadManager
+    const result = await uploadManager.queueUpload({
+      file: zipFile,
+      version,
+      isPublic,
+      igdbId,
+      executableName,
+      url,
+      token,
+      onProgress,
+      resumable: options.resumable !== false, // Resumable by default
+      onQueued: (upload) => {
+        // Notify when upload is queued
+        onProgress?.({
+          percent: 0,
+          loaded: 0,
+          total: zipFile.size,
+          speed: 0,
+          eta: 0,
+          status: 'queued',
+          uploadId: upload.id,
+          queueInfo: uploadManager.getQueueInfo()
+        });
       }
-
-      xhr.open("POST", url, true);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-
-      // Variables pour calculer la vitesse et l'ETA
-      let lastLoaded = 0;
-      let lastTime = Date.now();
-
-      // Suivi de la progression si onProgress est fourni
-      if (onProgress && xhr.upload) {
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            const currentTime = Date.now();
-            const timeElapsed = (currentTime - lastTime) / 1000; // en secondes
-
-            // Calculer la vitesse (bytes par seconde)
-            const bytesUploaded = event.loaded - lastLoaded;
-            const speed = timeElapsed > 0 ? bytesUploaded / timeElapsed : 0;
-
-            // Calculer le temps restant
-            const bytesRemaining = event.total - event.loaded;
-            const eta = speed > 0 ? bytesRemaining / speed : 0;
-
-            // Mettre à jour pour la prochaine mesure
-            lastLoaded = event.loaded;
-            lastTime = currentTime;
-
-            onProgress({
-              percent,
-              loaded: event.loaded,
-              total: event.total,
-              speed, // bytes/s
-              eta, // secondes
-            });
-          }
-        };
-      }
-
-      xhr.onload = () => {
-        if (xhr.status === 201) {
-          try {
-            const responseData = JSON.parse(xhr.responseText);
-            resolve(responseData);
-          } catch (err) {
-            reject(new Error("Invalid server response"));
-          }
-        } else {
-          reject(new Error(`HTTP Error ${xhr.status}: ${xhr.statusText}`));
-        }
-      };
-
-      xhr.onerror = () => {
-        reject(new Error("Network error during upload"));
-      };
-
-      xhr.send(formData);
     });
+
+    return result;
   } catch (error) {
     console.error("Error adding game:", error.message);
-    return null;
+    throw error;
+  }
+};
+
+/**
+ * Get upload queue information
+ * @returns {Object} Queue info
+ */
+export const getUploadQueueInfo = () => {
+  return uploadManager.getQueueInfo();
+};
+
+/**
+ * Cancel an upload
+ * @param {string} uploadId - Upload ID
+ */
+export const cancelUpload = (uploadId) => {
+  uploadManager.cancelUpload(uploadId);
+};
+
+/**
+ * Pause an upload (for resumable uploads)
+ * @param {string} uploadId - Upload ID
+ */
+export const pauseUpload = (uploadId) => {
+  uploadManager.pauseUpload(uploadId);
+};
+
+/**
+ * Configure upload manager settings
+ * @param {Object} settings - Settings object
+ */
+export const configureUploadManager = (settings) => {
+  if (settings.maxFileSize) {
+    uploadManager.setMaxFileSize(settings.maxFileSize);
+  }
+  if (settings.maxSimultaneousUploads) {
+    uploadManager.setMaxSimultaneousUploads(settings.maxSimultaneousUploads);
   }
 };
 

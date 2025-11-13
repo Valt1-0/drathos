@@ -76,8 +76,8 @@
 
 - [x] **Améliorer les performances de recherche**
 
-  - [x] Débounce sur la recherche de jeux (300ms) ✅ **FAIT**
-  - [x] Virtualisation des listes longues (react-window) ✅ **FAIT**
+  - [x] Débounce sur la recherche de jeux (300ms)
+  - [x] Virtualisation des listes longues (react-window)
   - [ ] Pagination côté serveur pour les grandes bibliothèques (optionnel - virtualisation suffit)
 
 - [x] **Optimiser le contexte Download**
@@ -93,10 +93,10 @@
   - [ ] Caching avec Redis pour les requêtes IGDB
   - [ ] Compression des réponses API (gzip)
 
-- [ ] **Optimiser l'upload de fichiers**
-  - [ ] Vérifier la taille du fichier avant l'upload
-  - [ ] Limiter le nombre d'uploads simultanés
-  - [ ] Reprendre les uploads interrompus (resumable uploads)
+- [x] **Optimiser l'upload de fichiers**
+  - [x] Vérifier la taille du fichier avant l'upload
+  - [x] Limiter le nombre d'uploads simultanés
+  - [x] Reprendre les uploads interrompus (resumable uploads)
 
 ### Electron / Main Process
 
@@ -150,10 +150,10 @@
 
 - [ ] **Discord RPC**
 
-  - [x] ~~Rich Presence s'active même quand désactivé~~ ✅ CORRIGÉ
+  - [x] Rich Presence s'active même quand désactivé
   - [ ] Gérer la reconnexion automatique si Discord redémarre
 
-- [x] **Gestion des erreurs** ✅ **FAIT**
+- [x] **Gestion des erreurs**
   - [x] Améliorer les messages d'erreur pour l'utilisateur (logger.error avec contexte)
   - [x] Logger les erreurs dans un fichier de log (rotation 7 jours, max 10MB)
   - [x] Système de rapport de bugs intégré (BugReportModal + export JSON)

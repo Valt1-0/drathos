@@ -58,6 +58,7 @@ const UploadNotification = () => {
     uploadTotal,
     uploadGameName,
     uploadError,
+    queueInfo,
     dismissUpload,
   } = useUpload();
 
@@ -76,6 +77,16 @@ const UploadNotification = () => {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
             <div className="flex items-center gap-3">
+              {uploadState === "queued" && (
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center"
+                >
+                  <FiClock className="text-2xl text-yellow-400" />
+                </motion.div>
+              )}
+
               {uploadState === "uploading" && (
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -110,11 +121,17 @@ const UploadNotification = () => {
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-white text-sm truncate">
+                  {uploadState === "queued" && "Upload queued"}
                   {uploadState === "uploading" && "Upload in progress"}
                   {uploadState === "success" && "Upload complete"}
                   {uploadState === "error" && "Upload error"}
                 </h3>
                 <p className="text-xs text-slate-400 truncate">{uploadGameName}</p>
+                {uploadState === "queued" && queueInfo && (
+                  <p className="text-xs text-yellow-400 mt-1">
+                    {queueInfo.active} active • {queueInfo.queued} queued
+                  </p>
+                )}
               </div>
             </div>
 
@@ -131,6 +148,19 @@ const UploadNotification = () => {
 
           {/* Body */}
           <div className="p-4">
+            {uploadState === "queued" && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                <p className="text-sm text-yellow-200">
+                  Your upload is in the queue. It will start when other uploads complete.
+                </p>
+                {queueInfo && (
+                  <p className="text-xs text-yellow-300 mt-2">
+                    <strong>{queueInfo.active}</strong> upload(s) in progress • <strong>{queueInfo.queued}</strong> waiting
+                  </p>
+                )}
+              </div>
+            )}
+
             {uploadState === "uploading" && (
               <>
                 {/* Progress Bar */}

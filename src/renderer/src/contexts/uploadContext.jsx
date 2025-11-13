@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from "react";
+import { getUploadQueueInfo } from "../api/serverGames";
 
 const UploadContext = createContext();
 
@@ -12,7 +13,7 @@ export const useUpload = () => {
 
 export const UploadProvider = ({ children }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadState, setUploadState] = useState("idle"); // idle, uploading, success, error
+  const [uploadState, setUploadState] = useState("idle"); // idle, queued, uploading, success, error
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState(0);
   const [uploadETA, setUploadETA] = useState(0);
@@ -20,6 +21,7 @@ export const UploadProvider = ({ children }) => {
   const [uploadTotal, setUploadTotal] = useState(0);
   const [uploadGameName, setUploadGameName] = useState("");
   const [uploadError, setUploadError] = useState("");
+  const [queueInfo, setQueueInfo] = useState({ active: 0, queued: 0, maxSimultaneous: 2 });
 
   const startUpload = (gameName) => {
     setIsUploading(true);
@@ -34,11 +36,24 @@ export const UploadProvider = ({ children }) => {
   };
 
   const updateUploadProgress = (progressData) => {
+    // Handle queued state
+    if (progressData.status === 'queued') {
+      setUploadState("queued");
+      setQueueInfo(progressData.queueInfo || getUploadQueueInfo());
+    } else {
+      setUploadState("uploading");
+    }
+
     setUploadProgress(progressData.percent);
     setUploadSpeed(progressData.speed);
     setUploadETA(progressData.eta);
     setUploadLoaded(progressData.loaded);
     setUploadTotal(progressData.total);
+
+    // Update queue info
+    if (progressData.queueInfo) {
+      setQueueInfo(progressData.queueInfo);
+    }
   };
 
   const completeUpload = () => {
@@ -88,6 +103,7 @@ export const UploadProvider = ({ children }) => {
         uploadTotal,
         uploadGameName,
         uploadError,
+        queueInfo,
         startUpload,
         updateUploadProgress,
         completeUpload,
