@@ -72,18 +72,20 @@ const GameLibrary = ({
     const uninstalling = isGameUninstalling(game._id);
     const pending = isPendingUninstall(game._id);
     const gameGenres = getGenresArray(game);
+    const isSelected = selectedGameId === game._id;
 
     return (
-      <div style={style} className="px-2">
+      <div style={style} className="px-3 py-0.5">
         <div
           onClick={() => onSelectGame(game)}
-          className={`group relative cursor-pointer transition-all duration-200 rounded-lg mb-2 p-3 ${
-            selectedGameId === game._id
-              ? "bg-blue-600/20 border border-blue-500/50"
-              : "bg-gray-800/40 border border-transparent hover:bg-gray-800/60 hover:border-gray-700"
+          className={`group relative cursor-pointer transition-all duration-200 rounded-md p-2 ${
+            isSelected
+              ? "bg-blue-600/10 ring-1 ring-blue-500/50"
+              : "hover:bg-gray-800/60"
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Cover compact */}
             <div className="relative w-12 h-12 bg-gray-700 rounded-md flex-shrink-0 overflow-hidden">
               <GameCover
                 src={game.coverUrl}
@@ -91,70 +93,64 @@ const GameLibrary = ({
                 className="w-full h-full object-cover"
                 size="thumb"
               />
+
+              {/* Badge playing */}
               {playing && (
-                <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                </div>
+              )}
+
+              {/* Badge installed */}
+              {installed && !playing && (
+                <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full"></div>
               )}
             </div>
 
+            {/* Info du jeu */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold truncate text-sm text-white mb-1">
+              <h3 className={`font-medium truncate text-sm mb-0.5 ${
+                isSelected ? "text-white" : "text-gray-200"
+              }`}>
                 {game.name}
               </h3>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {installed && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
-                    <span className="w-1 h-1 bg-green-400 rounded-full"></span>
-                    Installed
-                  </span>
+              {/* Statut */}
+              <div className="flex items-center gap-1.5 text-xs">
+                {stats && stats.totalPlayTime && stats.totalPlayTime !== "< 1 minute" && !stats.totalPlayTime.includes("NaN") && (
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <FiClock className="w-2.5 h-2.5" />
+                    <span>{stats.totalPlayTime}</span>
+                  </div>
                 )}
 
                 {uninstalling && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">
+                  <div className="flex items-center gap-1 text-orange-400">
                     <FiTrash2 className="w-2.5 h-2.5" />
-                    Removing
-                  </span>
+                    <span>Removing</span>
+                  </div>
                 )}
 
                 {pending && !uninstalling && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">
-                    <svg
-                      className="w-2.5 h-2.5 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Sync pending
-                  </span>
+                    <span>Pending</span>
+                  </div>
                 )}
 
-                {stats && stats.totalPlayTime && stats.totalPlayTime !== "< 1 minute" && !stats.totalPlayTime.includes("NaN") && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
-                    <FiClock className="w-2.5 h-2.5" />
-                    {stats.totalPlayTime}
-                  </span>
-                )}
-
-                {!stats && !installed && gameGenres.length > 0 && (
-                  <span className="text-gray-500 text-xs truncate">
-                    {gameGenres[0]}
-                  </span>
+                {!stats && !installed && !uninstalling && !pending && gameGenres.length > 0 && (
+                  <span className="text-gray-500 truncate">{gameGenres[0]}</span>
                 )}
               </div>
             </div>
+
+            {/* Indicateur de sélection */}
+            {isSelected && (
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-l"></div>
+            )}
           </div>
         </div>
       </div>
@@ -200,16 +196,21 @@ const GameLibrary = ({
           </div>
         ) : FixedSizeList ? (
           <FixedSizeList
-            height={window.innerHeight - 280}
+            height={window.innerHeight - (user?.role === "admin" ? 340 : 280)}
             itemCount={filteredGames.length}
-            itemSize={88}
+            itemSize={64}
             width="100%"
             className="scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900"
           >
             {GameRow}
           </FixedSizeList>
         ) : (
-          <div className="overflow-y-auto px-2 py-2">
+          <div
+            className="overflow-y-auto py-2"
+            style={{
+              height: user?.role === "admin" ? `calc(100vh - 340px)` : `calc(100vh - 280px)`
+            }}
+          >
             {filteredGames.map((game, index) => (
               <GameRow key={game._id} index={index} style={{}} />
             ))}
