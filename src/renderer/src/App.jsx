@@ -111,7 +111,7 @@ export default function App() {
                 position="top-right"
                 expand={true}
                 richColors
-                closeButton
+                closeButton={false}
                 toastOptions={{
                   duration: 4000,
                   style: {

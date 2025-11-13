@@ -287,15 +287,20 @@ const Games = () => {
   const handleLaunchGame = async (game) => {
     try {
       if (isPendingUninstall(game._id)) {
-        alert(
-          `Cannot launch "${game.name}".\n\nThis game has been uninstalled but synchronization with the server is pending.\n\nPlease reconnect to the server to complete the synchronization.`
-        );
+        toast.error("Cannot Launch Game", {
+          description: `"${game.name}" has been uninstalled but synchronization with the server is pending. Please reconnect to complete the synchronization.`,
+          duration: 5000,
+        });
         return;
       }
 
       const installedData = getInstalledGameData(game._id);
       if (!installedData) {
         console.error("Installation data not found for", game.name);
+        toast.error("Game Not Found", {
+          description: `Installation data not found for "${game.name}". Please try reinstalling the game.`,
+          duration: 4000,
+        });
         return;
       }
 
@@ -511,7 +516,10 @@ const Games = () => {
     if (installedData && installedData.path) {
       await gameManager.openGameFolder(installedData.path);
     } else {
-      alert("No path found for this game");
+      toast.error("Cannot Open Folder", {
+        description: `No installation path found for "${game.name}".`,
+        duration: 3000,
+      });
     }
   };
 
