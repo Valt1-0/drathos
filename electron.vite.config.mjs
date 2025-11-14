@@ -46,7 +46,10 @@ export default defineConfig({
       sourcemap: false,
       target: 'esnext', // Utiliser les fonctionnalités modernes pour éviter eval
       rollupOptions: {
-        input: resolve(__dirname, "src/renderer/index.html"),
+        input: {
+          index: resolve(__dirname, "src/renderer/index.html"),
+          splash: resolve(__dirname, "src/renderer/splash.html"),
+        },
         output: {
           format: 'es', // Format ES modules (pas de eval)
           manualChunks: undefined,

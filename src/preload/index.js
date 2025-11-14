@@ -110,6 +110,45 @@ const api = {
       ipcRenderer.invoke("logger:openLogsFolder"),
   },
 
+  // Auto Updater
+  updater: {
+    checkForUpdates: () =>
+      ipcRenderer.invoke("updater:checkForUpdates"),
+    downloadAndInstall: () =>
+      ipcRenderer.invoke("updater:downloadAndInstall"),
+    quitAndInstall: () =>
+      ipcRenderer.invoke("updater:quitAndInstall"),
+    getStatus: () =>
+      ipcRenderer.invoke("updater:getStatus"),
+    skipVersion: ({ version }) =>
+      ipcRenderer.invoke("updater:skipVersion", { version }),
+    // Event listeners for update events
+    onChecking: (callback) => {
+      ipcRenderer.on("updater:checking", (_event) => callback());
+      return () => ipcRenderer.removeAllListeners("updater:checking");
+    },
+    onUpdateAvailable: (callback) => {
+      ipcRenderer.on("updater:update-available", (_event, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners("updater:update-available");
+    },
+    onUpdateNotAvailable: (callback) => {
+      ipcRenderer.on("updater:update-not-available", (_event, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners("updater:update-not-available");
+    },
+    onDownloadProgress: (callback) => {
+      ipcRenderer.on("updater:download-progress", (_event, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners("updater:download-progress");
+    },
+    onUpdateDownloaded: (callback) => {
+      ipcRenderer.on("updater:update-downloaded", (_event, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners("updater:update-downloaded");
+    },
+    onError: (callback) => {
+      ipcRenderer.on("updater:error", (_event, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners("updater:error");
+    },
+  },
+
   // Contrôles de fenêtre
   windowMinimize: () => ipcRenderer.send("window-minimize"),
   windowMaximize: () => ipcRenderer.send("window-maximize"),

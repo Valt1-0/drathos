@@ -14,9 +14,11 @@ import {
   FiImage,
   FiTrash2,
   FiAlertTriangle,
+  FiRefreshCw,
 } from "react-icons/fi";
 import { SiDiscord } from "react-icons/si";
 import { useAuth } from "../contexts/authContext";
+import { useUpdate } from "../contexts/updateContext";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
 import BugReportModal from "../components/modals/BugReportModal";
@@ -25,6 +27,7 @@ const SettingsPage = () => {
   const [theme, setTheme] = useState("dark");
   const [downloadPath, setDownloadPath] = useState("");
   const { user } = useAuth();
+  const { checkForUpdates, updateStatus, updateInfo } = useUpdate();
 
   // Discord RPC States
   const [discordEnabled, setDiscordEnabled] = useState(false);
@@ -40,6 +43,22 @@ const SettingsPage = () => {
 
   // Bug Report Modal State
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
+
+  // Update States
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState('');
+
+  // Handle manual update check
+  const handleCheckForUpdates = async () => {
+    setUpdateChecking(true);
+    try {
+      await checkForUpdates();
+    } catch (error) {
+      logger.error("[Settings] Error checking for updates", error);
+    } finally {
+      setUpdateChecking(false);
+    }
+  };
 
   // Change theme (light/dark)
   const handleThemeChange = () => {
@@ -190,6 +209,16 @@ const SettingsPage = () => {
         setCacheSize(size);
       } catch (error) {
         logger.error("[Settings] Error fetching cache size", error);
+      }
+
+      // Get current version
+      try {
+        const status = await window.api.updater.getStatus();
+        if (status.success) {
+          setCurrentVersion(status.currentVersion);
+        }
+      } catch (error) {
+        logger.error("[Settings] Error fetching app version", error);
       }
     };
 
@@ -540,13 +569,110 @@ const SettingsPage = () => {
                 </div>
               </div>
             </motion.div>
+
+            {/* Updates Section - Full width */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg">
+                      <FiRefreshCw className="text-blue-400 text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Updates</h3>
+                      <p className="text-xs text-gray-400">Keep Drathos up to date</p>
+                    </div>
+                  </div>
+
+                  {/* Current Version Badge */}
+                  {currentVersion && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400">
+                      <FiCircle className="text-xs" />
+                      <span className="text-xs font-medium">
+                        v{currentVersion}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {/* Description */}
+                  <p className="text-sm text-gray-400">
+                    Drathos checks for updates automatically on startup. You can also manually check for new versions at any time.
+                  </p>
+
+                  {/* Check for Updates Button */}
+                  <button
+                    onClick={handleCheckForUpdates}
+                    disabled={updateChecking || updateStatus === 'checking'}
+                    className={`w-full px-4 py-3 bg-gray-700/50 border border-gray-600 hover:border-blue-500 hover:bg-gray-700 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
+                      updateChecking || updateStatus === 'checking' ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <FiRefreshCw className={`text-blue-400 ${updateChecking || updateStatus === 'checking' ? 'animate-spin' : ''}`} />
+                    <span>
+                      {updateChecking || updateStatus === 'checking' ? 'Checking for updates...' : 'Check for updates'}
+                    </span>
+                  </button>
+
+                  {/* Update Status Info */}
+                  {updateStatus === 'available' && updateInfo && (
+                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <FiRefreshCw className="text-blue-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-300">Update available</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Version {updateInfo.version} is ready to download
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {updateStatus === 'downloading' && (
+                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <FiDownload className="text-blue-400 mt-0.5 animate-pulse" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-300">Downloading update...</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Please wait while the update is being downloaded
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {updateStatus === 'downloaded' && (
+                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <FiCheck className="text-green-400 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-green-300">Update ready</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Restart Drathos to install the update
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </div>
 
           {/* Action buttons */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
+            transition={{ delay: 0.45, duration: 0.6 }}
             className="mt-6 flex justify-between items-center"
           >
             <button

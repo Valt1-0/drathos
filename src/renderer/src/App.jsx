@@ -6,11 +6,13 @@ import { AuthProvider, useAuth } from "./contexts/authContext";
 import { DownloadProvider } from "./contexts/downloadContext";
 import { ConnectionProvider } from "./contexts/connectionContext";
 import { UploadProvider } from "./contexts/uploadContext";
+import { UpdateProvider } from "./contexts/updateContext";
 
 import Drawer from "./components/Drawer";
 import TitleBar from "./components/TitleBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UploadNotification from "./components/UploadNotification";
+import UpdateModal from "./components/UpdateModal";
 
 // * Pages
 import Home from "./pages/Home";
@@ -99,35 +101,38 @@ export default function App() {
       <ConnectionProvider>
         <DownloadProvider>
           <UploadProvider>
-            <Router>
-              <div className="flex flex-col h-screen overflow-hidden">
-                <TitleBar />
-                <div className="flex-1 overflow-hidden">
-                  <AppRoutes />
+            <UpdateProvider>
+              <Router>
+                <div className="flex flex-col h-screen overflow-hidden">
+                  <TitleBar />
+                  <div className="flex-1 overflow-hidden">
+                    <AppRoutes />
+                  </div>
                 </div>
-              </div>
-              <UploadNotification />
-              <Toaster
-                position="top-right"
-                expand={true}
-                richColors
-                closeButton={false}
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                    color: '#f1f5f9',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    backdropFilter: 'blur(12px)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                  },
-                  className: 'sonner-toast',
-                  descriptionClassName: 'sonner-description',
-                }}
-              />
-            </Router>
+                <UploadNotification />
+                <UpdateModal />
+                <Toaster
+                  position="top-right"
+                  expand={true}
+                  richColors
+                  closeButton={false}
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      color: '#f1f5f9',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      backdropFilter: 'blur(12px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                    },
+                    className: 'sonner-toast',
+                    descriptionClassName: 'sonner-description',
+                  }}
+                />
+              </Router>
+            </UpdateProvider>
           </UploadProvider>
         </DownloadProvider>
       </ConnectionProvider>

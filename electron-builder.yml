@@ -110,4 +110,8 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
 
-publish: null
+publish:
+  provider: github
+  owner: Valt1-0
+  repo: drathos
+  releaseType: prerelease

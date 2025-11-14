@@ -25,11 +25,15 @@ import iconPath from "../../resources/logo2.png?asset";
 import { GameLauncher } from "./gameLauncher.js";
 import { moduleLoader } from "./utils/moduleLoader.js";
 import { memoryManager } from "./utils/memoryManager.js";
+import { AutoUpdateManager } from "./autoUpdater.js";
+import { SplashWindow } from "./splashWindow.js";
 import store from "./store.js";
 import logger from "./utils/logger.js";
 
 // Discord RPC sera chargé dynamiquement selon les besoins
 let discordRPC = null;
+let autoUpdateManager = null;
+let splashWindow = null;
 
 const execAsync = promisify(exec);
 
@@ -171,7 +175,7 @@ function createWindow() {
     height: 800,
     minWidth: 400,
     minHeight: 200,
-    show: false,
+    show: false, // Ne pas afficher automatiquement, le splash s'en occupera
     frame: false,
     autoHideMenuBar: true,
     icon: icon,
@@ -186,9 +190,10 @@ function createWindow() {
     },
   });
 
-  mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
-  });
+  // Ne pas afficher automatiquement - géré par le splash screen
+  // mainWindow.on("ready-to-show", () => {
+  //   mainWindow.show();
+  // });
 
   // Ouvrir les DevTools uniquement en développement
   if (is.dev) {
@@ -232,6 +237,11 @@ app.whenReady().then(async () => {
 
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
+
+  // Créer et afficher le splash screen
+  const splash = new SplashWindow(icon);
+  splashWindow = splash.create();
+  logger.info('[App] Splash screen created');
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const serverAddress = store.get("serverAddress", "");
@@ -390,10 +400,48 @@ app.whenReady().then(async () => {
     if (window) window.webContents.reloadIgnoringCache();
   });
 
+  // Créer la fenêtre principale (mais ne pas l'afficher encore)
   const mainWindow = createWindow();
 
   // Initialiser le gestionnaire de mémoire
   memoryManager.initialize();
+
+  // Initialiser l'auto-updater
+  autoUpdateManager = new AutoUpdateManager();
+  autoUpdateManager.setMainWindow(mainWindow);
+  logger.info('[AutoUpdater] Manager initialized');
+
+  // Attendre pour l'animation du splash
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Fermer le splash et afficher la fenêtre principale
+  splash.close();
+  splashWindow = null;
+
+  if (!mainWindow.isDestroyed()) {
+    mainWindow.show();
+  }
+
+  logger.info('[App] Main window shown');
+
+  // Vérifier les mises à jour APRÈS l'affichage de la fenêtre pour ne pas ralentir le démarrage
+  setTimeout(async () => {
+    try {
+      logger.info('[App] Starting initial update check...');
+      const updateResult = await autoUpdateManager.checkForUpdates();
+
+      if (updateResult.available) {
+        logger.info('[App] Update available:', updateResult.latestVersion);
+      } else {
+        logger.info('[App] No updates available');
+      }
+    } catch (error) {
+      logger.error('[App] Error checking for updates:', error);
+    }
+  }, 3000); // Attendre 3 secondes après l'affichage
+
+  // Démarrer les vérifications périodiques toutes les 2 heures
+  autoUpdateManager.startPeriodicCheck(120);
 
   // Charger Discord RPC uniquement si activé (lazy loading)
   const discordRPCEnabled = store.get("discordRPCEnabled", false);
@@ -487,6 +535,11 @@ app.on("before-quit", async () => {
   if (discordRPC && discordRPC.isConnected) {
     console.log("[Main] Déconnexion de Discord RPC...");
     await discordRPC.disconnect();
+  }
+
+  // Nettoyer l'auto-updater
+  if (autoUpdateManager) {
+    autoUpdateManager.cleanup();
   }
 
   // Nettoyer le gestionnaire de mémoire
@@ -1618,6 +1671,92 @@ ipcMain.handle("logger:openLogsFolder", async () => {
     return { success: true };
   } catch (error) {
     logger.error("[Logger] Failed to open logs folder", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// === AUTO UPDATER ===
+
+/**
+ * Vérifie les mises à jour disponibles
+ */
+ipcMain.handle("updater:checkForUpdates", async () => {
+  try {
+    if (!autoUpdateManager) {
+      return { success: false, error: 'AutoUpdateManager not initialized' };
+    }
+    const result = await autoUpdateManager.checkForUpdates();
+    return { success: true, ...result };
+  } catch (error) {
+    logger.error("[AutoUpdater] Error checking for updates", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Télécharge et installe la mise à jour
+ */
+ipcMain.handle("updater:downloadAndInstall", async () => {
+  try {
+    if (!autoUpdateManager) {
+      return { success: false, error: 'AutoUpdateManager not initialized' };
+    }
+    const result = await autoUpdateManager.downloadUpdate();
+    return result;
+  } catch (error) {
+    logger.error("[AutoUpdater] Error downloading update", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Quitte et installe la mise à jour
+ */
+ipcMain.handle("updater:quitAndInstall", async () => {
+  try {
+    if (!autoUpdateManager) {
+      return { success: false, error: 'AutoUpdateManager not initialized' };
+    }
+    const result = autoUpdateManager.quitAndInstall();
+    return result;
+  } catch (error) {
+    logger.error("[AutoUpdater] Error quitting and installing", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Obtient le statut de l'auto-updater
+ */
+ipcMain.handle("updater:getStatus", async () => {
+  try {
+    if (!autoUpdateManager) {
+      return {
+        success: false,
+        status: 'idle',
+        currentVersion: app.getVersion(),
+      };
+    }
+    const status = autoUpdateManager.getStatus();
+    return { success: true, ...status };
+  } catch (error) {
+    logger.error("[AutoUpdater] Error getting status", error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Ignore une version spécifique
+ */
+ipcMain.handle("updater:skipVersion", async (event, { version }) => {
+  try {
+    if (!autoUpdateManager) {
+      return { success: false, error: 'AutoUpdateManager not initialized' };
+    }
+    const result = autoUpdateManager.skipVersion(version);
+    return { success: true, ...result };
+  } catch (error) {
+    logger.error("[AutoUpdater] Error skipping version", error);
     return { success: false, error: error.message };
   }
 });
