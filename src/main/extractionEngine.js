@@ -108,22 +108,46 @@ export class ExtractionEngine {
           });
 
           await new Promise((resolve, reject) => {
+            let resolved = false;
+            const writeStream = fs.createWriteStream(outputPath);
+
             const timeout = setTimeout(() => {
-              reject(
-                new Error(`Timeout lors de l'extraction de ${entry.path}`)
-              );
+              if (!resolved) {
+                resolved = true;
+                writeStream.destroy(); // ✅ Cleanup
+                reject(new Error(`Timeout lors de l'extraction de ${entry.path}`));
+              }
             }, 30000);
+
+            const cleanup = () => {
+              clearTimeout(timeout);
+            };
 
             entry
               .stream()
-              .pipe(fs.createWriteStream(outputPath))
+              .pipe(writeStream)
               .on("finish", () => {
-                clearTimeout(timeout);
-                resolve();
+                if (!resolved) {
+                  resolved = true;
+                  cleanup();
+                  resolve();
+                }
               })
               .on("error", (error) => {
-                clearTimeout(timeout);
-                reject(error);
+                if (!resolved) {
+                  resolved = true;
+                  cleanup();
+                  writeStream.destroy();
+                  reject(error);
+                }
+              })
+              .on("close", () => {
+                // ✅ FIX: Si le stream se ferme sans finish/error
+                if (!resolved) {
+                  resolved = true;
+                  cleanup();
+                  resolve();
+                }
               });
           });
         }
@@ -163,30 +187,11 @@ export class ExtractionEngine {
     return new Promise((resolve, reject) => {
       const extract = tar.extract();
       let extractedCount = 0;
-      let totalFiles = 0;
+      let totalFiles = 0; // ✅ FIX: Compté pendant l'extraction au lieu d'une passe séparée
 
-      // First pass: count total files
-      const countStream = tar.extract();
-      countStream.on("entry", (header, stream, next) => {
-        totalFiles++;
-        stream.on("end", next);
-        stream.resume();
-      });
-
-      const countReadStream = fs.createReadStream(archivePath);
-      countReadStream.pipe(countStream);
-
-      countStream.on("finish", () => {
-        console.log(
-          `[ExtractionEngine] 📊 TAR contains ${totalFiles} entries`
-        );
-
-        if (onProgress) {
-          onProgress(0, 0, totalFiles, "Starting extraction...");
-        }
-
-        // Second pass: extract files
-        extract.on("entry", async (header, stream, next) => {
+      // Single pass: extract and count simultaneously
+      extract.on("entry", async (header, stream, next) => {
+        totalFiles++; // Compte au fur et à mesure
           const outputPath = path.join(extractPath, header.name);
 
           try {
@@ -259,12 +264,11 @@ export class ExtractionEngine {
           reject(new Error(`TAR extraction failed: ${err.message}`));
         });
 
-        const readStream = fs.createReadStream(archivePath);
-        readStream.pipe(extract);
-      });
+      const readStream = fs.createReadStream(archivePath);
+      readStream.pipe(extract);
 
-      countStream.on("error", (err) => {
-        reject(new Error(`TAR analysis failed: ${err.message}`));
+      readStream.on("error", (err) => {
+        reject(new Error(`TAR read failed: ${err.message}`));
       });
     });
   }

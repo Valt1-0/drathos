@@ -16,8 +16,14 @@ const schema = {
   },
 };
 
-const store = new Store({ schema });
+// 🔐 Encryption key depuis les variables d'environnement
+// Génère une clé par défaut en dev, utilise DRATHOS_ENCRYPTION_KEY en prod
+const encryptionKey = process.env.DRATHOS_ENCRYPTION_KEY ||
+  'drathos-dev-key-change-in-production';
+
+const store = new Store({
+  schema,
+  encryptionKey: encryptionKey,
+});
 
 export default store;
-
-//  encryptionKey: ""

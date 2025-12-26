@@ -658,8 +658,21 @@ ipcMain.handle("installGame", async (event, { serverGame }) => {
         ...data,
       });
 
-      if (data.stage === "Completed") {
+      if (data.stage === "Completed" || data.stage === "completed") {
         console.log(`[Main] Installation terminée: ${serverGame.name}`);
+
+        // ✅ FIX: Mise à jour atomique du cache dans le main process (évite race condition)
+        if (data.cacheData) {
+          try {
+            const installedGamesCache = store.get("installedGamesCache") || {};
+            installedGamesCache[serverGame._id] = data.cacheData;
+            store.set("installedGamesCache", installedGamesCache);
+            console.log(`[Main] Cache mis à jour pour ${serverGame.name}`);
+          } catch (cacheError) {
+            console.error(`[Main] Erreur mise à jour cache:`, cacheError);
+          }
+        }
+
         resolve({ success: true, path: data.finalPath });
       }
 

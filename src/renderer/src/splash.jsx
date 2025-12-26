@@ -54,54 +54,48 @@ function SplashScreen() {
     init();
 
     // Écouter les événements de mise à jour - avec un délai pour s'assurer que window.api est prêt
-    const unsubscribers = [];
-
     setTimeout(() => {
       if (!mounted || !window.api?.updater) return;
 
       try {
         // Checking
         if (window.api.updater.onChecking) {
-          const unsub = window.api.updater.onChecking(() => {
+          window.api.updater.onChecking(() => {
             if (mounted) {
               setStatus('Checking for updates...');
               setProgress(30);
             }
           });
-          if (typeof unsub === 'function') unsubscribers.push(unsub);
         }
 
         // Update available
         if (window.api.updater.onUpdateAvailable) {
-          const unsub = window.api.updater.onUpdateAvailable((data) => {
+          window.api.updater.onUpdateAvailable((data) => {
             if (mounted) {
               setStatus(`Update v${data.version} available`);
               setProgress(100);
             }
           });
-          if (typeof unsub === 'function') unsubscribers.push(unsub);
         }
 
         // No update
         if (window.api.updater.onUpdateNotAvailable) {
-          const unsub = window.api.updater.onUpdateNotAvailable(() => {
+          window.api.updater.onUpdateNotAvailable(() => {
             if (mounted) {
               setStatus('Up to date');
               setProgress(100);
             }
           });
-          if (typeof unsub === 'function') unsubscribers.push(unsub);
         }
 
         // Error
         if (window.api.updater.onError) {
-          const unsub = window.api.updater.onError(() => {
+          window.api.updater.onError(() => {
             if (mounted) {
               setStatus('Starting Drathos...');
               setProgress(100);
             }
           });
-          if (typeof unsub === 'function') unsubscribers.push(unsub);
         }
       } catch (error) {
         console.error('[Splash] Error setting up listeners:', error);
@@ -111,13 +105,6 @@ function SplashScreen() {
     return () => {
       mounted = false;
       if (progressInterval) clearInterval(progressInterval);
-      unsubscribers.forEach((unsub) => {
-        try {
-          unsub();
-        } catch (e) {
-          console.error('[Splash] Error unsubscribing:', e);
-        }
-      });
     };
   }, []);
 

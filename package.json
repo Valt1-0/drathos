@@ -1,5 +1,5 @@
 {
-  "name": "Drathos",
+  "name": "drathos",
   "version": "0.1.0-beta.1",
   "description": "Game Library Client for DRM Free Games",
   "main": "dist-electron/main/index.js",
@@ -22,31 +22,32 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@tailwindcss/postcss": "^4.1.11",
-    "@tailwindcss/vite": "^4.1.11",
     "7zip-bin": "^5.2.0",
     "crypto": "^1.0.1",
-    "dayjs": "^1.11.13",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",
     "jwt-decode": "^4.0.0",
     "node-7z": "^3.0.0",
     "react-icons": "^5.5.0",
-    "react-router": "^7.6.3",
     "react-window": "^2.2.3",
     "sonner": "^2.0.5",
     "tar-stream": "^3.1.7",
     "unzipper": "^0.12.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.6.0",
-    "electron": "^38.4.0",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
+    "@vitejs/plugin-react": "^5.1.2",
+    "baseline-browser-mapping": "^2.9.11",
+    "dayjs": "^1.11.19",
+    "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
-    "electron-vite": "^4.0.1",
-    "framer-motion": "^12.23.22",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "tailwindcss": "^4.1.11",
-    "vite": "^7.1.11"
+    "electron-vite": "^5.0.0",
+    "framer-motion": "^12.23.26",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router": "^7.11.0",
+    "tailwindcss": "^4.1.18",
+    "vite": "^7.3.0"
   }
 }

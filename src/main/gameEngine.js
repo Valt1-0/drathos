@@ -1,11 +1,10 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import https from "https";
 import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
 import { buildServerUrl } from "./utils/urlHelper.js";
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 export class GameEngine {
   constructor() {
@@ -16,10 +15,21 @@ export class GameEngine {
       speedSamples: 10,
       maxRetries: 3,
       retryDelay: 1000,
+      // ⚠️ Mettre à false en production si certificat valide (Let's Encrypt)
+      allowSelfSignedCerts: true, // Pour dev/serveurs avec certificats auto-signés
     };
 
     this.activeDownloads = new Map();
     this.metrics = new Map();
+
+    // Agent HTTPS pour les certificats auto-signés (self-hosting support)
+    this.httpsAgent = null;
+    if (this.config.allowSelfSignedCerts) {
+      this.httpsAgent = new https.Agent({
+        rejectUnauthorized: false,
+      });
+      console.log(`[GameEngine] ✅ Self-hosting mode: Certificats auto-signés acceptés`);
+    }
 
     console.log(`[GameEngine] Système initialisé`);
   }
@@ -126,9 +136,15 @@ export class GameEngine {
     console.log(`[GameEngine] URL de téléchargement: ${downloadUrl}`);
     console.log(`[GameEngine] Server address: ${this.serverAddress}`);
 
+    // Déclarer les ressources à nettoyer en cas d'erreur
+    let fileStream = null;
+    let reader = null;
+
     try {
       const response = await fetch(downloadUrl, {
         headers: { Authorization: `Bearer ${this.userToken}` },
+        // Utilise l'agent custom seulement si HTTPS + allowSelfSignedCerts activé
+        agent: (downloadUrl.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
       });
 
       console.log(`[GameEngine] R\u00e9ponse re\u00e7ue - Status: ${response.status}`);
@@ -144,10 +160,10 @@ export class GameEngine {
 
       let downloadedBytes = 0;
 
-      const fileStream = fs.createWriteStream(filePath);
+      fileStream = fs.createWriteStream(filePath);
       console.log(`[GameEngine] Stream cr\u00e9\u00e9: ${filePath}`);
 
-      const reader = response.body.getReader();
+      reader = response.body.getReader();
       console.log(`[GameEngine] Reader cr\u00e9\u00e9, d\u00e9but lecture...`);
 
       let chunkCount = 0;
@@ -207,6 +223,25 @@ export class GameEngine {
       console.error(`[GameEngine] Erreur détaillée de fetch:`, error);
       console.error(`[GameEngine] Type d'erreur:`, error.constructor.name);
       console.error(`[GameEngine] Cause:`, error.cause);
+
+      // ✅ FIX: Nettoyer les ressources pour éviter les memory leaks
+      try {
+        if (reader) {
+          await reader.cancel().catch(() => {}); // Cancel le stream HTTP
+          console.log(`[GameEngine] Reader nettoyé`);
+        }
+      } catch (cleanupError) {
+        console.warn(`[GameEngine] Erreur cleanup reader: ${cleanupError.message}`);
+      }
+
+      try {
+        if (fileStream) {
+          fileStream.destroy(); // Ferme le file stream
+          console.log(`[GameEngine] FileStream nettoyé`);
+        }
+      } catch (cleanupError) {
+        console.warn(`[GameEngine] Erreur cleanup fileStream: ${cleanupError.message}`);
+      }
 
       try {
         if (fs.existsSync(filePath)) {
@@ -291,14 +326,14 @@ export class GameEngine {
       console.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
     }
     const decoded = jwtDecode(this.userToken);
-    const response = await fetch(
-      buildServerUrl(this.serverAddress, '/api/installedGames/addInstalledGame'),
-      {
+    const url = buildServerUrl(this.serverAddress, '/api/installedGames/addInstalledGame');
+    const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.userToken}`,
         },
+        agent: (url.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
         body: JSON.stringify({
           userId: decoded.user.id,
           serverGameId: gameId,
@@ -314,8 +349,10 @@ export class GameEngine {
     }
 
     console.log(`[GameEngine] Jeu enregistré dans l'API`);
-    const installedGamesCache = this.store.get("installedGamesCache", {});
-    installedGamesCache[gameId] = {
+
+    // ✅ FIX: Préparer les données du cache mais NE PAS écrire ici (race condition)
+    // Le main process fera la mise à jour atomique du cache
+    const cacheData = {
       name: serverGame.name,
       summary: serverGame.summary,
       storyline: serverGame.storyline,
@@ -347,8 +384,10 @@ export class GameEngine {
         firstLaunched: null,
       },
     };
-    this.store.set("installedGamesCache", installedGamesCache);
-    console.log(`[GameEngine] Jeu sauvegardé dans le cache local`);
+
+    // Ne PAS mettre à jour le cache ici (race condition)
+    console.log(`[GameEngine] Données du cache préparées (seront sauvegardées par le main process)`);
+
     const metrics = this.metrics.get(gameId);
     this.sendProgress({
       id: gameId,
@@ -357,6 +396,7 @@ export class GameEngine {
       totalTime: Date.now() - metrics.startTime,
       avgSpeed: metrics.avgSpeed / (1024 * 1024), // MB/s
       finalPath: extractPath,
+      cacheData: cacheData, // ✅ Envoyer les données au main process
       message: "Installation terminée !",
     });
   }

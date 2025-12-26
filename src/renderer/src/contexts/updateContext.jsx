@@ -22,20 +22,17 @@ export const UpdateProvider = ({ children }) => {
   useEffect(() => {
     if (!window.api?.updater) return;
 
-    const unsubscribers = [];
-
     // Checking
     if (window.api.updater.onChecking) {
-      const unsub = window.api.updater.onChecking(() => {
+      window.api.updater.onChecking(() => {
         setUpdateStatus('checking');
         setError(null);
       });
-      if (typeof unsub === 'function') unsubscribers.push(unsub);
     }
 
     // Update available
     if (window.api.updater.onUpdateAvailable) {
-      const unsub = window.api.updater.onUpdateAvailable((data) => {
+      window.api.updater.onUpdateAvailable((data) => {
         setUpdateStatus('available');
         setUpdateInfo(data);
         setShowUpdateModal(true);
@@ -44,30 +41,27 @@ export const UpdateProvider = ({ children }) => {
           duration: 5000,
         });
       });
-      if (typeof unsub === 'function') unsubscribers.push(unsub);
     }
 
     // No update
     if (window.api.updater.onUpdateNotAvailable) {
-      const unsub = window.api.updater.onUpdateNotAvailable(() => {
+      window.api.updater.onUpdateNotAvailable(() => {
         setUpdateStatus('idle');
         setUpdateInfo(null);
       });
-      if (typeof unsub === 'function') unsubscribers.push(unsub);
     }
 
     // Download progress
     if (window.api.updater.onDownloadProgress) {
-      const unsub = window.api.updater.onDownloadProgress((data) => {
+      window.api.updater.onDownloadProgress((data) => {
         setUpdateStatus('downloading');
         setDownloadProgress(data);
       });
-      if (typeof unsub === 'function') unsubscribers.push(unsub);
     }
 
     // Downloaded
     if (window.api.updater.onUpdateDownloaded) {
-      const unsub = window.api.updater.onUpdateDownloaded((data) => {
+      window.api.updater.onUpdateDownloaded((data) => {
         setUpdateStatus('downloaded');
         setShowUpdateModal(true);
         toast.success('Mise à jour téléchargée', {
@@ -75,12 +69,11 @@ export const UpdateProvider = ({ children }) => {
           duration: 10000,
         });
       });
-      if (typeof unsub === 'function') unsubscribers.push(unsub);
     }
 
     // Error
     if (window.api.updater.onError) {
-      const unsub = window.api.updater.onError((data) => {
+      window.api.updater.onError((data) => {
         setUpdateStatus('error');
         setError(data.message);
         toast.error('Erreur de mise à jour', {
@@ -88,18 +81,7 @@ export const UpdateProvider = ({ children }) => {
           duration: 5000,
         });
       });
-      if (typeof unsub === 'function') unsubscribers.push(unsub);
     }
-
-    return () => {
-      unsubscribers.forEach((unsub) => {
-        try {
-          unsub();
-        } catch (e) {
-          console.error('[UpdateContext] Error unsubscribing:', e);
-        }
-      });
-    };
   }, []);
 
   // Vérifier les mises à jour manuellement

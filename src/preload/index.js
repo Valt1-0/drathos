@@ -124,28 +124,28 @@ const api = {
       ipcRenderer.invoke("updater:skipVersion", { version }),
     // Event listeners for update events
     onChecking: (callback) => {
+      ipcRenderer.removeAllListeners("updater:checking");
       ipcRenderer.on("updater:checking", (_event) => callback());
-      return () => ipcRenderer.removeAllListeners("updater:checking");
     },
     onUpdateAvailable: (callback) => {
+      ipcRenderer.removeAllListeners("updater:update-available");
       ipcRenderer.on("updater:update-available", (_event, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners("updater:update-available");
     },
     onUpdateNotAvailable: (callback) => {
+      ipcRenderer.removeAllListeners("updater:update-not-available");
       ipcRenderer.on("updater:update-not-available", (_event, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners("updater:update-not-available");
     },
     onDownloadProgress: (callback) => {
+      ipcRenderer.removeAllListeners("updater:download-progress");
       ipcRenderer.on("updater:download-progress", (_event, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners("updater:download-progress");
     },
     onUpdateDownloaded: (callback) => {
+      ipcRenderer.removeAllListeners("updater:update-downloaded");
       ipcRenderer.on("updater:update-downloaded", (_event, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners("updater:update-downloaded");
     },
     onError: (callback) => {
+      ipcRenderer.removeAllListeners("updater:error");
       ipcRenderer.on("updater:error", (_event, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners("updater:error");
     },
   },
 
