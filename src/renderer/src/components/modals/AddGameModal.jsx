@@ -109,6 +109,17 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
       return;
     }
 
+    // Validate version format (should be X.Y.Z or similar)
+    const versionPattern = /^\d+(\.\d+)*$/;
+    if (!version.trim()) {
+      setErrorMessage("Version is required");
+      return;
+    }
+    if (!versionPattern.test(version.trim())) {
+      setErrorMessage("Invalid version format. Use format like: 1.0.0");
+      return;
+    }
+
     try {
       setErrorMessage("");
 

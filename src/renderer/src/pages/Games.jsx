@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
@@ -12,6 +12,7 @@ import gameManager from "../services/gameManager";
 import { useGameStats } from "../hooks/games/useGameStats";
 import { useGameModals } from "../hooks/games/useGameModals";
 import { useDebounce } from "../hooks/useDebounce";
+import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import GameLibrary from "../components/games/GameLibrary";
 import GameDetails from "../components/games/GameDetails";
 import UninstallModal from "../components/modals/UninstallModal";
@@ -44,29 +45,29 @@ const Games = () => {
   const { isOnline } = useConnection();
   const { user } = useAuth();
 
-  const extractGenreName = (genre) => {
+  const extractGenreName = useCallback((genre) => {
     if (!genre) return "Unknown";
     if (typeof genre === "string") return genre;
     return genre.name || genre.slug || genre.id || "Unknown";
-  };
+  }, []);
 
-  const extractPlatformName = (platform) => {
+  const extractPlatformName = useCallback((platform) => {
     if (!platform) return "Unknown";
     if (typeof platform === "string") return platform;
     return platform.name || platform.slug || platform.id || "Unknown";
-  };
+  }, []);
 
-  const getGenresArray = (game) => {
+  const getGenresArray = useCallback((game) => {
     if (!game || !game.genres) return [];
     if (!Array.isArray(game.genres)) return [];
     return game.genres.map(extractGenreName);
-  };
+  }, [extractGenreName]);
 
-  const getPlatformsArray = (game) => {
+  const getPlatformsArray = useCallback((game) => {
     if (!game || !game.platforms) return ["PC"];
     if (!Array.isArray(game.platforms)) return ["PC"];
     return game.platforms.map(extractPlatformName);
-  };
+  }, [extractPlatformName]);
 
   useEffect(() => {
     const loadGames = async () => {
@@ -120,6 +121,7 @@ const Games = () => {
         setPlayingGames(playingSet);
       } catch (err) {
         console.debug("[Games] Server unavailable:", err.message);
+        // Don't show error toast for server unavailable (offline mode is normal)
       }
     };
 
@@ -134,6 +136,7 @@ const Games = () => {
         setPlayingGames(playingSet);
       } catch (error) {
         console.error("[Games] Error refreshing active games:", error);
+        toast.error("Failed to refresh active games status");
       }
     };
 
@@ -181,6 +184,9 @@ const Games = () => {
           });
         } catch (error) {
           console.error("[Games] Uninstall error:", error);
+          toast.error("Uninstall Failed", {
+            description: `Failed to uninstall ${item.gameName}: ${error.message}`,
+          });
           setUninstalling((prev) => {
             const newSet = new Set(prev);
             newSet.delete(item.gameId);
@@ -274,15 +280,19 @@ const Games = () => {
     loadGameSize();
   }, [selectedGame]);
 
-  const isInstalled = (gameId) =>
-    installedGames.some((g) => g.serverGameId?._id === gameId);
+  const isInstalled = useCallback((gameId) =>
+    installedGames.some((g) => g.serverGameId?._id === gameId),
+    [installedGames]
+  );
 
-  const getInstalledGameData = (gameId) =>
-    installedGames.find((g) => g.serverGameId?._id === gameId);
+  const getInstalledGameData = useCallback((gameId) =>
+    installedGames.find((g) => g.serverGameId?._id === gameId),
+    [installedGames]
+  );
 
-  const isGamePlaying = (gameId) => playingGames.has(gameId);
-  const isGameUninstalling = (gameId) => uninstalling.has(gameId);
-  const isPendingUninstall = (gameId) => pendingUninstalls.has(gameId);
+  const isGamePlaying = useCallback((gameId) => playingGames.has(gameId), [playingGames]);
+  const isGameUninstalling = useCallback((gameId) => uninstalling.has(gameId), [uninstalling]);
+  const isPendingUninstall = useCallback((gameId) => pendingUninstalls.has(gameId), [pendingUninstalls]);
 
   const handleLaunchGame = async (game) => {
     try {
@@ -363,9 +373,15 @@ const Games = () => {
       const result = await gameManager.stopGame(game._id);
       if (!result.success) {
         console.error("Stop failed:", result.error);
+        toast.error("Stop Failed", {
+          description: `Unable to stop "${game.name}". Try force stop instead.`,
+        });
       }
     } catch (error) {
       console.error("Error stopping", game.name, ":", error);
+      toast.error("Stop Error", {
+        description: `An error occurred while stopping "${game.name}"`,
+      });
     }
   };
 
@@ -374,9 +390,17 @@ const Games = () => {
       const result = await gameManager.forceStopGame(game._id);
       if (!result.success) {
         console.error("Force stop failed:", result.error);
+        toast.error("Force Stop Failed", {
+          description: `Unable to force stop "${game.name}": ${result.error}`,
+        });
+      } else {
+        toast.success(`"${game.name}" was force stopped`);
       }
     } catch (error) {
       console.error("Error force stopping", game.name, ":", error);
+      toast.error("Force Stop Error", {
+        description: `An error occurred while force stopping "${game.name}"`,
+      });
     }
   };
 
@@ -445,6 +469,10 @@ const Games = () => {
 
     window.api.installGame(game).catch((error) => {
       console.error("Installation error:", error);
+      toast.error("Installation Error", {
+        description: `Failed to install "${game.name}": ${error.message}`,
+        duration: 5000,
+      });
       removeDownload(downloadId);
     });
   };
@@ -555,12 +583,51 @@ const Games = () => {
     }
   };
 
+  // Keyboard shortcuts for Games page
+  useKeyboardShortcuts({
+    'enter': () => {
+      if (selectedGame && isInstalled(selectedGame._id) && !isGamePlaying(selectedGame._id)) {
+        handleLaunchGame(selectedGame);
+      } else if (selectedGame && !isInstalled(selectedGame._id)) {
+        handleInstallGame(selectedGame);
+      }
+    },
+    'escape': () => {
+      // Close any open modal
+      if (modals.uninstallModal.isOpen) modals.uninstallModal.close();
+      if (modals.installPathModal.isOpen) modals.installPathModal.close();
+      if (modals.deleteGameModal.isOpen) modals.deleteGameModal.close();
+      if (modals.wineModal.isOpen) modals.wineModal.close();
+    },
+    'ctrl+r': async () => {
+      try {
+        const updatedGames = await getAllServerGames();
+        setGames(updatedGames || []);
+        toast.success("Games list refreshed");
+      } catch (error) {
+        toast.error("Failed to refresh games list");
+      }
+    },
+    'ctrl+f': (e) => {
+      // Focus search input (will be implemented in GameLibrary if needed)
+      const searchInput = document.querySelector('input[type="text"]');
+      if (searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    },
+  }, !modals.deleteGameModal.isOpen); // Disable shortcuts when delete modal is open
+
   const handleAddGameSuccess = async () => {
     try {
       const updatedGames = await getAllServerGames();
       setGames(updatedGames || []);
+      toast.success("Game list updated successfully");
     } catch (error) {
       console.error("Error reloading games:", error);
+      toast.error("Failed to reload games list", {
+        description: "The game was added but the list couldn't be refreshed. Try reloading the page.",
+      });
     }
   };
 

@@ -6,6 +6,7 @@ import {
   useActiveDownloads,
   useDownloadsByStage,
   useDownloadCount,
+  useDownloadActions,
 } from "../contexts/downloadContext";
 import EnhancedDownloadProgress from "../components/EnhancedDownloadProgress";
 import GameCover from "../components/GameCover";
@@ -17,7 +18,9 @@ import {
   FiHardDrive,
   FiZap,
   FiSettings,
+  FiLoader,
 } from "react-icons/fi";
+import { toast } from "sonner";
 
 const Download = () => {
   // Utiliser les hooks optimisés au lieu de useDownload()
@@ -26,17 +29,20 @@ const Download = () => {
   const completedDownloads = useDownloadsByStage("completed");
   const failedDownloads = useDownloadsByStage("failed");
   const totalDownloads = useDownloadCount();
+  const { removeDownload, updateDownloadProgress } = useDownloadActions();
 
   const [diskSpace, setDiskSpace] = useState({
     freeSpace: 0,
     totalSpace: 0,
     usedPercent: 0,
   });
+  const [diskSpaceLoading, setDiskSpaceLoading] = useState(true);
 
   // Charger l'espace disque au montage
   useEffect(() => {
     const loadDiskSpace = async () => {
       try {
+        setDiskSpaceLoading(true);
         const result = await window.api.getDiskSpace();
         if (result.success) {
           setDiskSpace({
@@ -44,9 +50,14 @@ const Download = () => {
             totalSpace: result.totalGB,
             usedPercent: result.usedPercent,
           });
+        } else {
+          toast.error("Failed to load disk space information");
         }
       } catch (error) {
         console.error("Error loading disk space:", error);
+        toast.error(`Disk space error: ${error.message || "Unknown error"}`);
+      } finally {
+        setDiskSpaceLoading(false);
       }
     };
 
@@ -55,6 +66,28 @@ const Download = () => {
     const interval = setInterval(loadDiskSpace, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Retry a failed download
+  const handleRetryDownload = async (download) => {
+    try {
+      // Remove the failed download from the list
+      removeDownload(download.id);
+
+      // Show feedback
+      toast.info(`Retrying ${download.name}...`);
+
+      // Trigger installation again via API
+      // The download will be re-added to the context by the install handler
+      await window.api.installGame({
+        _id: download.gameId || download.id,
+        name: download.name,
+        coverUrl: download.image,
+      });
+    } catch (error) {
+      console.error("Retry error:", error);
+      toast.error(`Failed to retry ${download.name}: ${error.message}`);
+    }
+  };
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
@@ -136,7 +169,12 @@ const Download = () => {
                   </div>
                 </div>
 
-                {diskSpace.freeSpace > 0 ? (
+                {diskSpaceLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <FiLoader className="text-2xl text-yellow-400 animate-spin" />
+                    <span className="ml-3 text-gray-400 text-sm">Loading disk space...</span>
+                  </div>
+                ) : diskSpace.freeSpace > 0 ? (
                   <>
                     <div className="flex items-baseline gap-2 mb-2">
                       <span className="text-3xl font-bold text-white">
@@ -339,10 +377,12 @@ const Download = () => {
                       </div>
 
                       <motion.button
+                        onClick={() => handleRetryDownload(download)}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-medium transition-colors"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
                       >
+                        <FiDownload className="text-sm" />
                         Retry
                       </motion.button>
                     </div>

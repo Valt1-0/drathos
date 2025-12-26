@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { FiSearch, FiClock, FiTrash2, FiPlus } from "react-icons/fi";
 import GameCover from "../GameCover";
 
@@ -54,12 +54,14 @@ const GameLibrary = ({
     ];
   }, [games, getGenresArray]);
 
-  const isInstalled = (gameId) =>
-    installedGames.some((g) => g.serverGameId?._id === gameId);
+  const isInstalled = useCallback((gameId) =>
+    installedGames.some((g) => g.serverGameId?._id === gameId),
+    [installedGames]
+  );
 
-  const isGamePlaying = (gameId) => playingGames.has(gameId);
-  const isGameUninstalling = (gameId) => uninstallingGames.has(gameId);
-  const isPendingUninstall = (gameId) => pendingUninstalls.has(gameId);
+  const isGamePlaying = useCallback((gameId) => playingGames.has(gameId), [playingGames]);
+  const isGameUninstalling = useCallback((gameId) => uninstallingGames.has(gameId), [uninstallingGames]);
+  const isPendingUninstall = useCallback((gameId) => pendingUninstalls.has(gameId), [pendingUninstalls]);
 
   // Composant pour chaque ligne de jeu (virtualisé)
   const GameRow = ({ index, style }) => {
