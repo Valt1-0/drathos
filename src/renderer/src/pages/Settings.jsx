@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   FiSettings,
   FiUser,
@@ -15,6 +16,7 @@ import {
   FiTrash2,
   FiAlertTriangle,
   FiRefreshCw,
+  FiGlobe,
 } from "react-icons/fi";
 import { SiDiscord } from "react-icons/si";
 import { useAuth } from "../contexts/authContext";
@@ -24,6 +26,7 @@ import logger from "../services/logger";
 import BugReportModal from "../components/modals/BugReportModal";
 
 const SettingsPage = () => {
+  const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState("dark");
   const [downloadPath, setDownloadPath] = useState("");
   const { user } = useAuth();
@@ -76,8 +79,8 @@ const SettingsPage = () => {
       }
     } catch (error) {
       logger.error("[Settings] Error selecting/creating folder", error);
-      toast.error("Error", {
-        description: "Unable to select folder",
+      toast.error(t('common.error'), {
+        description: t('settings.errorSelectFolder'),
       });
     }
   };
@@ -93,8 +96,8 @@ const SettingsPage = () => {
         setDiscordEnabled(false);
         await window.store.set("discordRPCEnabled", false);
 
-        toast.success("Discord RPC disabled", {
-          description: "Your activity will no longer be displayed on Discord",
+        toast.success(t('success.discordDisabled'), {
+          description: t('settings.discordDisabledDesc'),
         });
       } else {
         // Enable Discord RPC
@@ -110,20 +113,20 @@ const SettingsPage = () => {
           const status = await window.api.discordRPC.getStatus();
           setDiscordStatus(status);
 
-          toast.success("Discord RPC enabled", {
+          toast.success(t('success.discordEnabled'), {
             description: result.connected
-              ? `Connected to Discord${status.user ? ` (${status.user.username})` : ""}`
-              : "Discord is not running, will be available on next launch",
+              ? t('settings.discordEnabledDesc', { username: status.user ? ` (${status.user.username})` : '' })
+              : t('settings.discordEnabledNoConnection'),
           });
         } else {
-          toast.error("Discord RPC error", {
-            description: result.error || "Unable to connect to Discord",
+          toast.error(t('settings.discordError'), {
+            description: result.error || t('settings.discordErrorConnect'),
           });
         }
       }
     } catch (error) {
       logger.error("[Settings] Discord RPC error", error);
-      toast.error("Discord RPC error", {
+      toast.error(t('settings.discordError'), {
         description: error.message,
       });
     } finally {
@@ -134,12 +137,12 @@ const SettingsPage = () => {
   // Save settings
   const handleSaveSettings = async () => {
     try {
-      toast.success("Settings saved", {
-        description: "Your changes have been saved successfully",
+      toast.success(t('success.settingsSaved'), {
+        description: t('settings.settingsSavedDesc'),
       });
     } catch (error) {
-      toast.error("Save error", {
-        description: "Unable to save settings",
+      toast.error(t('settings.saveError'), {
+        description: t('settings.saveErrorDesc'),
       });
     }
   };
@@ -152,13 +155,13 @@ const SettingsPage = () => {
       const newSize = await imageCacheService.getCacheSize();
       setCacheSize(newSize);
 
-      toast.success("Cache cleared", {
-        description: "All cached images have been deleted",
+      toast.success(t('success.cacheCleared'), {
+        description: t('settings.cacheClearedDesc'),
       });
     } catch (error) {
       logger.error("[Settings] Error clearing cache", error);
-      toast.error("Error", {
-        description: "Unable to clear cache",
+      toast.error(t('common.error'), {
+        description: t('settings.errorClearCache'),
       });
     } finally {
       setCacheLoading(false);
@@ -173,13 +176,13 @@ const SettingsPage = () => {
       const newSize = await imageCacheService.getCacheSize();
       setCacheSize(newSize);
 
-      toast.success("Cleanup complete", {
-        description: `${deletedCount} expired image(s) deleted`,
+      toast.success(t('success.cleanupComplete'), {
+        description: t('settings.cleanupCompleteDesc', { count: deletedCount }),
       });
     } catch (error) {
       logger.error("[Settings] Error cleaning cache", error);
-      toast.error("Error", {
-        description: "Unable to clean cache",
+      toast.error(t('common.error'), {
+        description: t('settings.errorCleanCache'),
       });
     } finally {
       setCacheLoading(false);
@@ -240,11 +243,11 @@ const SettingsPage = () => {
                 <FiSettings className="text-white text-xl" />
               </div>
               <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                Settings
+                {t('settings.title')}
               </h1>
             </div>
             <p className="text-gray-400 text-sm ml-13">
-              Configure your Drathos experience
+              {t('settings.subtitle')}
             </p>
           </div>
 
@@ -262,20 +265,20 @@ const SettingsPage = () => {
                   <div className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg">
                     <FiUser className="text-blue-400 text-xl" />
                   </div>
-                  <h3 className="text-xl font-bold text-white">Account</h3>
+                  <h3 className="text-xl font-bold text-white">{t('settings.account')}</h3>
                 </div>
 
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-sm text-gray-400 mb-2 block">
-                      Username
+                      {t('settings.username')}
                     </span>
                     <input
                       type="text"
                       value={user.username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                      placeholder="Your username"
+                      placeholder={t('settings.usernamePlaceholder')}
                     />
                   </label>
                 </div>
@@ -299,13 +302,13 @@ const SettingsPage = () => {
                       <FiSun className="text-purple-400 text-xl" />
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-white">Appearance</h3>
+                  <h3 className="text-xl font-bold text-white">{t('settings.appearance')}</h3>
                 </div>
 
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-sm text-gray-400 mb-2 block">
-                      Application theme
+                      {t('settings.appTheme')}
                     </span>
                     <button
                       onClick={handleThemeChange}
@@ -315,20 +318,79 @@ const SettingsPage = () => {
                         {theme === "dark" ? (
                           <>
                             <FiMoon className="text-purple-400" />
-                            <span>Dark mode</span>
+                            <span>{t('settings.darkMode')}</span>
                           </>
                         ) : (
                           <>
                             <FiSun className="text-yellow-400" />
-                            <span>Light mode</span>
+                            <span>{t('settings.lightMode')}</span>
                           </>
                         )}
                       </span>
                       <span className="text-sm text-gray-400">
-                        Click to change
+                        {t('settings.clickToChange')}
                       </span>
                     </button>
                   </label>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Language Section */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.25, duration: 0.6 }}
+              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-lg">
+                    <FiGlobe className="text-green-400 text-xl" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{t('settings.language')}</h3>
+                    <p className="text-sm text-gray-400">{t('settings.languageDesc')}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => i18n.changeLanguage('en')}
+                    className={`p-4 rounded-lg border-2 transition-all duration-300 flex items-center gap-3 ${
+                      i18n.language === 'en'
+                        ? 'bg-green-500/20 border-green-500 shadow-lg shadow-green-500/30'
+                        : 'bg-gray-700/50 border-gray-600 hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl">🇬🇧</div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-white">English</div>
+                      <div className="text-xs text-gray-400">{t('settings.languageInternational')}</div>
+                    </div>
+                    {i18n.language === 'en' && (
+                      <FiCheck className="text-green-400 text-xl" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => i18n.changeLanguage('fr')}
+                    className={`p-4 rounded-lg border-2 transition-all duration-300 flex items-center gap-3 ${
+                      i18n.language === 'fr'
+                        ? 'bg-green-500/20 border-green-500 shadow-lg shadow-green-500/30'
+                        : 'bg-gray-700/50 border-gray-600 hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl">🇫🇷</div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-white">Français</div>
+                      <div className="text-xs text-gray-400">{t('settings.languageFrance')}</div>
+                    </div>
+                    {i18n.language === 'fr' && (
+                      <FiCheck className="text-green-400 text-xl" />
+                    )}
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -337,7 +399,7 @@ const SettingsPage = () => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.25, duration: 0.6 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
               className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-indigo-500/50 transition-all duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -348,8 +410,8 @@ const SettingsPage = () => {
                       <SiDiscord className="text-indigo-400 text-xl" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">Discord Rich Presence</h3>
-                      <p className="text-xs text-gray-400">Display your game activity on Discord</p>
+                      <h3 className="text-xl font-bold text-white">{t('settings.discordRPC')}</h3>
+                      <p className="text-xs text-gray-400">{t('settings.discordDisplayActivity')}</p>
                     </div>
                   </div>
 
@@ -365,8 +427,8 @@ const SettingsPage = () => {
                       }`} />
                       <span className="text-xs font-medium">
                         {discordStatus.isConnected
-                          ? `Connected${discordStatus.user ? ` · ${discordStatus.user.username}` : ''}`
-                          : 'Waiting for Discord'}
+                          ? `${t('settings.discordConnected')}${discordStatus.user ? ` · ${discordStatus.user.username}` : ''}`
+                          : t('settings.discordWaiting')}
                       </span>
                     </div>
                   )}
@@ -375,15 +437,14 @@ const SettingsPage = () => {
                 <div className="space-y-4">
                   {/* Description */}
                   <p className="text-sm text-gray-400">
-                    Enable this option to automatically display "Drathos" and the current game on your Discord profile.
-                    Make sure Discord Desktop is running.
+                    {t('settings.discordEnableDesc')}
                   </p>
 
                   {/* Toggle Button */}
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                       <FiActivity className="text-indigo-400" />
-                      <span>Show my game activity on Discord</span>
+                      <span>{t('settings.discordShowActivity')}</span>
                     </div>
                     <button
                       onClick={handleDiscordToggle}
@@ -408,11 +469,11 @@ const SettingsPage = () => {
                       <div className="flex items-start gap-3">
                         <FiActivity className="text-indigo-400 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-indigo-300">Current activity</p>
+                          <p className="text-sm font-medium text-indigo-300">{t('settings.discordCurrentActivity')}</p>
                           <p className="text-xs text-gray-400 mt-1">
                             {discordStatus.currentActivity.type === "game"
-                              ? `Playing ${discordStatus.currentActivity.gameName}`
-                              : "Browsing in Drathos"}
+                              ? t('settings.discordPlayingGame', { gameName: discordStatus.currentActivity.gameName })
+                              : t('settings.discordBrowsing')}
                           </p>
                         </div>
                       </div>
@@ -425,9 +486,9 @@ const SettingsPage = () => {
                       <div className="flex items-start gap-3">
                         <FiCircle className="text-yellow-400 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-yellow-300">Discord not detected</p>
+                          <p className="text-sm font-medium text-yellow-300">{t('settings.discordNotDetected')}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Launch Discord Desktop to see your activity appear
+                            {t('settings.discordLaunchDesktop')}
                           </p>
                         </div>
                       </div>
@@ -452,8 +513,8 @@ const SettingsPage = () => {
                       <FiImage className="text-orange-400 text-xl" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">Image Cache</h3>
-                      <p className="text-xs text-gray-400">Management of local game cover cache</p>
+                      <h3 className="text-xl font-bold text-white">{t('settings.imageCache')}</h3>
+                      <p className="text-xs text-gray-400">{t('settings.imageCacheManagement')}</p>
                     </div>
                   </div>
 
@@ -461,7 +522,7 @@ const SettingsPage = () => {
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400">
                     <FiImage className="text-xs" />
                     <span className="text-xs font-medium">
-                      {cacheSize} cached image{cacheSize > 1 ? 's' : ''}
+                      {t('settings.cachedImages', { count: cacheSize, plural: cacheSize > 1 ? 's' : '' })}
                     </span>
                   </div>
                 </div>
@@ -469,8 +530,7 @@ const SettingsPage = () => {
                 <div className="space-y-4">
                   {/* Description */}
                   <p className="text-sm text-gray-400">
-                    Game covers are automatically cached locally to improve performance.
-                    The cache is automatically cleaned after 7 days.
+                    {t('settings.imageCacheDesc')}
                   </p>
 
                   {/* Cache Actions */}
@@ -483,7 +543,7 @@ const SettingsPage = () => {
                       }`}
                     >
                       <FiActivity className="text-orange-400" />
-                      <span>Clean expired images</span>
+                      <span>{t('settings.cleanExpiredImages')}</span>
                     </button>
 
                     <button
@@ -494,7 +554,7 @@ const SettingsPage = () => {
                       }`}
                     >
                       <FiTrash2 className="text-red-400" />
-                      <span>Clear entire cache</span>
+                      <span>{t('settings.clearEntireCache')}</span>
                     </button>
                   </div>
 
@@ -503,12 +563,12 @@ const SettingsPage = () => {
                     <div className="flex items-start gap-3">
                       <FiImage className="text-orange-400 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-300">Active optimizations</p>
+                        <p className="text-sm font-medium text-orange-300">{t('settings.activeOptimizations')}</p>
                         <ul className="text-xs text-gray-400 mt-1 space-y-1">
-                          <li>• Lazy loading of images</li>
-                          <li>• Automatic compression of IGDB covers</li>
-                          <li>• Local cache with IndexedDB</li>
-                          <li>• Animated placeholders during loading</li>
+                          <li>• {t('settings.optimizationLazyLoading')}</li>
+                          <li>• {t('settings.optimizationCompression')}</li>
+                          <li>• {t('settings.optimizationLocalCache')}</li>
+                          <li>• {t('settings.optimizationPlaceholders')}</li>
                         </ul>
                       </div>
                     </div>
@@ -531,14 +591,14 @@ const SettingsPage = () => {
                     <FiDownload className="text-green-400 text-xl" />
                   </div>
                   <h3 className="text-xl font-bold text-white">
-                    Downloads
+                    {t('settings.downloads')}
                   </h3>
                 </div>
 
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-sm text-gray-400 mb-2 block">
-                      Game installation path
+                      {t('settings.installPath')}
                     </span>
                     <div className="flex gap-3">
                       <div className="flex-1 relative">
@@ -547,7 +607,7 @@ const SettingsPage = () => {
                         </div>
                         <input
                           type="text"
-                          value={downloadPath || "No path selected"}
+                          value={downloadPath || t('settings.noPathSelected')}
                           readOnly
                           className="w-full pl-10 pr-3 py-3 rounded-lg bg-gray-700/50 border border-gray-600 text-gray-300 cursor-not-allowed"
                         />
@@ -557,12 +617,12 @@ const SettingsPage = () => {
                         className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-green-500/50 flex items-center gap-2"
                       >
                         <FiFolder />
-                        Browse
+                        {t('settings.browse')}
                       </button>
                     </div>
                     {downloadPath && (
                       <p className="text-xs text-gray-500 mt-2">
-                        Games will be installed in this folder
+                        {t('settings.gamesWillBeInstalled')}
                       </p>
                     )}
                   </label>
@@ -585,8 +645,8 @@ const SettingsPage = () => {
                       <FiRefreshCw className="text-blue-400 text-xl" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">Updates</h3>
-                      <p className="text-xs text-gray-400">Keep Drathos up to date</p>
+                      <h3 className="text-xl font-bold text-white">{t('settings.updates')}</h3>
+                      <p className="text-xs text-gray-400">{t('settings.keepUpToDate')}</p>
                     </div>
                   </div>
 
@@ -604,7 +664,7 @@ const SettingsPage = () => {
                 <div className="space-y-4">
                   {/* Description */}
                   <p className="text-sm text-gray-400">
-                    Drathos checks for updates automatically on startup. You can also manually check for new versions at any time.
+                    {t('settings.updatesAutoCheck')}
                   </p>
 
                   {/* Check for Updates Button */}
@@ -617,7 +677,7 @@ const SettingsPage = () => {
                   >
                     <FiRefreshCw className={`text-blue-400 ${updateChecking || updateStatus === 'checking' ? 'animate-spin' : ''}`} />
                     <span>
-                      {updateChecking || updateStatus === 'checking' ? 'Checking for updates...' : 'Check for updates'}
+                      {updateChecking || updateStatus === 'checking' ? t('settings.checkingUpdates') : t('settings.checkForUpdates')}
                     </span>
                   </button>
 
@@ -627,9 +687,9 @@ const SettingsPage = () => {
                       <div className="flex items-start gap-3">
                         <FiRefreshCw className="text-blue-400 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-blue-300">Update available</p>
+                          <p className="text-sm font-medium text-blue-300">{t('settings.updateAvailable')}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Version {updateInfo.version} is ready to download
+                            {t('settings.updateVersionReady', { version: updateInfo.version })}
                           </p>
                         </div>
                       </div>
@@ -641,9 +701,9 @@ const SettingsPage = () => {
                       <div className="flex items-start gap-3">
                         <FiDownload className="text-blue-400 mt-0.5 animate-pulse" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-blue-300">Downloading update...</p>
+                          <p className="text-sm font-medium text-blue-300">{t('settings.downloadingUpdate')}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Please wait while the update is being downloaded
+                            {t('settings.updateDownloading')}
                           </p>
                         </div>
                       </div>
@@ -655,9 +715,9 @@ const SettingsPage = () => {
                       <div className="flex items-start gap-3">
                         <FiCheck className="text-green-400 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-green-300">Update ready</p>
+                          <p className="text-sm font-medium text-green-300">{t('settings.updateReady')}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Restart Drathos to install the update
+                            {t('settings.updateRestartToInstall')}
                           </p>
                         </div>
                       </div>
@@ -680,7 +740,7 @@ const SettingsPage = () => {
               className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-medium transition-all duration-300 border border-red-500/30 hover:border-red-500/50 flex items-center gap-2"
             >
               <FiAlertTriangle className="w-5 h-5" />
-              Report a Bug
+              {t('settings.reportBug')}
             </button>
 
             <button
@@ -688,7 +748,7 @@ const SettingsPage = () => {
               className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/50 flex items-center gap-2"
             >
               <FiCheck />
-              Save settings
+              {t('settings.saveSettings')}
             </button>
           </motion.div>
         </motion.div>

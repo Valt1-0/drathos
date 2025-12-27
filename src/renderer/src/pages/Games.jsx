@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
 import { formatStats as formatStatsAPI } from "../api/gameStats";
@@ -24,6 +25,7 @@ import WineRequiredModal from "../components/modals/WineRequiredModal";
 import { toast } from "sonner";
 
 const Games = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [installedGames, setInstalledGames] = useState([]);
@@ -46,16 +48,16 @@ const Games = () => {
   const { user } = useAuth();
 
   const extractGenreName = useCallback((genre) => {
-    if (!genre) return "Unknown";
+    if (!genre) return t('games.unknown');
     if (typeof genre === "string") return genre;
-    return genre.name || genre.slug || genre.id || "Unknown";
-  }, []);
+    return genre.name || genre.slug || genre.id || t('games.unknown');
+  }, [t]);
 
   const extractPlatformName = useCallback((platform) => {
-    if (!platform) return "Unknown";
+    if (!platform) return t('games.unknown');
     if (typeof platform === "string") return platform;
-    return platform.name || platform.slug || platform.id || "Unknown";
-  }, []);
+    return platform.name || platform.slug || platform.id || t('games.unknown');
+  }, [t]);
 
   const getGenresArray = useCallback((game) => {
     if (!game || !game.genres) return [];
@@ -136,7 +138,7 @@ const Games = () => {
         setPlayingGames(playingSet);
       } catch (error) {
         console.error("[Games] Error refreshing active games:", error);
-        toast.error("Failed to refresh active games status");
+        toast.error(t('games.refreshActiveGamesError'));
       }
     };
 
@@ -184,8 +186,8 @@ const Games = () => {
           });
         } catch (error) {
           console.error("[Games] Uninstall error:", error);
-          toast.error("Uninstall Failed", {
-            description: `Failed to uninstall ${item.gameName}: ${error.message}`,
+          toast.error(t('errors.uninstallFailed'), {
+            description: `${t('games.installErrorDesc', { name: item.gameName, error: error.message })}`,
           });
           setUninstalling((prev) => {
             const newSet = new Set(prev);
@@ -297,8 +299,8 @@ const Games = () => {
   const handleLaunchGame = async (game) => {
     try {
       if (isPendingUninstall(game._id)) {
-        toast.error("Cannot Launch Game", {
-          description: `"${game.name}" has been uninstalled but synchronization with the server is pending. Please reconnect to complete the synchronization.`,
+        toast.error(t('games.cannotLaunchTitle'), {
+          description: `"${game.name}" ${t('games.cannotLaunchPendingSync')}`,
           duration: 5000,
         });
         return;
@@ -307,8 +309,8 @@ const Games = () => {
       const installedData = getInstalledGameData(game._id);
       if (!installedData) {
         console.error("Installation data not found for", game.name);
-        toast.error("Game Not Found", {
-          description: `Installation data not found for "${game.name}". Please try reinstalling the game.`,
+        toast.error(t('games.gameNotFoundTitle'), {
+          description: t('games.gameNotFoundDesc', { name: game.name }),
           duration: 4000,
         });
         return;
@@ -344,8 +346,8 @@ const Games = () => {
             console.error("Error parsing Wine instructions:", e);
           }
         } else {
-          toast.error("Launch Failed", {
-            description: `Unable to launch "${game.name}". Please verify the game is properly installed.`,
+          toast.error(t('games.launchFailedTitle'), {
+            description: t('games.launchFailedDesc', { name: game.name }),
           });
         }
 
@@ -357,8 +359,8 @@ const Games = () => {
       }
     } catch (error) {
       console.error("Error launching", game.name, ":", error);
-      toast.error("Launch Error", {
-        description: `An error occurred while launching "${game.name}"`,
+      toast.error(t('games.launchErrorTitle'), {
+        description: t('games.launchErrorDesc', { name: game.name }),
       });
       setPlayingGames((prev) => {
         const newSet = new Set(prev);
@@ -373,14 +375,14 @@ const Games = () => {
       const result = await gameManager.stopGame(game._id);
       if (!result.success) {
         console.error("Stop failed:", result.error);
-        toast.error("Stop Failed", {
-          description: `Unable to stop "${game.name}". Try force stop instead.`,
+        toast.error(t('games.stopFailedTitle'), {
+          description: t('games.stopFailedDesc', { name: game.name }),
         });
       }
     } catch (error) {
       console.error("Error stopping", game.name, ":", error);
-      toast.error("Stop Error", {
-        description: `An error occurred while stopping "${game.name}"`,
+      toast.error(t('games.stopErrorTitle'), {
+        description: t('games.stopErrorDesc', { name: game.name }),
       });
     }
   };
@@ -390,16 +392,16 @@ const Games = () => {
       const result = await gameManager.forceStopGame(game._id);
       if (!result.success) {
         console.error("Force stop failed:", result.error);
-        toast.error("Force Stop Failed", {
-          description: `Unable to force stop "${game.name}": ${result.error}`,
+        toast.error(t('games.forceStopFailedTitle'), {
+          description: t('games.forceStopFailedDesc', { name: game.name, error: result.error }),
         });
       } else {
-        toast.success(`"${game.name}" was force stopped`);
+        toast.success(t('games.forceStopSuccess', { name: game.name }));
       }
     } catch (error) {
       console.error("Error force stopping", game.name, ":", error);
-      toast.error("Force Stop Error", {
-        description: `An error occurred while force stopping "${game.name}"`,
+      toast.error(t('games.forceStopErrorTitle'), {
+        description: t('games.forceStopErrorDesc', { name: game.name }),
       });
     }
   };
@@ -469,8 +471,8 @@ const Games = () => {
 
     window.api.installGame(game).catch((error) => {
       console.error("Installation error:", error);
-      toast.error("Installation Error", {
-        description: `Failed to install "${game.name}": ${error.message}`,
+      toast.error(t('games.installErrorTitle'), {
+        description: t('games.installErrorDesc', { name: game.name, error: error.message }),
         duration: 5000,
       });
       removeDownload(downloadId);
@@ -510,8 +512,8 @@ const Games = () => {
 
       if (!result.success) {
         console.error("Uninstall failed:", result.error);
-        toast.error("Uninstallation Failed", {
-          description: `Unable to uninstall "${game.name}". ${result.error || ''}`,
+        toast.error(t('errors.uninstallFailed'), {
+          description: `${t('games.launchFailedDesc', { name: game.name })} ${result.error || ''}`,
           duration: 5000,
         });
         setUninstalling((prev) => {
@@ -520,15 +522,15 @@ const Games = () => {
           return newSet;
         });
       } else {
-        toast.success("Uninstallation Successful", {
-          description: `"${game.name}" has been uninstalled successfully`,
+        toast.success(t('games.uninstallSuccessTitle'), {
+          description: t('games.uninstallSuccessDesc', { name: game.name }),
           duration: 4000,
         });
       }
     } catch (error) {
       console.error("Uninstall error:", error);
-      toast.error("Uninstallation Error", {
-        description: `An error occurred while uninstalling "${game.name}"`,
+      toast.error(t('errors.uninstallFailed'), {
+        description: t('games.launchErrorDesc', { name: game.name }),
         duration: 5000,
       });
       setUninstalling((prev) => {
@@ -544,8 +546,8 @@ const Games = () => {
     if (installedData && installedData.path) {
       await gameManager.openGameFolder(installedData.path);
     } else {
-      toast.error("Cannot Open Folder", {
-        description: `No installation path found for "${game.name}".`,
+      toast.error(t('games.cannotOpenFolderTitle'), {
+        description: t('games.cannotOpenFolderDesc', { name: game.name }),
         duration: 3000,
       });
     }
@@ -575,7 +577,7 @@ const Games = () => {
       }, 2000);
     } catch (error) {
       modals.deleteGameModal.setResult({
-        error: error.message || "Erreur inconnue",
+        error: error.message || t('games.unknownError'),
         details: error.response?.data?.message || "",
       });
     } finally {
@@ -603,9 +605,9 @@ const Games = () => {
       try {
         const updatedGames = await getAllServerGames();
         setGames(updatedGames || []);
-        toast.success("Games list refreshed");
+        toast.success(t('games.gamesListRefreshed'));
       } catch (error) {
-        toast.error("Failed to refresh games list");
+        toast.error(t('errors.refreshGames'));
       }
     },
     'ctrl+f': (e) => {
@@ -622,11 +624,11 @@ const Games = () => {
     try {
       const updatedGames = await getAllServerGames();
       setGames(updatedGames || []);
-      toast.success("Game list updated successfully");
+      toast.success(t('success.gameListUpdated'));
     } catch (error) {
       console.error("Error reloading games:", error);
-      toast.error("Failed to reload games list", {
-        description: "The game was added but the list couldn't be refreshed. Try reloading the page.",
+      toast.error(t('errors.refreshGames'), {
+        description: t('games.failedReloadDesc'),
       });
     }
   };
@@ -636,7 +638,7 @@ const Games = () => {
       <div className="h-full flex items-center justify-center bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading your library...</p>
+          <p className="text-gray-400">{t('games.loadingLibrary')}</p>
         </div>
       </div>
     );
@@ -651,7 +653,7 @@ const Games = () => {
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
           >
-            Retry
+            {t('games.retry')}
           </button>
         </div>
       </div>

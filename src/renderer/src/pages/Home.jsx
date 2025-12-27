@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaChevronLeft,
@@ -20,6 +21,7 @@ import GameCover from "../components/GameCover";
 import { useAuth } from "../contexts/authContext";
 
 const Home = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [stats, setStats] = useState(null);
@@ -145,7 +147,7 @@ const Home = () => {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading your gaming hub...</p>
+          <p className="text-gray-400">{t('home.loadingHub')}</p>
         </div>
       </div>
     );
@@ -208,7 +210,7 @@ const Home = () => {
                 >
                   <div className="inline-flex items-center gap-2 mb-3 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-full backdrop-blur-sm">
                     <FaStar className="text-yellow-400" />
-                    <span className="text-sm font-semibold text-blue-300">Featured Game</span>
+                    <span className="text-sm font-semibold text-blue-300">{t('home.featuredGame')}</span>
                   </div>
 
                   <h1 className="text-3xl md:text-5xl lg:text-7xl font-black leading-tight mb-3 md:mb-4 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent drop-shadow-2xl">
@@ -216,7 +218,7 @@ const Home = () => {
                   </h1>
 
                   <p className="text-sm md:text-base lg:text-lg text-gray-300 mb-4 md:mb-6 max-w-2xl leading-relaxed line-clamp-3 md:line-clamp-none">
-                    {currentGame.summary || currentGame.storyline || "An amazing gaming experience awaits you."}
+                    {currentGame.summary || currentGame.storyline || t('home.amazingExperience')}
                   </p>
 
                   <div className="flex flex-wrap gap-3 md:gap-4 justify-center md:justify-start">
@@ -226,7 +228,7 @@ const Home = () => {
                         whileTap={{ scale: 0.95 }}
                         className="px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm md:text-base rounded-xl font-bold shadow-lg hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
                       >
-                        <FaPlay /> Play Now
+                        <FaPlay /> {t('home.playNow')}
                       </motion.button>
                     </Link>
                     <Link to="/games">
@@ -235,7 +237,7 @@ const Home = () => {
                         whileTap={{ scale: 0.95 }}
                         className="px-6 py-3 md:px-8 md:py-4 bg-white/10 backdrop-blur-sm text-white text-sm md:text-base rounded-xl font-bold border border-white/20 hover:bg-white/20 transition-all duration-300"
                       >
-                        Learn More
+                        {t('home.learnMore')}
                       </motion.button>
                     </Link>
                   </div>
@@ -278,8 +280,8 @@ const Home = () => {
         <div className="relative w-full h-[60vh] md:h-[65vh] lg:h-[70vh] flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
           <div className="text-center">
             <div className="text-6xl mb-4">🎮</div>
-            <h2 className="text-3xl font-bold text-white mb-2">No Games Available</h2>
-            <p className="text-gray-400">Start by adding games to your library</p>
+            <h2 className="text-3xl font-bold text-white mb-2">{t('home.noGamesAvailable')}</h2>
+            <p className="text-gray-400">{t('home.startAdding')}</p>
           </div>
         </div>
       )}
@@ -301,7 +303,7 @@ const Home = () => {
                     <FaClock className="text-3xl text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400 font-medium">Total Play Time</p>
+                    <p className="text-sm text-gray-400 font-medium">{t('home.totalPlayTime')}</p>
                     <p className="text-3xl font-bold text-white">{stats.totalPlayTime}h</p>
                   </div>
                 </div>
@@ -314,7 +316,7 @@ const Home = () => {
                     <FaGamepad className="text-3xl text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400 font-medium">Games Played</p>
+                    <p className="text-sm text-gray-400 font-medium">{t('home.gamesPlayed')}</p>
                     <p className="text-3xl font-bold text-white">{stats.totalGames}</p>
                   </div>
                 </div>
@@ -327,10 +329,10 @@ const Home = () => {
                     <FaTrophy className="text-3xl text-yellow-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400 font-medium">Gaming Streak</p>
+                    <p className="text-sm text-gray-400 font-medium">{t('home.gamingStreak')}</p>
                     <p className="text-3xl font-bold text-white">
                       <FaFire className="inline text-orange-500 mr-2" />
-                      {stats.totalGames} days
+                      {t('home.days', { count: stats.totalGames })}
                     </p>
                   </div>
                 </div>
@@ -350,7 +352,7 @@ const Home = () => {
                 <div className="p-4 bg-green-500/30 rounded-xl">
                   <FaPlus className="text-3xl text-green-400" />
                 </div>
-                <p className="text-xl font-bold text-white">Add Game</p>
+                <p className="text-xl font-bold text-white">{t('home.addGame')}</p>
               </div>
             </motion.div>
           )}
@@ -368,7 +370,7 @@ const Home = () => {
             <div className="flex items-center gap-3 mb-8">
               <FaClock className="text-2xl text-blue-400" />
               <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Continue Playing
+                {t('home.continuePlaying')}
               </h2>
             </div>
 
@@ -411,7 +413,7 @@ const Home = () => {
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <FaClock />
                       <span>
-                        {game.totalPlayTime || "Recently played"}
+                        {game.totalPlayTime || t('home.recentlyPlayed')}
                       </span>
                     </div>
                   </div>
@@ -431,10 +433,10 @@ const Home = () => {
       >
         <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 backdrop-blur-sm border border-blue-500/20 rounded-3xl p-8 md:p-12 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Start Your Gaming Journey?
+            {t('home.readyToStart')}
           </h2>
           <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-            Explore thousands of games, track your progress, and join a community of passionate gamers.
+            {t('home.exploreDescription')}
           </p>
           <Link to="/games">
             <motion.button
@@ -442,7 +444,7 @@ const Home = () => {
               whileTap={{ scale: 0.95 }}
               className="px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg rounded-xl font-bold shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
             >
-              Explore All Games
+              {t('home.exploreAllGames')}
             </motion.button>
           </Link>
         </div>

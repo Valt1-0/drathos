@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   useDownloadStats,
   useActiveDownloads,
@@ -23,6 +24,8 @@ import {
 import { toast } from "sonner";
 
 const Download = () => {
+  const { t } = useTranslation();
+
   // Utiliser les hooks optimisés au lieu de useDownload()
   const downloadStats = useDownloadStats();
   const activeDownloads = useActiveDownloads();
@@ -105,11 +108,11 @@ const Download = () => {
                 <FiDownload className="text-white text-xl" />
               </div>
               <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                Downloads
+                {t('downloads.title')}
               </h1>
             </div>
             <p className="text-gray-400 text-sm ml-13">
-              Advanced download manager with real-time metrics
+              {t('downloads.subtitle')}
             </p>
           </div>
 

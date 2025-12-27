@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 import {
   FiBarChart2,
   FiClock,
@@ -33,15 +34,17 @@ const GameDetails = ({
   getGenresArray,
   getPlatformsArray,
 }) => {
+  const { t } = useTranslation();
+
   if (!game) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center text-gray-400">
           <div className="text-6xl mb-4">🎮</div>
           <h2 className="text-xl font-semibold mb-2">
-            Select a game
+            {t('games.selectGame')}
           </h2>
-          <p>Choose a game from the list to see its details</p>
+          <p>{t('games.selectGameDesc')}</p>
         </div>
       </div>
     );
@@ -70,7 +73,7 @@ const GameDetails = ({
           <div className="flex items-center gap-4 text-gray-300">
             <span>
               {getGenresArray(game).slice(0, 3).join(" • ") ||
-                "No genre"}
+                t('games.noGenre')}
             </span>
             {game.releaseDate && (
               <span>
@@ -114,11 +117,11 @@ const GameDetails = ({
 
 
             <div className="mb-6 mt-6">
-              <h2 className="text-xl font-bold mb-3">About</h2>
+              <h2 className="text-xl font-bold mb-3">{t('games.about')}</h2>
               <p className="text-gray-300 leading-relaxed">
                 {game.summary ||
                   game.storyline ||
-                  "No description available."}
+                  t('games.noDescription')}
               </p>
             </div>
           </div>
@@ -153,6 +156,8 @@ const ActionButtons = ({
   onOpenFolder,
   onDeleteFromServer,
 }) => {
+  const { t } = useTranslation();
+
   // Jeu en attente de synchronisation
   if (isPending && !isUninstalling) {
     return (
@@ -182,14 +187,13 @@ const ActionButtons = ({
               </svg>
             </div>
             <div className="text-xl font-bold text-white mb-2">
-              Sync pending
+              {t('games.syncPending')}
             </div>
             <div className="text-sm text-slate-400 mb-3">
-              This game has been uninstalled but is waiting for
-              synchronization with the server.
+              {t('games.syncPendingDesc')}
             </div>
             <div className="text-xs text-yellow-400">
-              🚫 The game cannot be launched until synchronization is complete.
+              {t('games.cannotLaunchSync')}
             </div>
           </div>
         </div>
@@ -208,10 +212,10 @@ const ActionButtons = ({
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-400 border-t-transparent"></div>
             </div>
             <div className="text-xl font-bold text-white mb-2">
-              Uninstalling...
+              {t('games.uninstalling')}
             </div>
             <div className="text-sm text-slate-400">
-              Removing game files
+              {t('games.removingFiles')}
             </div>
           </div>
         </div>
@@ -259,12 +263,12 @@ const ActionButtons = ({
                 )}
               </div>
               <div className="text-xl font-bold text-white mb-2">
-                {isInstalling ? "Starting..." : "Install game"}
+                {isInstalling ? t('games.starting') : t('games.installGame')}
               </div>
               <div className="text-sm text-slate-400">
                 {isInstalling
-                  ? "Redirecting to downloads page"
-                  : `Download and install (${game.sizeMB} MB)`}
+                  ? t('games.redirecting')
+                  : t('games.downloadAndInstall', { size: game.sizeMB })}
               </div>
             </div>
           </button>
@@ -281,10 +285,10 @@ const ActionButtons = ({
                   <FiTrash2 className="text-red-400 text-3xl" />
                 </div>
                 <div className="text-xl font-bold text-white mb-2">
-                  Delete from server
+                  {t('games.deleteFromServerBtn')}
                 </div>
                 <div className="text-sm text-slate-400">
-                  Admin only
+                  {t('games.adminOnly')}
                 </div>
               </div>
             </button>
@@ -302,7 +306,7 @@ const ActionButtons = ({
           <FiPlay className="text-white text-base md:text-lg" />
         </div>
         <h3 className="text-xl md:text-2xl font-bold text-white">
-          Actions
+          {t('games.actions')}
         </h3>
       </div>
 
@@ -319,10 +323,10 @@ const ActionButtons = ({
                   <FiSquare className="text-orange-400 text-xl md:text-2xl" />
                 </div>
                 <div className="text-base md:text-lg font-bold text-white mb-1">
-                  Stop
+                  {t('games.stop')}
                 </div>
                 <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
-                  End session
+                  {t('games.endSession')}
                 </div>
               </div>
             </button>
@@ -337,10 +341,10 @@ const ActionButtons = ({
                   <FiZap className="text-red-400 text-xl md:text-2xl" />
                 </div>
                 <div className="text-base md:text-lg font-bold text-white mb-1">
-                  Force stop
+                  {t('games.forceStop')}
                 </div>
                 <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
-                  Force quit
+                  {t('games.forceQuit')}
                 </div>
               </div>
             </button>
@@ -356,10 +360,10 @@ const ActionButtons = ({
                 <FiPlay className="text-green-400 text-2xl md:text-3xl" />
               </div>
               <div className="text-lg md:text-xl font-bold text-white mb-2">
-                Play now
+                {t('games.playNow')}
               </div>
               <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
-                Launch game
+                {t('games.launchGame')}
               </div>
             </div>
           </button>
@@ -375,10 +379,10 @@ const ActionButtons = ({
               <FiFolder className="text-blue-400 text-xl md:text-2xl" />
             </div>
             <div className="text-base md:text-lg font-bold text-white mb-1">
-              Folder
+              {t('games.folder')}
             </div>
             <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
-              Open folder
+              {t('games.openFolder')}
             </div>
           </div>
         </button>
@@ -393,10 +397,10 @@ const ActionButtons = ({
               <FiTrash2 className="text-red-400 text-xl md:text-2xl" />
             </div>
             <div className="text-base md:text-lg font-bold text-white mb-1">
-              Uninstall
+              {t('games.uninstall')}
             </div>
             <div className="text-xs md:text-sm text-slate-400 hidden sm:block">
-              Remove game
+              {t('games.removeGame')}
             </div>
           </div>
         </button>
@@ -406,6 +410,8 @@ const ActionButtons = ({
 };
 
 const GameStatistics = ({ stats, isPlaying }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="mt-6 md:mt-8">
       <div className="flex items-center gap-3 mb-4 md:mb-6">
@@ -413,7 +419,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
           <FiBarChart2 className="text-white text-base md:text-lg" />
         </div>
         <h3 className="text-xl md:text-2xl font-bold text-white">
-          Game statistics
+          {t('games.gameStatistics')}
         </h3>
       </div>
 
@@ -424,7 +430,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-400 text-sm font-medium">
-                Total time
+                {t('games.totalTime')}
               </span>
               <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 rounded-lg">
                 <FiClock className="text-blue-400 text-lg" />
@@ -445,7 +451,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-400 text-sm font-medium">
-                Sessions
+                {t('games.sessions')}
               </span>
               <div className="flex items-center justify-center w-8 h-8 bg-purple-500/20 rounded-lg">
                 <FiTarget className="text-purple-400 text-lg" />
@@ -466,7 +472,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-400 text-sm font-medium">
-                Average time
+                {t('games.averageTime')}
               </span>
               <div className="flex items-center justify-center w-8 h-8 bg-emerald-500/20 rounded-lg">
                 <FiTrendingUp className="text-emerald-400 text-lg" />
@@ -490,11 +496,11 @@ const GameStatistics = ({ stats, isPlaying }) => {
               <FiPlay className="text-white text-lg" />
             </div>
             <span className="text-slate-300 font-medium">
-              First launch
+              {t('games.firstLaunch')}
             </span>
           </div>
           <div className="text-white font-semibold text-lg">
-            {stats.firstLaunchedFormatted || "Never"}
+            {stats.firstLaunchedFormatted || t('games.never')}
           </div>
         </div>
 
@@ -504,11 +510,11 @@ const GameStatistics = ({ stats, isPlaying }) => {
               <FiActivity className="text-white text-lg" />
             </div>
             <span className="text-slate-300 font-medium">
-              Last session
+              {t('games.lastSession')}
             </span>
           </div>
           <div className="text-white font-semibold text-lg">
-            {stats.lastPlayedFormatted || "Never"}
+            {stats.lastPlayedFormatted || t('games.never')}
           </div>
         </div>
       </div>
@@ -521,7 +527,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
               🎮
             </span>
             <span className="font-bold text-lg text-white">
-              Game in progress...
+              {t('games.gameInProgress')}
             </span>
           </div>
           <div className="flex gap-1">
@@ -551,33 +557,35 @@ const GameInformation = ({
   getGenresArray,
   getPlatformsArray,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div>
       <div className="bg-gray-800 rounded-lg p-4">
-        <h3 className="font-bold mb-4">Information</h3>
+        <h3 className="font-bold mb-4">{t('games.information')}</h3>
 
         <div className="space-y-3 text-sm">
           <div>
-            <span className="text-gray-400">Developer:</span>
-            <p className="text-white">{game.developer || "Unknown"}</p>
+            <span className="text-gray-400">{t('games.developer')}</span>
+            <p className="text-white">{game.developer || t('games.unknown')}</p>
           </div>
 
           <div>
-            <span className="text-gray-400">Publisher:</span>
-            <p className="text-white">{game.publisher || "Unknown"}</p>
+            <span className="text-gray-400">{t('games.publisher')}</span>
+            <p className="text-white">{game.publisher || t('games.unknown')}</p>
           </div>
 
           <div>
-            <span className="text-gray-400">Release date:</span>
+            <span className="text-gray-400">{t('games.releaseDate')}</span>
             <p className="text-white">
               {game.releaseDate
                 ? dayjs(game.releaseDate).format("DD/MM/YYYY")
-                : "Unknown"}
+                : t('games.unknown')}
             </p>
           </div>
 
           <div>
-            <span className="text-gray-400">Genres:</span>
+            <span className="text-gray-400">{t('games.genres')}</span>
             <div className="flex flex-wrap gap-1 mt-1">
               {getGenresArray(game).map((genre, index) => (
                 <span
@@ -591,7 +599,7 @@ const GameInformation = ({
           </div>
 
           <div>
-            <span className="text-gray-400">Platforms:</span>
+            <span className="text-gray-400">{t('games.platforms')}</span>
             <div className="flex flex-wrap gap-1 mt-1">
               {getPlatformsArray(game).map((platform, index) => (
                 <span
@@ -608,18 +616,18 @@ const GameInformation = ({
             <>
               <div>
                 <span className="text-gray-400">
-                  Installed size:
+                  {t('games.installedSize')}
                 </span>
                 <p className="text-white">
-                  {gameSize ? `${gameSize.sizeGB} GB` : "Calculating..."}
+                  {gameSize ? `${gameSize.sizeGB} GB` : t('games.calculating')}
                 </p>
               </div>
 
               <div>
                 <span className="text-gray-400">
-                  Last session:
+                  {t('games.lastSession')}
                 </span>
-                <p className="text-white">Never</p>
+                <p className="text-white">{t('games.never')}</p>
               </div>
             </>
           )}
@@ -627,7 +635,7 @@ const GameInformation = ({
           {!isInstalled && (
             <div>
               <span className="text-gray-400">
-                Download size:
+                {t('games.downloadSize')}
               </span>
               <p className="text-white">{game.sizeMB} MB</p>
             </div>

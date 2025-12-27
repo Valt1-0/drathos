@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { FiSearch, FiClock, FiTrash2, FiPlus } from "react-icons/fi";
 import GameCover from "../GameCover";
 
@@ -20,6 +21,7 @@ const GameLibrary = ({
   onAddGame,
   getGenresArray,
 }) => {
+  const { t } = useTranslation();
   const [FixedSizeList, setFixedSizeList] = useState(null);
 
   // Charger react-window de manière asynchrone pour éviter les problèmes d'imports
@@ -41,7 +43,7 @@ const GameLibrary = ({
 
       const gameGenres = getGenresArray(game);
       const matchesGenre =
-        selectedGenre === "All" || gameGenres.includes(selectedGenre);
+        selectedGenre === t('games.allGenres') || gameGenres.includes(selectedGenre);
 
       return matchesSearch && matchesGenre;
     });
@@ -49,10 +51,10 @@ const GameLibrary = ({
 
   const allGenres = useMemo(() => {
     return [
-      "All",
+      t('games.allGenres'),
       ...new Set(games.flatMap((game) => getGenresArray(game))),
     ];
-  }, [games, getGenresArray]);
+  }, [games, getGenresArray, t]);
 
   const isInstalled = useCallback((gameId) =>
     installedGames.some((g) => g.serverGameId?._id === gameId),
@@ -129,7 +131,7 @@ const GameLibrary = ({
                 {uninstalling && (
                   <div className="flex items-center gap-1 text-orange-400">
                     <FiTrash2 className="w-2.5 h-2.5" />
-                    <span>Removing</span>
+                    <span>{t('games.removing')}</span>
                   </div>
                 )}
 
@@ -139,7 +141,7 @@ const GameLibrary = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Pending</span>
+                    <span>{t('games.pending')}</span>
                   </div>
                 )}
 
@@ -162,13 +164,13 @@ const GameLibrary = ({
   return (
     <div className="w-56 xl:w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
       <div className="p-3 xl:p-4 space-y-3">
-        <h1 className="text-lg xl:text-xl font-bold text-white">Library</h1>
+        <h1 className="text-lg xl:text-xl font-bold text-white">{t('nav.library')}</h1>
 
         <div className="relative">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
           <input
             type="text"
-            placeholder="Search games..."
+            placeholder={t('games.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full bg-gray-800 text-white text-sm pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 transition-all placeholder-gray-500"
@@ -192,8 +194,8 @@ const GameLibrary = ({
         {filteredGames.length === 0 ? (
           <div className="h-full flex items-center justify-center px-4 text-center">
             <div className="text-gray-500">
-              <p className="text-sm mb-1">No games found</p>
-              <p className="text-xs">Try adjusting your search or filters</p>
+              <p className="text-sm mb-1">{t('games.noGamesFound')}</p>
+              <p className="text-xs">{t('games.noGamesMessage')}</p>
             </div>
           </div>
         ) : FixedSizeList ? (
@@ -227,14 +229,14 @@ const GameLibrary = ({
             className="w-full px-4 py-2.5 bg-gray-800 hover:bg-gray-750 text-gray-200 rounded-lg font-medium transition-all duration-200 border border-gray-700 hover:border-gray-600 flex items-center justify-center gap-2 group"
           >
             <FiPlus className="text-base group-hover:rotate-90 transition-transform duration-300" />
-            Add Game
+            {t('games.addGame')}
           </button>
         )}
 
         <div className="flex justify-between text-sm">
-          <span className="text-gray-400">{games.length} games</span>
+          <span className="text-gray-400">{t('games.gamesCount', { count: games.length })}</span>
           <span className="text-green-400 font-medium">
-            {installedGames.length} installed
+            {t('games.installedCount', { count: installedGames.length })}
           </span>
         </div>
       </div>

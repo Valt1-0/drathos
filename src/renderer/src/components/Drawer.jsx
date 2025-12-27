@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FaBars,
   FaTrash,
@@ -14,19 +15,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import ConfirmationModal from "./modals/ConfirmationModal";
 import syncQueue from "../utils/syncQueue";
 
-const menuItems = [
-  { label: "Home", icon: FaHome, path: "/" },
-  { label: "Library", icon: FaGamepad, path: "/games" },
-  { label: "Downloads", icon: FaDownload, path: "/download" },
-  { label: "Settings", icon: FaGear, path: "/settings" },
-];
-
 const Drawer = ({ children }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingSyncs, setPendingSyncs] = useState(0);
   const { user } = useAuth();
   const location = useLocation();
+
+  const menuItems = [
+    { label: t('nav.home'), icon: FaHome, path: "/" },
+    { label: t('nav.library'), icon: FaGamepad, path: "/games" },
+    { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
+    { label: t('nav.settings'), icon: FaGear, path: "/settings" },
+  ];
 
   // Listen to sync queue changes
   useEffect(() => {
@@ -228,7 +230,7 @@ const Drawer = ({ children }) => {
                     transition={{ duration: 0.2 }}
                     className="ml-4 font-medium text-slate-300 group-hover:text-red-400"
                   >
-                    Clear Data
+                    {t('nav.clearData')}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -283,7 +285,7 @@ const Drawer = ({ children }) => {
                       <p className="text-sm font-semibold text-white truncate">
                         {user.username}
                       </p>
-                      <p className="text-xs text-slate-400">Online</p>
+                      <p className="text-xs text-slate-400">{t('nav.userOnline')}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -303,10 +305,10 @@ const Drawer = ({ children }) => {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handlerDeleteUserData}
-        title="Clear All Data"
-        message="Are you sure you want to delete all your local data? This action is irreversible."
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('modals.clearData.title')}
+        message={t('modals.clearData.message')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         confirmColor="red"
         icon={FaTrash}
       />

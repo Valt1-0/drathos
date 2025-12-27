@@ -3,6 +3,8 @@ import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from "reac
 import { Toaster } from "sonner";
 import { motion } from "framer-motion";
 import { FiLoader } from "react-icons/fi";
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n/config';
 
 import { AuthProvider, useAuth } from "./contexts/authContext";
 import { DownloadProvider } from "./contexts/downloadContext";
@@ -130,13 +132,14 @@ export default function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <ConnectionProvider>
-          <DownloadProvider>
-            <UploadProvider>
-              <UpdateProvider>
-                <Router>
+    <I18nextProvider i18n={i18n}>
+      <ErrorBoundary>
+        <AuthProvider>
+          <ConnectionProvider>
+            <DownloadProvider>
+              <UploadProvider>
+                <UpdateProvider>
+                  <Router>
                   <div className="flex flex-col h-screen overflow-hidden">
                     <TitleBar />
                     <div className="flex-1 overflow-hidden">
@@ -165,12 +168,13 @@ export default function App() {
                       descriptionClassName: 'sonner-description',
                     }}
                   />
-                </Router>
-              </UpdateProvider>
-            </UploadProvider>
-          </DownloadProvider>
-        </ConnectionProvider>
-      </AuthProvider>
-    </ErrorBoundary>
+                  </Router>
+                </UpdateProvider>
+              </UploadProvider>
+            </DownloadProvider>
+          </ConnectionProvider>
+        </AuthProvider>
+      </ErrorBoundary>
+    </I18nextProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { checkServerStatus } from "../api/server";
 import { useAuth } from "../contexts/authContext";
 import {
@@ -20,6 +21,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 const Welcome = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { login, register } = useAuth();
 
@@ -49,7 +51,7 @@ const Welcome = () => {
 
   const handleServerCheck = async () => {
     if (!validateAddress(serverAddress)) {
-      setServerStatus({ online: false, error: "Format d'adresse invalide. Utilisez une IP ou un nom de domaine (port optionnel)" });
+      setServerStatus({ online: false, error: t('welcome.invalidAddress') });
       return;
     }
 
@@ -94,9 +96,9 @@ const Welcome = () => {
                   <FiCheckCircle className="text-green-400 text-2xl" />
                 </motion.div>
                 <div className="text-left flex-1">
-                  <div className="text-lg font-bold text-white">Serveur en ligne</div>
+                  <div className="text-lg font-bold text-white">{t('welcome.serverOnline')}</div>
                   <div className="text-sm text-green-400">
-                    Connexion établie avec succès
+                    {t('welcome.connectionSuccess')}
                     {serverStatus.protocol && (
                       <span className="ml-2 px-2 py-0.5 bg-green-500/20 rounded text-xs font-semibold uppercase">
                         {serverStatus.protocol}
@@ -118,7 +120,7 @@ const Welcome = () => {
                   <FiX className="text-red-400 text-2xl" />
                 </motion.div>
                 <div className="text-left flex-1">
-                  <div className="text-lg font-bold text-white">Serveur hors ligne</div>
+                  <div className="text-lg font-bold text-white">{t('welcome.serverOffline')}</div>
                   <div className="text-sm text-red-400">{serverStatus.error}</div>
                 </div>
               </div>
@@ -134,7 +136,7 @@ const Welcome = () => {
 
     if (authMode === "register") {
       if (formData.password !== formData.confirmPassword) {
-        setError("Les mots de passe ne correspondent pas.");
+        setError(t('welcome.passwordMismatch'));
         return;
       }
 
@@ -142,14 +144,14 @@ const Welcome = () => {
       if (result.success) {
         navigate("/");
       } else {
-        setError(result.error || "Échec de l'inscription.");
+        setError(result.error || t('welcome.registerFailed'));
       }
     } else {
       const result = await login(formData.username, formData.password);
       if (result.success) {
         navigate("/");
       } else {
-        setError(result.error || "Échec de la connexion.");
+        setError(result.error || t('welcome.loginFailed'));
       }
     }
   };
@@ -214,7 +216,7 @@ const Welcome = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
-                Welcome to Drathos
+                {t('welcome.title')}
               </motion.h1>
 
               {/* Subtitle */}
@@ -224,7 +226,7 @@ const Welcome = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                Your new personalized game library. Let's start the setup!
+                {t('welcome.subtitle')}
               </motion.p>
             </motion.div>
 
@@ -236,9 +238,9 @@ const Welcome = () => {
               transition={{ duration: 0.6, delay: 0.5 }}
             >
               {[
-                { icon: FiServer, color: "blue", title: "Distributed Server", desc: "Host your games on your own server", delay: 0.6 },
-                { icon: FiCheckCircle, color: "purple", title: "Easy Installation", desc: "Download and install in just a few clicks", delay: 0.7 },
-                { icon: FiPlay, color: "green", title: "Launch in 1 Click", desc: "Start your games instantly", delay: 0.8 }
+                { icon: FiServer, color: "blue", titleKey: "welcome.featureDistributed", descKey: "welcome.featureDistributedDesc", delay: 0.6 },
+                { icon: FiCheckCircle, color: "purple", titleKey: "welcome.featureEasyInstall", descKey: "welcome.featureEasyInstallDesc", delay: 0.7 },
+                { icon: FiPlay, color: "green", titleKey: "welcome.featureLaunch", descKey: "welcome.featureLaunchDesc", delay: 0.8 }
               ].map((feature, index) => (
                 <motion.div
                   key={index}
@@ -257,8 +259,8 @@ const Welcome = () => {
                     >
                       <feature.icon className={`text-${feature.color}-400 text-2xl`} />
                     </motion.div>
-                    <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                    <p className="text-sm text-slate-400">{feature.desc}</p>
+                    <h3 className="text-lg font-semibold text-white mb-2">{t(feature.titleKey)}</h3>
+                    <p className="text-sm text-slate-400">{t(feature.descKey)}</p>
                   </div>
                 </motion.div>
               ))}
@@ -286,8 +288,8 @@ const Welcome = () => {
                     <FiArrowRight className="text-blue-400 text-2xl" />
                   </motion.div>
                   <div className="text-left">
-                    <div className="text-xl font-bold text-white">Commencer la configuration</div>
-                    <div className="text-sm text-slate-400">3 étapes rapides</div>
+                    <div className="text-xl font-bold text-white">{t('welcome.getStarted')}</div>
+                    <div className="text-sm text-slate-400">{t('welcome.quickSteps')}</div>
                   </div>
                 </div>
               </motion.button>
@@ -319,7 +321,7 @@ const Welcome = () => {
               >
                 <FiServer className="text-white text-2xl" />
               </motion.div>
-              <h2 className="text-4xl font-bold text-white">Configuration du serveur</h2>
+              <h2 className="text-4xl font-bold text-white">{t('welcome.serverSetup')}</h2>
             </motion.div>
 
             {/* Server Input Card */}
@@ -333,7 +335,7 @@ const Welcome = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10">
                 <label className="text-base text-slate-400 font-medium mb-3 block">
-                  Adresse du serveur
+                  {t('welcome.serverAddress')}
                 </label>
                 <div className="relative">
                   <input
@@ -341,7 +343,7 @@ const Welcome = () => {
                     value={serverAddress}
                     onChange={(e) => setServerAddress(e.target.value)}
                     onKeyDown={handleServerKeyDown}
-                    placeholder="192.168.1.100:3000 ou domain.com:3000"
+                    placeholder={t('welcome.serverAddressPlaceholder')}
                     className="w-full p-4 pr-14 text-lg rounded-xl text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
                   />
                   <div className="absolute top-1/2 -translate-y-1/2 right-4">
@@ -387,10 +389,10 @@ const Welcome = () => {
                 </div>
                 <div className="text-left">
                   <div className="text-xl font-bold text-white">
-                    {isChecking ? "Vérification en cours..." : "Vérifier la connexion"}
+                    {isChecking ? t('welcome.checking') : t('welcome.checkConnection')}
                   </div>
                   <div className="text-sm text-slate-400">
-                    Test de connectivité au serveur
+                    {t('welcome.connectivityTest')}
                   </div>
                 </div>
               </div>
@@ -420,7 +422,7 @@ const Welcome = () => {
                   >
                     <FiArrowLeft className="text-slate-400 text-lg" />
                   </motion.div>
-                  <div className="text-lg font-bold text-white">Retour</div>
+                  <div className="text-lg font-bold text-white">{t('common.back')}</div>
                 </div>
               </motion.button>
 
@@ -433,7 +435,7 @@ const Welcome = () => {
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative z-10 flex items-center justify-center gap-3">
-                  <div className="text-lg font-bold text-white">Suivant</div>
+                  <div className="text-lg font-bold text-white">{t('common.next')}</div>
                   <motion.div
                     className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-all duration-300"
                     whileHover={{ x: 3 }}
@@ -481,7 +483,7 @@ const Welcome = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  {authMode === "login" ? "Connexion" : "Inscription"}
+                  {authMode === "login" ? t('welcome.login') : t('welcome.register')}
                 </motion.h2>
               </div>
 
@@ -495,7 +497,7 @@ const Welcome = () => {
                       : "text-slate-400 hover:text-slate-300"
                   }`}
                 >
-                  Connexion
+                  {t('welcome.login')}
                 </button>
                 <button
                   onClick={() => setAuthMode("register")}
@@ -505,7 +507,7 @@ const Welcome = () => {
                       : "text-slate-400 hover:text-slate-300"
                   }`}
                 >
-                  Inscription
+                  {t('welcome.register')}
                 </button>
               </div>
             </motion.div>
@@ -525,7 +527,7 @@ const Welcome = () => {
                       <FiX className="text-red-400 text-lg" />
                     </div>
                     <div className="text-left flex-1">
-                      <div className="text-sm font-bold text-white">Erreur</div>
+                      <div className="text-sm font-bold text-white">{t('common.error')}</div>
                       <div className="text-xs text-red-400">{error}</div>
                     </div>
                   </div>
@@ -554,11 +556,11 @@ const Welcome = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="relative z-10">
                     <label className="text-sm text-slate-400 font-medium mb-2 block">
-                      Nom d'utilisateur
+                      {t('welcome.username')}
                     </label>
                     <input
                       type="text"
-                      placeholder="Entrez votre nom d'utilisateur"
+                      placeholder={t('welcome.usernamePlaceholder')}
                       className="w-full p-3 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
                       value={formData.username}
                       onChange={(e) =>
@@ -580,12 +582,12 @@ const Welcome = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="relative z-10">
                     <label className="text-sm text-slate-400 font-medium mb-2 block">
-                      Mot de passe
+                      {t('welcome.password')}
                     </label>
                     <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
-                        placeholder="Entrez votre mot de passe"
+                        placeholder={t('welcome.passwordPlaceholder')}
                         className="w-full p-3 pr-12 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
                         value={formData.password}
                         onChange={(e) =>
@@ -617,12 +619,12 @@ const Welcome = () => {
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="relative z-10">
                       <label className="text-sm text-slate-400 font-medium mb-2 block">
-                        Confirmer le mot de passe
+                        {t('welcome.confirmPassword')}
                       </label>
                       <div className="relative">
                         <input
                           type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Confirmez votre mot de passe"
+                          placeholder={t('welcome.confirmPasswordPlaceholder')}
                           className="w-full p-3 pr-12 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500"
                           value={formData.confirmPassword}
                           onChange={(e) =>
@@ -669,7 +671,7 @@ const Welcome = () => {
                   >
                     <FiArrowLeft className="text-slate-400 text-lg" />
                   </motion.div>
-                  <div className="text-base font-bold text-white">Retour</div>
+                  <div className="text-base font-bold text-white">{t('common.back')}</div>
                 </div>
               </motion.button>
 
@@ -682,7 +684,7 @@ const Welcome = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative z-10 flex items-center justify-center gap-2">
                   <div className="text-base font-bold text-white">
-                    {authMode === "login" ? "Se connecter" : "S'inscrire"}
+                    {authMode === "login" ? t('welcome.signIn') : t('welcome.signUp')}
                   </div>
                   <motion.div
                     className="flex items-center justify-center w-9 h-9 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-all duration-300"
