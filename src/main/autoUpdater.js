@@ -23,22 +23,24 @@ export class AutoUpdateManager {
     // Toujours configurer les événements (même en dev pour le débogage)
     this.setupEvents();
 
+    // Auto-update temporairement désactivé
     // Configuration du feed uniquement en production
-    if (this.isProduction) {
-      try {
-        autoUpdater.setFeedURL({
-          provider: 'generic',
-          url: 'https://drathos.gg/downloads',
-          // Ou utiliser votre backend:
-          // url: 'https://api.drathos.gg/updates',
-        });
-        logger.info('[AutoUpdater] Generic feed configured');
-      } catch (error) {
-        logger.error('[AutoUpdater] Failed to configure feed:', error);
-      }
-    } else {
-      logger.info('[AutoUpdater] Dev mode - updates disabled');
-    }
+    // if (this.isProduction) {
+    //   try {
+    //     autoUpdater.setFeedURL({
+    //       provider: 'generic',
+    //       url: 'https://drathos.gg/downloads',
+    //       // Ou utiliser votre backend:
+    //       // url: 'https://api.drathos.gg/updates',
+    //     });
+    //     logger.info('[AutoUpdater] Generic feed configured');
+    //   } catch (error) {
+    //     logger.error('[AutoUpdater] Failed to configure feed:', error);
+    //   }
+    // } else {
+    //   logger.info('[AutoUpdater] Dev mode - updates disabled');
+    // }
+    logger.info('[AutoUpdater] Auto-update disabled - no feed configured');
   }
 
   setMainWindow(window) {

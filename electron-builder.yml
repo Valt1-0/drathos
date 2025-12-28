@@ -110,7 +110,8 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
 
-publish:
-  provider: generic
-  url: https://drathos.gg/downloads
+# Auto-update désactivé temporairement
+# publish:
+#   provider: generic
+#   url: https://drathos.gg/downloads
 
