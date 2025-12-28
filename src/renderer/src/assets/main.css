@@ -1,36 +1,224 @@
 @import "tailwindcss";
 
-/* GLOBAL SCROLLBAR STYLES */
+/* APP THEME VARIABLES - Source values that JavaScript will modify */
+:root {
+  /* Default: Dark Modern theme */
+  --app-primary: #6366F1;
+  --app-primaryHover: #4F46E5;
+  --app-secondary: #8B5CF6;
+  --app-secondaryHover: #7C3AED;
+  --app-accent: #14B8A6;
+  --app-accentHover: #0D9488;
+  --app-background: #0A0A0A;
+  --app-backgroundSecondary: #141414;
+  --app-surface: #1A1A1A;
+  --app-text: #FAFAFA;
+  --app-textSecondary: #A3A3A3;
+  --app-border: rgba(99, 102, 241, 0.15);
+  --app-success: #22C55E;
+  --app-error: #EF4444;
+  --app-warning: #F59E0B;
+
+  /* Gradients */
+  --app-gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  --app-gradient-secondary: linear-gradient(135deg, #14B8A6 0%, #6366F1 100%);
+  --app-gradient-button: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+
+  /* Shadows */
+  --app-shadow-primary: 0 8px 32px rgba(99, 102, 241, 0.25);
+  --app-shadow-secondary: 0 8px 32px rgba(139, 92, 246, 0.25);
+  --app-shadow-accent: 0 8px 32px rgba(20, 184, 166, 0.25);
+
+  /* Glassmorphism */
+  --app-glass-bg: rgba(255, 255, 255, 0.05);
+  --app-glass-border: rgba(255, 255, 255, 0.1);
+  --app-glass-blur: 16px;
+
+  /* Text Opacity */
+  --app-text-opacity-high: 0.95;
+  --app-text-opacity-medium: 0.75;
+  --app-text-opacity-low: 0.6;
+}
+
+/* LIGHT THEME OVERRIDES */
+[data-theme="lightModern"] {
+  --app-glass-bg: rgba(0, 0, 0, 0.03);
+  --app-glass-border: rgba(0, 0, 0, 0.08);
+}
+
+/* TAILWIND V4 THEME - Map app variables to Tailwind utilities */
+@theme {
+  /* Colors */
+  --color-primary: var(--app-primary);
+  --color-primary-hover: var(--app-primaryHover);
+  --color-secondary: var(--app-secondary);
+  --color-secondary-hover: var(--app-secondaryHover);
+  --color-accent: var(--app-accent);
+  --color-accent-hover: var(--app-accentHover);
+  --color-background: var(--app-background);
+  --color-background-secondary: var(--app-backgroundSecondary);
+  --color-surface: var(--app-surface);
+  --color-text: var(--app-text);
+  --color-text-secondary: var(--app-textSecondary);
+  --color-border: var(--app-border);
+  --color-success: var(--app-success);
+  --color-error: var(--app-error);
+  --color-warning: var(--app-warning);
+
+  /* Background images (gradients) */
+  --background-image-gradient-primary: var(--app-gradient-primary);
+  --background-image-gradient-secondary: var(--app-gradient-secondary);
+  --background-image-gradient-button: var(--app-gradient-button);
+
+  /* Box shadows */
+  --box-shadow-primary: var(--app-shadow-primary);
+  --box-shadow-secondary: var(--app-shadow-secondary);
+  --box-shadow-accent: var(--app-shadow-accent);
+}
+
+/* GLOBAL SCROLLBAR STYLES - Dynamic based on theme */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937; /* Tailwind gray-800 */
+  background: var(--app-backgroundSecondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563; /* Tailwind gray-600 */
-  border-radius: 6px;
+  background: var(--app-surface);
+  border-radius: 8px;
+  border: 2px solid var(--app-backgroundSecondary);
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280; /* Tailwind gray-500 */
+  background: var(--app-primary);
 }
 
 * {
   user-select: none;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 img {
   pointer-events: none;
 }
 
-/* .drag-zone {
-  -webkit-app-region: drag;
+body {
+  font-feature-settings: 'cv11', 'ss01';
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.no-drag {
-  -webkit-app-region: no-drag;
-} */
+/* SMOOTH TRANSITIONS FOR THEME CHANGES */
+html, body, #root {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ENHANCED ANIMATIONS */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ===== EFFETS AVANCÉS (Non disponibles en Tailwind pur) ===== */
+
+/* Glass avec bordure gradient (nécessite ::before pseudo-élément) */
+.glass-gradient-border {
+  position: relative;
+  background: var(--app-glass-bg);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+}
+
+.glass-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--app-gradient-primary);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.glass-gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* Gradient overlay avec ::after */
+.gradient-overlay-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.gradient-overlay-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--app-gradient-primary);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.gradient-overlay-primary:hover::after {
+  opacity: 0.1;
+}
+
+/* Ripple Effect avec ::before */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, var(--app-primary) 10%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+
+.ripple:active::before {
+  opacity: 0.3;
+  transition: opacity 0s;
+}
+
+/* ===== NOTE =====
+  La plupart des effets ont été migrés vers Tailwind (voir tailwind.config.js):
+  - .glass → Utiliser la classe Tailwind "glass"
+  - .glass-frosted → Utiliser la classe Tailwind "glass-frosted"
+  - .gradient-text → Utiliser la classe Tailwind "gradient-text"
+  - .btn-press → Utiliser la classe Tailwind "btn-press"
+  - .glow-hover → Utiliser la classe Tailwind "hover-glow"
+  - .hover-lift → Utiliser la classe Tailwind "hover-lift"
+  - Animations → Utiliser animate-{name} (fadeIn, slideIn, shimmer, glow-pulse, etc.)
+
+  Voir TAILWIND_DESIGN_GUIDE.md pour tous les exemples
+================ */

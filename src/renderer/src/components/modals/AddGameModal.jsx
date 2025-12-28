@@ -19,9 +19,9 @@ import {
 import { FaWindows, FaLinux, FaApple } from "react-icons/fa";
 
 const PLATFORM_CONFIG = {
-  windows: { icon: FaWindows, color: 'text-blue-400', label: 'Windows' },
-  linux: { icon: FaLinux, color: 'text-yellow-400', label: 'Linux' },
-  mac: { icon: FaApple, color: 'text-gray-400', label: 'Mac' }
+  windows: { icon: FaWindows, color: 'text-primary', label: 'Windows' },
+  linux: { icon: FaLinux, color: 'text-warning', label: 'Linux' },
+  mac: { icon: FaApple, color: 'text-text-secondary', label: 'Mac' }
 };
 
 const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
@@ -224,11 +224,11 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
             transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
             className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden">
+            <div className="glass backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden">
               {/* Close Button */}
               <button
                 onClick={handleClose}
-                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-all duration-200"
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-surface hover:bg-surface/80 text-text-secondary hover:text-text transition-all duration-200"
               >
                 <FiX className="text-lg" />
               </button>
@@ -237,14 +237,14 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="p-8">
                   {/* Header */}
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-lg shadow-primary">
                       <FiUpload className="text-3xl text-white" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-white">
+                      <h2 className="text-2xl font-bold text-text">
                         Add a Game
                       </h2>
-                      <p className="text-slate-400 text-sm">
+                      <p className="text-text-secondary text-sm">
                         Search and upload a new game
                       </p>
                     </div>
@@ -255,15 +255,15 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4"
+                      className="mb-6 bg-error/10 border border-error/20 rounded-xl p-4"
                     >
                       <div className="flex items-start gap-3">
-                        <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0 mt-0.5" />
+                        <FiAlertTriangle className="text-error text-lg flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-red-400 font-semibold text-sm mb-1">
+                          <p className="text-error font-semibold text-sm mb-1">
                             Error
                           </p>
-                          <p className="text-slate-300 text-sm break-words">
+                          <p className="text-text-secondary text-sm break-words">
                             {errorMessage}
                           </p>
                         </div>
@@ -273,12 +273,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
                   {/* Search Input */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
                       Search for IGDB Game
                     </label>
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                        <FiSearch className="text-slate-400" />
+                        <FiSearch className="text-text-secondary" />
                       </div>
                       <input
                         type="text"
@@ -288,18 +288,18 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           setSelectedGame(null);
                         }}
                         placeholder="Search for a game by name..."
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white placeholder-slate-500"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-text placeholder-text-secondary"
                       />
                     </div>
                   </div>
 
                   {/* Suggestions List */}
                   {!selectedGame && (
-                    <div className="mb-6 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-slate-800 rounded-xl pr-2">
+                    <div className="mb-6 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface rounded-xl pr-2">
                       {loading && (
                         <div className="flex items-center justify-center py-8">
-                          <FiLoader className="text-3xl text-blue-400 animate-spin" />
-                          <span className="ml-3 text-slate-400">Searching...</span>
+                          <FiLoader className="text-3xl text-primary animate-spin" />
+                          <span className="ml-3 text-text-secondary">Searching...</span>
                         </div>
                       )}
 
@@ -316,20 +316,20 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                                 ease: "easeOut"
                               }}
                               onClick={() => handleSelect(game.id)}
-                              className="group p-4 bg-slate-800/50 border border-slate-700 hover:border-blue-500/50 rounded-xl cursor-pointer transition-all duration-200 hover:bg-slate-800"
+                              className="group p-4 bg-surface border border-border hover:border-primary/50 rounded-xl cursor-pointer transition-all duration-200 hover:bg-surface/80"
                             >
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <div className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                  <div className="font-semibold text-text group-hover:text-primary transition-colors">
                                     {game.name}
                                   </div>
-                                  <div className="text-sm text-slate-400">
+                                  <div className="text-sm text-text-secondary">
                                     {game.first_release_date
                                       ? new Date(game.first_release_date * 1000).getFullYear()
                                       : "Unknown Date"}
                                   </div>
                                 </div>
-                                <FiCheck className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                                <FiCheck className="text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                               </div>
                             </motion.div>
                           ))}
@@ -341,7 +341,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.3 }}
-                          className="text-center py-8 text-slate-400"
+                          className="text-center py-8 text-text-secondary"
                         >
                           <FiSearch className="text-4xl mx-auto mb-2 opacity-50" />
                           <p>No games found for "{query}"</p>
@@ -358,21 +358,21 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       className="space-y-4"
                     >
                       {/* Selected Game Card */}
-                      <div className="p-4 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl">
+                      <div className="p-4 bg-primary/10 border border-primary/30 rounded-xl">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                            <FiCheck className="text-green-400 text-xl" />
+                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <FiCheck className="text-success text-xl" />
                           </div>
                           <div>
-                            <p className="text-sm text-slate-400">Selected Game</p>
-                            <p className="font-bold text-white text-lg">{selectedGame.name}</p>
+                            <p className="text-sm text-text-secondary">Selected Game</p>
+                            <p className="font-bold text-text text-lg">{selectedGame.name}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* File Upload */}
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                        <label className="block text-sm font-medium text-text-secondary mb-2">
                           Game File
                         </label>
                         <div className="relative">
@@ -382,19 +382,19 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             disabled={isLoadingExecutables}
                             className={`flex items-center justify-center gap-3 w-full p-4 rounded-xl border-2 border-dashed transition-all duration-300 group ${
                               zipFile
-                                ? "bg-green-500/10 border-green-500/50"
-                                : "bg-slate-800/50 border-slate-700 hover:border-blue-500"
+                                ? "bg-success/10 border-success/50"
+                                : "bg-surface border border-border hover:border-primary"
                             } ${isLoadingExecutables ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
                           >
                             {isLoadingExecutables ? (
-                              <FiLoader className="text-xl text-blue-400 animate-spin" />
+                              <FiLoader className="text-xl text-primary animate-spin" />
                             ) : (
                               <FiUpload className={`text-xl transition-colors ${
-                                zipFile ? "text-green-400" : "text-slate-400 group-hover:text-blue-400"
+                                zipFile ? "text-success" : "text-text-secondary group-hover:text-primary"
                               }`} />
                             )}
                             <span className={`transition-colors ${
-                              zipFile ? "text-white" : "text-slate-400 group-hover:text-white"
+                              zipFile ? "text-text" : "text-text-secondary group-hover:text-text"
                             }`}>
                               {isLoadingExecutables
                                 ? "Analyzing..."
@@ -408,7 +408,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
                       {/* Version Input */}
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                        <label className="block text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
                           <FiFileText />
                           Game Version
                         </label>
@@ -417,13 +417,13 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           value={version}
                           onChange={(e) => setVersion(e.target.value)}
                           placeholder="1.0.0"
-                          className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+                          className="w-full p-3 rounded-xl bg-surface border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-text"
                         />
                       </div>
 
                       {/* Executable Selection */}
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                        <label className="block text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
                           <FiCpu />
                           Executable to launch (optional)
                         </label>
@@ -433,7 +433,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         {!isLoadingExecutables && availableExecutables.length > 0 && (
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <p className="text-xs text-green-400 flex items-center gap-1">
+                              <p className="text-xs text-success flex items-center gap-1">
                                 <FiCheck className="text-sm" />
                                 {availableExecutables.length} executable(s) found
                               </p>
@@ -441,14 +441,14 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                                 <button
                                   type="button"
                                   onClick={() => setExecutableName("")}
-                                  className="text-xs text-slate-400 hover:text-white transition-colors"
+                                  className="text-xs text-text-secondary hover:text-text transition-colors"
                                 >
                                   Clear Selection
                                 </button>
                               )}
                             </div>
 
-                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-slate-800 rounded-xl">
+                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-primary scrollbar-track-surface rounded-xl">
                               {Object.entries(PLATFORM_CONFIG).map(([platform, config]) => {
                                 const execs = availableExecutables.filter(e => e.platform === platform);
                                 if (execs.length === 0) return null;
@@ -468,17 +468,17 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                                         onClick={() => setExecutableName(exe.path)}
                                         className={`w-full text-left p-3 rounded-lg transition-all ${
                                           executableName === exe.path
-                                            ? 'bg-blue-500/20 border-2 border-blue-500'
-                                            : 'bg-slate-800/50 border border-slate-700 hover:border-slate-600 hover:bg-slate-800'
+                                            ? 'bg-primary/20 border-2 border-primary'
+                                            : 'bg-surface border border-border hover:border-border/60 hover:bg-surface/80'
                                         }`}
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-white text-sm truncate">{exe.name}</div>
-                                            <div className="text-xs text-slate-400 mt-1 break-all">{exe.path}</div>
+                                            <div className="font-medium text-text text-sm truncate">{exe.name}</div>
+                                            <div className="text-xs text-text-secondary mt-1 break-all">{exe.path}</div>
                                           </div>
                                           {executableName === exe.path && (
-                                            <FiCheck className="text-blue-400 flex-shrink-0 mt-1" />
+                                            <FiCheck className="text-primary flex-shrink-0 mt-1" />
                                           )}
                                         </div>
                                       </button>
@@ -498,9 +498,9 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                               value={executableName}
                               onChange={(e) => setExecutableName(e.target.value)}
                               placeholder="ex: game.exe or bin/server.exe"
-                              className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white placeholder-slate-500"
+                              className="w-full p-3 rounded-xl bg-surface border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-text placeholder-text-secondary"
                             />
-                            <p className="text-xs text-amber-400 flex items-center gap-1">
+                            <p className="text-xs text-warning flex items-center gap-1">
                               <FiAlertTriangle className="text-sm" />
                               No executables found automatically
                             </p>
@@ -509,33 +509,33 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
                         {/* No File Selected Yet */}
                         {!zipFile && (
-                          <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-500 text-sm">
+                          <div className="p-3 rounded-xl bg-surface border border-border text-text-secondary text-sm">
                             Select a file first to detect executables
                           </div>
                         )}
 
-                        <p className="text-xs text-slate-400 mt-2">
+                        <p className="text-xs text-text-secondary mt-2">
                           If empty, the game will automatically detect the executable on launch
                         </p>
                       </div>
 
                       {/* Public/Private Toggle */}
-                      <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                      <div className="flex items-center justify-between p-4 bg-surface rounded-xl border border-border">
                         <div className="flex items-center gap-3">
                           {isPublic ? (
-                            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                              <FiUnlock className="text-green-400 text-xl" />
+                            <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                              <FiUnlock className="text-success text-xl" />
                             </div>
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                              <FiLock className="text-yellow-400 text-xl" />
+                            <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                              <FiLock className="text-warning text-xl" />
                             </div>
                           )}
                           <div>
-                            <p className="font-medium text-white">
+                            <p className="font-medium text-text">
                               {isPublic ? "Public Game" : "Private Game"}
                             </p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-text-secondary">
                               {isPublic
                                 ? "Visible to all users"
                                 : "Visible only to you"}
@@ -545,7 +545,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         <button
                           onClick={() => setIsPublic(!isPublic)}
                           className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
-                            isPublic ? "bg-green-500" : "bg-slate-600"
+                            isPublic ? "bg-success" : "bg-surface"
                           }`}
                         >
                           <motion.div
@@ -565,14 +565,14 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             setErrorMessage("");
                             setUploadState("idle");
                           }}
-                          className="flex-1 px-6 py-3 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-200 border border-slate-700/50"
+                          className="flex-1 px-6 py-3 bg-surface hover:bg-surface/80 text-text-secondary hover:text-text rounded-xl font-medium transition-all duration-200 border border-border"
                         >
                           Back
                         </button>
                         <button
                           onClick={handleUpload}
                           disabled={!zipFile}
-                          className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                          className="flex-1 px-6 py-3 bg-success hover:bg-success/80 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-glow-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                         >
                           <FiUpload />
                           Upload

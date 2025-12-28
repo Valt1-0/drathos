@@ -19,40 +19,40 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="bg-gradient-to-br from-gray-800 to-gray-900 text-white p-6 md:p-8 rounded-2xl w-full max-w-md relative shadow-2xl border border-gray-700"
+            className="glass backdrop-blur-xl text-text p-6 md:p-8 rounded-2xl w-full max-w-md relative shadow-2xl"
           >
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600 transition-all duration-300 group"
+              className="absolute top-4 right-4 p-2 rounded-lg bg-surface hover:bg-surface/80 transition-all duration-300 group"
             >
-              <FiX className="text-xl text-gray-400 group-hover:text-white" />
+              <FiX className="text-xl text-text-secondary group-hover:text-text" />
             </button>
 
             {/* Header avec icône d'avertissement */}
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl">
+              <div className="p-3 bg-error rounded-xl">
                 <FiTrash2 className="text-2xl text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-red-100 to-orange-200 bg-clip-text text-transparent">
+                <h2 className="text-2xl font-bold text-text">
                   Uninstall game
                 </h2>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-text-secondary">
                   This action is irreversible
                 </p>
               </div>
             </div>
 
             {/* Bannière d'avertissement */}
-            <div className="mb-6 p-4 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-xl">
+            <div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-xl">
               <div className="flex items-start gap-3">
-                <FiAlertTriangle className="text-orange-400 text-xl flex-shrink-0 mt-0.5" />
+                <FiAlertTriangle className="text-warning text-xl flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-orange-200 font-medium mb-1">
+                  <p className="text-warning font-medium mb-1">
                     Warning
                   </p>
-                  <p className="text-sm text-orange-100/80">
+                  <p className="text-sm text-text-secondary">
                     All game files will be permanently deleted from
                     your computer.
                   </p>
@@ -63,9 +63,9 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
             {/* Informations du jeu */}
             <div className="space-y-3 mb-6">
               {/* Nom du jeu */}
-              <div className="p-4 bg-gray-700/30 rounded-lg border border-gray-600">
+              <div className="p-4 bg-surface rounded-lg border border-border">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-700 rounded-lg flex-shrink-0 overflow-hidden">
+                  <div className="w-12 h-12 bg-surface rounded-lg flex-shrink-0 overflow-hidden">
                     {game.coverUrl && (
                       <img
                         src={game.coverUrl}
@@ -78,8 +78,8 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-400">Game to uninstall</p>
-                    <p className="font-bold text-white text-lg truncate">
+                    <p className="text-sm text-text-secondary">Game to uninstall</p>
+                    <p className="font-bold text-text text-lg truncate">
                       {game.name}
                     </p>
                   </div>
@@ -88,21 +88,21 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
 
               {/* Informations de taille */}
               {gameSize && (
-                <div className="p-4 bg-gray-700/20 rounded-lg border border-gray-600/50">
+                <div className="p-4 bg-surface/50 rounded-lg border border-border">
                   <div className="flex items-center gap-2 mb-1">
-                    <FiHardDrive className="text-blue-400 text-lg" />
-                    <span className="text-sm text-gray-400">Space to free up</span>
+                    <FiHardDrive className="text-primary text-lg" />
+                    <span className="text-sm text-text-secondary">Space to free up</span>
                   </div>
-                  <p className="text-white font-bold text-xl">{gameSize.sizeGB} GB</p>
+                  <p className="text-text font-bold text-xl">{gameSize.sizeGB} GB</p>
                 </div>
               )}
             </div>
 
             {/* Message de confirmation */}
-            <div className="mb-6 p-4 bg-gray-700/20 rounded-lg border border-gray-600/50">
-              <p className="text-center text-gray-300 text-sm">
+            <div className="mb-6 p-4 bg-surface/50 rounded-lg border border-border">
+              <p className="text-center text-text-secondary text-sm">
                 Are you sure you want to uninstall{" "}
-                <span className="font-bold text-white">"{game.name}"</span>?
+                <span className="font-bold text-text">"{game.name}"</span>?
               </p>
             </div>
 
@@ -110,7 +110,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={onClose}
-                className="w-full sm:flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 px-4 py-3 bg-surface hover:bg-surface/80 text-text rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FiX />
                 Cancel
@@ -120,7 +120,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                   onConfirm();
                   onClose();
                 }}
-                className="w-full sm:flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-red-500/50 flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 px-4 py-3 bg-error hover:bg-error/80 text-white rounded-lg font-medium transition-all duration-300 shadow-lg shadow-glow-primary flex items-center justify-center gap-2"
               >
                 <FiTrash2 />
                 Uninstall

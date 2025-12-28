@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
@@ -17,20 +17,37 @@ import {
   FiAlertTriangle,
   FiRefreshCw,
   FiGlobe,
+  FiSearch,
+  FiMonitor,
+  FiLayers,
 } from "react-icons/fi";
 import { SiDiscord } from "react-icons/si";
+import GB from "country-flag-icons/react/3x2/GB";
+import FR from "country-flag-icons/react/3x2/FR";
 import { useAuth } from "../contexts/authContext";
 import { useUpdate } from "../contexts/updateContext";
+import { useTheme } from "../contexts/themeContext";
+import { getThemesList } from "../config/themes";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
 import BugReportModal from "../components/modals/BugReportModal";
+import { Button, Card, Input, Toggle } from "../components/ui";
 
 const SettingsPage = () => {
   const { t, i18n } = useTranslation();
-  const [theme, setTheme] = useState("dark");
   const [downloadPath, setDownloadPath] = useState("");
   const { user } = useAuth();
   const { checkForUpdates, updateStatus, updateInfo } = useUpdate();
+  const { currentTheme, changeTheme: changeAppTheme, theme, getBackgroundStyle } = useTheme();
+  const themesList = getThemesList();
+
+  // Déterminer si le thème actuel est clair ou sombre
+  const isLightTheme = theme?.colors?.background &&
+    parseInt(theme.colors.background.replace('#', ''), 16) > 0x808080;
+
+  // UI States
+  const [activeCategory, setActiveCategory] = useState("general");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Discord RPC States
   const [discordEnabled, setDiscordEnabled] = useState(false);
@@ -51,6 +68,14 @@ const SettingsPage = () => {
   const [updateChecking, setUpdateChecking] = useState(false);
   const [currentVersion, setCurrentVersion] = useState('');
 
+  // Categories
+  const categories = [
+    { id: 'general', name: t('settings.general'), icon: FiUser },
+    { id: 'appearance', name: t('settings.appearance'), icon: FiMonitor },
+    { id: 'downloads', name: t('settings.downloads'), icon: FiDownload },
+    { id: 'advanced', name: t('settings.advanced'), icon: FiLayers },
+  ];
+
   // Handle manual update check
   const handleCheckForUpdates = async () => {
     setUpdateChecking(true);
@@ -63,11 +88,10 @@ const SettingsPage = () => {
     }
   };
 
-  // Change theme (light/dark)
-  const handleThemeChange = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  // Toggle entre Light Modern et Dark Modern
+  const handleQuickThemeToggle = () => {
+    const newTheme = isLightTheme ? 'darkModern' : 'lightModern';
+    changeAppTheme(newTheme);
   };
 
   const selectDownloadPath = async () => {
@@ -229,529 +253,616 @@ const SettingsPage = () => {
   }, []);
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
-      <div className="px-6 md:px-16 py-6 pb-12 max-w-7xl mx-auto">
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6 }}
-        >
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
-                <FiSettings className="text-white text-xl" />
+    <div className="h-full overflow-hidden flex flex-col bg-background text-text">
+      {/* Header with horizontal navigation */}
+      <motion.div
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="border-b backdrop-blur-xl"
+        style={{ borderColor: 'var(--app-border)', background: 'var(--app-backgroundSecondary)' }}
+      >
+        <div className="px-8 py-6">
+          {/* Title and Search */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-2xl" style={{ background: 'var(--app-gradient-primary)', boxShadow: 'var(--app-shadow-primary)' }}>
+                <FiSettings className="text-2xl text-white" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                {t('settings.title')}
-              </h1>
+              <div>
+                <h1 className="text-3xl font-black text-text">
+                  {t('settings.title')}
+                </h1>
+                <p className="text-sm text-text-secondary">{t('settings.subtitle')}</p>
+              </div>
             </div>
-            <p className="text-gray-400 text-sm ml-13">
-              {t('settings.subtitle')}
-            </p>
+
+            {/* Search Bar - Compact */}
+            <div className="relative w-80">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+              <input
+                type="text"
+                placeholder={t('settings.search')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-white/10 focus:border-primary focus:outline-none transition-all text-sm text-text placeholder-text-secondary"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Account Section */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg">
-                    <FiUser className="text-blue-400 text-xl" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white">{t('settings.account')}</h3>
-                </div>
+          {/* Horizontal Tabs Navigation */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              const isActive = activeCategory === category.id;
 
-                <div className="space-y-3">
-                  <label className="block">
-                    <span className="text-sm text-gray-400 mb-2 block">
-                      {t('settings.username')}
-                    </span>
-                    <input
-                      type="text"
-                      value={user.username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-                      placeholder={t('settings.usernamePlaceholder')}
+              return (
+                <motion.button
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id)}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative flex items-center gap-2 px-5 py-3 rounded-xl transition-all whitespace-nowrap"
+                  style={{
+                    background: isActive ? 'var(--app-surface)' : 'transparent',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: isActive ? 'var(--app-primary)' : 'transparent',
+                  }}
+                >
+                  <Icon className="text-lg" style={{ color: isActive ? 'var(--app-primary)' : 'var(--app-textSecondary)' }} />
+                  <span className="font-medium text-sm" style={{ color: isActive ? 'var(--app-text)' : 'var(--app-textSecondary)' }}>
+                    {category.name}
+                  </span>
+                </motion.button>
+              );
+            })}
+
+            {/* Bug Report Button - Moved to tabs */}
+            <motion.button
+              onClick={() => setIsBugReportOpen(true)}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="ml-auto flex items-center gap-2 px-5 py-3 rounded-xl border border-transparent hover:border-error/30 hover:bg-error/10 transition-all"
+            >
+              <FiAlertTriangle className="text-lg" style={{ color: 'var(--app-error)' }} />
+              <span className="font-medium text-sm text-text-secondary">
+                {t('settings.reportBug')}
+              </span>
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Main Content - Full Width */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-surface scrollbar-track-transparent">
+        <div className="p-8 max-w-7xl mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeCategory}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* General Settings */}
+              {activeCategory === 'general' && (
+                <div className="space-y-6">
+                  {/* Account Card */}
+                  <Card variant="glass" hover>
+                    <Card.Header
+                      icon={<FiUser className="text-2xl" style={{ color: 'var(--app-primary)' }} />}
+                      title={t('settings.account')}
+                      subtitle={t('settings.manageProfile')}
                     />
-                  </label>
-                </div>
-              </div>
-            </motion.div>
+                    <Card.Body>
+                      <Input
+                        label={t('settings.username')}
+                        value={user.username}
+                        icon={<FiUser />}
+                        disabled
+                      />
+                    </Card.Body>
+                  </Card>
 
-            {/* Appearance Section */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-purple-500/20 rounded-lg">
-                    {theme === "dark" ? (
-                      <FiMoon className="text-purple-400 text-xl" />
-                    ) : (
-                      <FiSun className="text-purple-400 text-xl" />
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold text-white">{t('settings.appearance')}</h3>
-                </div>
+                  {/* Language Card */}
+                  <Card variant="glass" hover>
+                    <Card.Header
+                      icon={<FiGlobe className="text-2xl" style={{ color: 'var(--app-success)' }} />}
+                      title={t('settings.language')}
+                      subtitle={t('settings.languageDesc')}
+                    />
+                    <Card.Body>
+                      <div className="flex gap-3">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => i18n.changeLanguage('en')}
+                          className="relative flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all flex-1"
+                          style={{
+                            background: i18n.language === 'en' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                            borderColor: i18n.language === 'en' ? 'var(--app-success)' : 'rgba(255, 255, 255, 0.1)',
+                            boxShadow: i18n.language === 'en' ? '0 4px 12px rgba(34, 197, 94, 0.2)' : 'none'
+                          }}
+                        >
+                          <div className="w-8 h-6 rounded overflow-hidden shadow-md">
+                            <GB className="w-full h-full" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>English</div>
+                          </div>
+                          {i18n.language === 'en' && (
+                            <FiCheck className="text-lg" style={{ color: 'var(--app-success)' }} />
+                          )}
+                        </motion.button>
 
-                <div className="space-y-3">
-                  <label className="block">
-                    <span className="text-sm text-gray-400 mb-2 block">
-                      {t('settings.appTheme')}
-                    </span>
-                    <button
-                      onClick={handleThemeChange}
-                      className="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 hover:border-purple-500 hover:bg-gray-700 transition-all flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2">
-                        {theme === "dark" ? (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => i18n.changeLanguage('fr')}
+                          className="relative flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all flex-1"
+                          style={{
+                            background: i18n.language === 'fr' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                            borderColor: i18n.language === 'fr' ? 'var(--app-success)' : 'rgba(255, 255, 255, 0.1)',
+                            boxShadow: i18n.language === 'fr' ? '0 4px 12px rgba(34, 197, 94, 0.2)' : 'none'
+                          }}
+                        >
+                          <div className="w-8 h-6 rounded overflow-hidden shadow-md">
+                            <FR className="w-full h-full" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>Français</div>
+                          </div>
+                          {i18n.language === 'fr' && (
+                            <FiCheck className="text-lg" style={{ color: 'var(--app-success)' }} />
+                          )}
+                        </motion.button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </div>
+              )}
+
+              {/* Appearance Settings */}
+              {activeCategory === 'appearance' && (
+                <div className="space-y-6">
+                  {/* Theme Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.2)' }}>
+                          {isLightTheme ? (
+                            <FiSun className="text-2xl" style={{ color: 'var(--app-warning)' }} />
+                          ) : (
+                            <FiMoon className="text-2xl" style={{ color: 'var(--app-secondary)' }} />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.appearance')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.appTheme')}</p>
+                        </div>
+                      </div>
+
+                      {/* Toggle Switch Light/Dark */}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleQuickThemeToggle}
+                        className="relative inline-flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-300 shadow-lg"
+                        style={{
+                          background: isLightTheme
+                            ? 'linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%)'
+                            : 'var(--app-gradient-primary)',
+                          boxShadow: isLightTheme
+                            ? '0 4px 20px rgba(245, 158, 11, 0.4)'
+                            : 'var(--app-shadow-primary)'
+                        }}
+                      >
+                        {isLightTheme ? (
                           <>
-                            <FiMoon className="text-purple-400" />
-                            <span>{t('settings.darkMode')}</span>
+                            <FiSun className="text-xl" style={{ color: '#FFFFFF' }} />
+                            <span className="font-bold text-sm" style={{ color: '#FFFFFF' }}>Light</span>
                           </>
                         ) : (
                           <>
-                            <FiSun className="text-yellow-400" />
-                            <span>{t('settings.lightMode')}</span>
+                            <FiMoon className="text-xl" style={{ color: '#FFFFFF' }} />
+                            <span className="font-bold text-sm" style={{ color: '#FFFFFF' }}>Dark</span>
                           </>
                         )}
-                      </span>
-                      <span className="text-sm text-gray-400">
-                        {t('settings.clickToChange')}
-                      </span>
-                    </button>
-                  </label>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Language Section */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.25, duration: 0.6 }}
-              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-lg">
-                    <FiGlobe className="text-green-400 text-xl" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">{t('settings.language')}</h3>
-                    <p className="text-sm text-gray-400">{t('settings.languageDesc')}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => i18n.changeLanguage('en')}
-                    className={`p-4 rounded-lg border-2 transition-all duration-300 flex items-center gap-3 ${
-                      i18n.language === 'en'
-                        ? 'bg-green-500/20 border-green-500 shadow-lg shadow-green-500/30'
-                        : 'bg-gray-700/50 border-gray-600 hover:border-green-500/50'
-                    }`}
-                  >
-                    <div className="text-3xl">🇬🇧</div>
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold text-white">English</div>
-                      <div className="text-xs text-gray-400">{t('settings.languageInternational')}</div>
+                      </motion.button>
                     </div>
-                    {i18n.language === 'en' && (
-                      <FiCheck className="text-green-400 text-xl" />
-                    )}
-                  </button>
 
-                  <button
-                    onClick={() => i18n.changeLanguage('fr')}
-                    className={`p-4 rounded-lg border-2 transition-all duration-300 flex items-center gap-3 ${
-                      i18n.language === 'fr'
-                        ? 'bg-green-500/20 border-green-500 shadow-lg shadow-green-500/30'
-                        : 'bg-gray-700/50 border-gray-600 hover:border-green-500/50'
-                    }`}
-                  >
-                    <div className="text-3xl">🇫🇷</div>
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold text-white">Français</div>
-                      <div className="text-xs text-gray-400">{t('settings.languageFrance')}</div>
-                    </div>
-                    {i18n.language === 'fr' && (
-                      <FiCheck className="text-green-400 text-xl" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Discord Rich Presence Section - Full width */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-indigo-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-indigo-500/20 rounded-lg">
-                      <SiDiscord className="text-indigo-400 text-xl" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{t('settings.discordRPC')}</h3>
-                      <p className="text-xs text-gray-400">{t('settings.discordDisplayActivity')}</p>
-                    </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  {discordEnabled && (
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-                      discordStatus.isConnected
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      <FiCircle className={`text-xs ${
-                        discordStatus.isConnected ? 'animate-pulse' : ''
-                      }`} />
-                      <span className="text-xs font-medium">
-                        {discordStatus.isConnected
-                          ? `${t('settings.discordConnected')}${discordStatus.user ? ` · ${discordStatus.user.username}` : ''}`
-                          : t('settings.discordWaiting')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {/* Description */}
-                  <p className="text-sm text-gray-400">
-                    {t('settings.discordEnableDesc')}
-                  </p>
-
-                  {/* Toggle Button */}
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <FiActivity className="text-indigo-400" />
-                      <span>{t('settings.discordShowActivity')}</span>
-                    </div>
-                    <button
-                      onClick={handleDiscordToggle}
-                      disabled={discordLoading}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-                        discordEnabled
-                          ? "bg-indigo-600 hover:bg-indigo-700"
-                          : "bg-gray-600 hover:bg-gray-500"
-                      } ${discordLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
-                          discordEnabled ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Info Box - Current Activity */}
-                  {discordEnabled && discordStatus.currentActivity && (
-                    <div className="mt-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <FiActivity className="text-indigo-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-indigo-300">{t('settings.discordCurrentActivity')}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {discordStatus.currentActivity.type === "game"
-                              ? t('settings.discordPlayingGame', { gameName: discordStatus.currentActivity.gameName })
-                              : t('settings.discordBrowsing')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Info - Discord required */}
-                  {!discordStatus.isConnected && discordEnabled && (
-                    <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <FiCircle className="text-yellow-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-yellow-300">{t('settings.discordNotDetected')}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {t('settings.discordLaunchDesktop')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Image Cache Section - Full width */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-orange-500/20 rounded-lg">
-                      <FiImage className="text-orange-400 text-xl" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{t('settings.imageCache')}</h3>
-                      <p className="text-xs text-gray-400">{t('settings.imageCacheManagement')}</p>
-                    </div>
-                  </div>
-
-                  {/* Cache Size Badge */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400">
-                    <FiImage className="text-xs" />
-                    <span className="text-xs font-medium">
-                      {t('settings.cachedImages', { count: cacheSize, plural: cacheSize > 1 ? 's' : '' })}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Description */}
-                  <p className="text-sm text-gray-400">
-                    {t('settings.imageCacheDesc')}
-                  </p>
-
-                  {/* Cache Actions */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button
-                      onClick={handleCleanExpiredImages}
-                      disabled={cacheLoading}
-                      className={`px-4 py-3 bg-gray-700/50 border border-gray-600 hover:border-orange-500 hover:bg-gray-700 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
-                        cacheLoading ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      <FiActivity className="text-orange-400" />
-                      <span>{t('settings.cleanExpiredImages')}</span>
-                    </button>
-
-                    <button
-                      onClick={handleClearImageCache}
-                      disabled={cacheLoading}
-                      className={`px-4 py-3 bg-gray-700/50 border border-gray-600 hover:border-red-500 hover:bg-gray-700 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
-                        cacheLoading ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      <FiTrash2 className="text-red-400" />
-                      <span>{t('settings.clearEntireCache')}</span>
-                    </button>
-                  </div>
-
-                  {/* Info Box */}
-                  <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <FiImage className="text-orange-400 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-300">{t('settings.activeOptimizations')}</p>
-                        <ul className="text-xs text-gray-400 mt-1 space-y-1">
-                          <li>• {t('settings.optimizationLazyLoading')}</li>
-                          <li>• {t('settings.optimizationCompression')}</li>
-                          <li>• {t('settings.optimizationLocalCache')}</li>
-                          <li>• {t('settings.optimizationPlaceholders')}</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Downloads Section - Full width */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.35, duration: 0.6 }}
-              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-lg">
-                    <FiDownload className="text-green-400 text-xl" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white">
-                    {t('settings.downloads')}
-                  </h3>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="block">
-                    <span className="text-sm text-gray-400 mb-2 block">
-                      {t('settings.installPath')}
-                    </span>
-                    <div className="flex gap-3">
-                      <div className="flex-1 relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                          <FiFolder className="text-gray-400" />
-                        </div>
-                        <input
-                          type="text"
-                          value={downloadPath || t('settings.noPathSelected')}
-                          readOnly
-                          className="w-full pl-10 pr-3 py-3 rounded-lg bg-gray-700/50 border border-gray-600 text-gray-300 cursor-not-allowed"
-                        />
-                      </div>
-                      <button
-                        onClick={selectDownloadPath}
-                        className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-green-500/50 flex items-center gap-2"
+                    <Card.Body>
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-sm p-4 rounded-xl"
+                        style={{
+                          backgroundColor: 'var(--app-surface)',
+                          color: 'var(--app-textSecondary)'
+                        }}
                       >
-                        <FiFolder />
-                        {t('settings.browse')}
-                      </button>
+                        {isLightTheme
+                          ? '☀️ Mode clair activé - Interface lumineuse et aérée'
+                          : '🌙 Mode sombre activé - Confort visuel nocturne'
+                        }
+                      </motion.p>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Color Theme Selector Card */}
+                  <Card variant="glass" hover>
+                    <Card.Header
+                      icon={<FiMonitor className="text-2xl" style={{ color: 'var(--app-secondary)' }} />}
+                      title={t('settings.colorTheme')}
+                      subtitle={t('settings.colorThemeDesc')}
+                    />
+                    <Card.Body>
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {themesList.map((themeOption) => {
+                          const isActive = currentTheme === themeOption.id;
+                          return (
+                            <motion.button
+                              key={themeOption.id}
+                              whileHover={{ scale: 1.05, y: -4 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => changeAppTheme(themeOption.id)}
+                              className={`relative p-4 rounded-2xl border-2 transition-all overflow-hidden ${
+                                isActive
+                                  ? 'border-secondary shadow-lg shadow-secondary/30'
+                                  : 'border-white/10 hover:border-secondary/50'
+                              }`}
+                              style={{
+                                background: isActive
+                                  ? `linear-gradient(135deg, ${themeOption.colors.primary}15 0%, ${themeOption.colors.secondary}15 100%)`
+                                  : 'rgba(255, 255, 255, 0.03)'
+                              }}
+                            >
+                              {/* Preview circles */}
+                              <div className="flex gap-1.5 mb-3 justify-center">
+                                <div
+                                  className="w-6 h-6 rounded-full shadow-lg"
+                                  style={{
+                                    background: themeOption.gradients.primary,
+                                    boxShadow: `0 0 12px ${themeOption.colors.primary}60`
+                                  }}
+                                />
+                                <div
+                                  className="w-6 h-6 rounded-full shadow-lg"
+                                  style={{
+                                    background: themeOption.gradients.secondary,
+                                    boxShadow: `0 0 12px ${themeOption.colors.secondary}60`
+                                  }}
+                                />
+                              </div>
+
+                              {/* Theme info */}
+                              <div className="text-center mb-2">
+                                <div className="text-2xl mb-1">{themeOption.preview}</div>
+                                <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>{themeOption.name}</div>
+                                <div className="text-xs mt-0.5" style={{ color: 'var(--app-textSecondary)' }}>{themeOption.description}</div>
+                              </div>
+
+                              {/* Active indicator */}
+                              {isActive && (
+                                <motion.div
+                                  layoutId="activeThemeIndicator"
+                                  className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
+                                  style={{
+                                    background: themeOption.gradients.primary,
+                                    boxShadow: `0 0 12px ${themeOption.colors.primary}80`
+                                  }}
+                                >
+                                  <FiCheck className="text-sm" style={{ color: '#FFFFFF' }} />
+                                </motion.div>
+                              )}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Current theme info */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-6 p-4 rounded-xl"
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          borderColor: 'rgba(255, 255, 255, 0.1)'
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">
+                            {themesList.find(t => t.id === currentTheme)?.preview}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium" style={{ color: 'var(--app-text)' }}>
+                              {t('settings.currentTheme')}: {themesList.find(t => t.id === currentTheme)?.name}
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--app-textSecondary)' }}>
+                              {themesList.find(t => t.id === currentTheme)?.description}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </Card.Body>
+                  </Card>
+                </div>
+              )}
+
+              {/* Downloads Settings */}
+              {activeCategory === 'downloads' && (
+                <div className="space-y-6">
+                  {/* Download Path Card */}
+                  <Card variant="glass" hover>
+                    <Card.Header
+                      icon={<FiDownload className="text-2xl" style={{ color: 'var(--app-success)' }} />}
+                      title={t('settings.downloads')}
+                      subtitle={t('settings.installPath')}
+                    />
+                    <Card.Body>
+                      <div className="flex gap-3">
+                        <Input
+                          value={downloadPath || t('settings.noPathSelected')}
+                          icon={<FiFolder />}
+                          disabled
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="success"
+                          onClick={selectDownloadPath}
+                          icon={<FiFolder />}
+                          iconPosition="left"
+                        >
+                          {t('settings.browse')}
+                        </Button>
+                      </div>
+                      {downloadPath && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-xs flex items-center gap-2 mt-4"
+                          style={{ color: 'var(--app-textSecondary)' }}
+                        >
+                          <FiCheck style={{ color: 'var(--app-success)' }} />
+                          {t('settings.gamesWillBeInstalled')}
+                        </motion.p>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </div>
+              )}
+
+              {/* Advanced Settings */}
+              {activeCategory === 'advanced' && (
+                <div className="space-y-6">
+                  {/* Discord RPC Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(20, 184, 166, 0.2)' }}>
+                          <SiDiscord className="text-2xl" style={{ color: 'var(--app-accent)' }} />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.discordRPC')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.discordDisplayActivity')}</p>
+                        </div>
+                      </div>
+
+                      <Toggle
+                        checked={discordEnabled}
+                        onChange={handleDiscordToggle}
+                        disabled={discordLoading}
+                      />
                     </div>
-                    {downloadPath && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        {t('settings.gamesWillBeInstalled')}
-                      </p>
+
+                    {discordEnabled && (
+                      <Card.Body>
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-4"
+                        >
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
+                            {t('settings.discordEnableDesc')}
+                          </p>
+
+                          {discordStatus.isConnected && (
+                            <div className="p-4 rounded-xl" style={{
+                              background: 'rgba(20, 184, 166, 0.1)',
+                              borderWidth: '1px',
+                              borderStyle: 'solid',
+                              borderColor: 'rgba(20, 184, 166, 0.3)'
+                            }}>
+                              <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'var(--app-success)' }} />
+                                <span className="text-sm font-medium" style={{ color: 'var(--app-accent)' }}>
+                                  {t('settings.discordConnected')}
+                                  {discordStatus.user && ` · ${discordStatus.user.username}`}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {!discordStatus.isConnected && (
+                            <div className="p-4 rounded-xl" style={{
+                              background: 'rgba(245, 158, 11, 0.1)',
+                              borderWidth: '1px',
+                              borderStyle: 'solid',
+                              borderColor: 'rgba(245, 158, 11, 0.3)'
+                            }}>
+                              <div className="flex items-start gap-3">
+                                <FiCircle className="mt-0.5" style={{ color: 'var(--app-warning)' }} />
+                                <div>
+                                  <p className="text-sm font-medium" style={{ color: 'var(--app-warning)' }}>{t('settings.discordNotDetected')}</p>
+                                  <p className="text-xs mt-1" style={{ color: 'var(--app-textSecondary)' }}>
+                                    {t('settings.discordLaunchDesktop')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      </Card.Body>
                     )}
-                  </label>
+                  </Card>
+
+                  {/* Image Cache Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(245, 158, 11, 0.2)' }}>
+                          <FiImage className="text-2xl" style={{ color: 'var(--app-warning)' }} />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.imageCache')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.imageCacheManagement')}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{
+                        background: 'rgba(245, 158, 11, 0.2)',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: 'rgba(245, 158, 11, 0.3)'
+                      }}>
+                        <FiImage style={{ color: 'var(--app-warning)' }} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--app-warning)' }}>
+                          {t('settings.cachedImages', { count: cacheSize, plural: cacheSize > 1 ? 's' : '' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Card.Body>
+                      <p className="text-sm mb-4" style={{ color: 'var(--app-textSecondary)' }}>
+                        {t('settings.imageCacheDesc')}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant="ghost"
+                          onClick={handleCleanExpiredImages}
+                          disabled={cacheLoading}
+                          icon={<FiActivity />}
+                          iconPosition="left"
+                        >
+                          {t('settings.cleanExpiredImages')}
+                        </Button>
+
+                        <Button
+                          variant="danger"
+                          onClick={handleClearImageCache}
+                          disabled={cacheLoading}
+                          icon={<FiTrash2 />}
+                          iconPosition="left"
+                        >
+                          {t('settings.clearEntireCache')}
+                        </Button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Updates Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(99, 102, 241, 0.2)' }}>
+                          <FiRefreshCw className="text-2xl" style={{ color: 'var(--app-primary)' }} />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.updates')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.keepUpToDate')}</p>
+                        </div>
+                      </div>
+
+                      {currentVersion && (
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{
+                          background: 'rgba(99, 102, 241, 0.2)',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          borderColor: 'rgba(99, 102, 241, 0.3)'
+                        }}>
+                          <FiCircle className="text-xs" style={{ color: 'var(--app-primary)' }} />
+                          <span className="text-sm font-medium" style={{ color: 'var(--app-primary)' }}>
+                            v{currentVersion}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Card.Body>
+                      <p className="text-sm mb-4" style={{ color: 'var(--app-textSecondary)' }}>
+                        {t('settings.updatesAutoCheck')}
+                      </p>
+
+                      <Button
+                        variant="ghost"
+                        onClick={handleCheckForUpdates}
+                        disabled={updateChecking || updateStatus === 'checking'}
+                        icon={<FiRefreshCw className={updateChecking || updateStatus === 'checking' ? 'animate-spin' : ''} />}
+                        iconPosition="left"
+                        className="w-full"
+                      >
+                        {updateChecking || updateStatus === 'checking' ? t('settings.checkingUpdates') : t('settings.checkForUpdates')}
+                      </Button>
+
+                      {/* Update Status */}
+                      <AnimatePresence>
+                        {updateStatus === 'available' && updateInfo && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="mt-4 p-4 rounded-xl"
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.1)',
+                              borderWidth: '1px',
+                              borderStyle: 'solid',
+                              borderColor: 'rgba(99, 102, 241, 0.3)'
+                            }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <FiRefreshCw className="mt-0.5" style={{ color: 'var(--app-primary)' }} />
+                              <div>
+                                <p className="text-sm font-medium" style={{ color: 'var(--app-primary)' }}>{t('settings.updateAvailable')}</p>
+                                <p className="text-xs mt-1" style={{ color: 'var(--app-textSecondary)' }}>
+                                  {t('settings.updateVersionReady', { version: updateInfo.version })}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Card.Body>
+                  </Card>
                 </div>
-              </div>
+              )}
             </motion.div>
+          </AnimatePresence>
 
-            {/* Updates Section - Full width */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="lg:col-span-2 group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg">
-                      <FiRefreshCw className="text-blue-400 text-xl" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{t('settings.updates')}</h3>
-                      <p className="text-xs text-gray-400">{t('settings.keepUpToDate')}</p>
-                    </div>
-                  </div>
-
-                  {/* Current Version Badge */}
-                  {currentVersion && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400">
-                      <FiCircle className="text-xs" />
-                      <span className="text-xs font-medium">
-                        v{currentVersion}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {/* Description */}
-                  <p className="text-sm text-gray-400">
-                    {t('settings.updatesAutoCheck')}
-                  </p>
-
-                  {/* Check for Updates Button */}
-                  <button
-                    onClick={handleCheckForUpdates}
-                    disabled={updateChecking || updateStatus === 'checking'}
-                    className={`w-full px-4 py-3 bg-gray-700/50 border border-gray-600 hover:border-blue-500 hover:bg-gray-700 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
-                      updateChecking || updateStatus === 'checking' ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    <FiRefreshCw className={`text-blue-400 ${updateChecking || updateStatus === 'checking' ? 'animate-spin' : ''}`} />
-                    <span>
-                      {updateChecking || updateStatus === 'checking' ? t('settings.checkingUpdates') : t('settings.checkForUpdates')}
-                    </span>
-                  </button>
-
-                  {/* Update Status Info */}
-                  {updateStatus === 'available' && updateInfo && (
-                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <FiRefreshCw className="text-blue-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-blue-300">{t('settings.updateAvailable')}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {t('settings.updateVersionReady', { version: updateInfo.version })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {updateStatus === 'downloading' && (
-                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <FiDownload className="text-blue-400 mt-0.5 animate-pulse" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-blue-300">{t('settings.downloadingUpdate')}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {t('settings.updateDownloading')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {updateStatus === 'downloaded' && (
-                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <FiCheck className="text-green-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-green-300">{t('settings.updateReady')}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {t('settings.updateRestartToInstall')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Action buttons */}
+          {/* Save Button */}
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.45, duration: 0.6 }}
-            className="mt-6 flex justify-between items-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 flex justify-end"
           >
-            <button
-              onClick={() => setIsBugReportOpen(true)}
-              className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-medium transition-all duration-300 border border-red-500/30 hover:border-red-500/50 flex items-center gap-2"
-            >
-              <FiAlertTriangle className="w-5 h-5" />
-              {t('settings.reportBug')}
-            </button>
-
-            <button
+            <Button
+              variant="primary"
+              size="lg"
+              gradient
               onClick={handleSaveSettings}
-              className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/50 flex items-center gap-2"
+              icon={<FiCheck />}
+              iconPosition="left"
             >
-              <FiCheck />
               {t('settings.saveSettings')}
-            </button>
+            </Button>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Bug Report Modal */}

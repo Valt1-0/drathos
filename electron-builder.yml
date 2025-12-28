@@ -111,7 +111,6 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
 
 publish:
-  provider: github
-  owner: Valt1-0
-  repo: drathos
-  releaseType: prerelease
+  provider: generic
+  url: https://drathos.gg/downloads
+

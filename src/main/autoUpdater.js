@@ -23,16 +23,16 @@ export class AutoUpdateManager {
     // Toujours configurer les événements (même en dev pour le débogage)
     this.setupEvents();
 
-    // Configuration du feed GitHub uniquement en production
+    // Configuration du feed uniquement en production
     if (this.isProduction) {
       try {
         autoUpdater.setFeedURL({
-          provider: 'github',
-          owner: 'Valt1-0',
-          repo: 'drathos',
-          private: false,
+          provider: 'generic',
+          url: 'https://drathos.gg/downloads',
+          // Ou utiliser votre backend:
+          // url: 'https://api.drathos.gg/updates',
         });
-        logger.info('[AutoUpdater] GitHub feed configured');
+        logger.info('[AutoUpdater] Generic feed configured');
       } catch (error) {
         logger.error('[AutoUpdater] Failed to configure feed:', error);
       }

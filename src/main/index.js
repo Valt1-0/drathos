@@ -14,6 +14,7 @@ import {
   Menu,
   dialog,
   session,
+  globalShortcut,
 } from "electron";
 import path, { join } from "path";
 import fs from "fs";
@@ -359,6 +360,23 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window);
   });
 
+  // Register global shortcuts for app reload
+  globalShortcut.register('CommandOrControl+Shift+R', () => {
+    console.log('[Shortcut] Ctrl+Shift+R pressed - Hard reloading app...');
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      window.webContents.reloadIgnoringCache();
+    }
+  });
+
+  globalShortcut.register('F5', () => {
+    console.log('[Shortcut] F5 pressed - Reloading app...');
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      window.webContents.reload();
+    }
+  });
+
   //* IPC test
   //* ipcMain.on("ping", () => console.log("pong"));
 
@@ -547,6 +565,9 @@ app.on("before-quit", async () => {
 
   // Décharger tous les modules
   moduleLoader.unloadAll();
+
+  // Unregister global shortcuts
+  globalShortcut.unregisterAll();
 });
 
 // In this file you can include the rest of your app"s specific main process

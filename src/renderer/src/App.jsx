@@ -11,12 +11,13 @@ import { DownloadProvider } from "./contexts/downloadContext";
 import { ConnectionProvider } from "./contexts/connectionContext";
 import { UploadProvider } from "./contexts/uploadContext";
 import { UpdateProvider } from "./contexts/updateContext";
+import { ThemeProvider } from "./contexts/themeContext";
 
 import Drawer from "./components/Drawer";
 import TitleBar from "./components/TitleBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UploadNotification from "./components/UploadNotification";
-import UpdateModal from "./components/UpdateModal";
+import UpdateModal from "./components/modals/UpdateModal";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 
@@ -30,7 +31,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 // Loading fallback component
 function PageLoader() {
   return (
-    <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900">
+    <div className="h-full w-full flex items-center justify-center bg-background">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -40,11 +41,11 @@ function PageLoader() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="inline-block"
+          className="inline-block mb-4"
         >
-          <FiLoader className="text-5xl text-blue-500 mb-4" />
+          <FiLoader className="text-5xl text-primary" />
         </motion.div>
-        <p className="text-slate-400 text-sm">Loading...</p>
+        <p className="text-text-secondary text-sm">Loading...</p>
       </motion.div>
     </div>
   );
@@ -133,8 +134,9 @@ export default function App() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <ErrorBoundary>
-        <AuthProvider>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <AuthProvider>
           <ConnectionProvider>
             <DownloadProvider>
               <UploadProvider>
@@ -156,13 +158,13 @@ export default function App() {
                     toastOptions={{
                       duration: 4000,
                       style: {
-                        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                        color: '#f1f5f9',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                        border: '1px solid var(--color-border)',
                         borderRadius: '12px',
                         padding: '16px',
                         backdropFilter: 'blur(12px)',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                        boxShadow: 'var(--app-shadow-primary)',
                       },
                       className: 'sonner-toast',
                       descriptionClassName: 'sonner-description',
@@ -173,8 +175,9 @@ export default function App() {
               </UploadProvider>
             </DownloadProvider>
           </ConnectionProvider>
-        </AuthProvider>
-      </ErrorBoundary>
+          </AuthProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
     </I18nextProvider>
   );
 }

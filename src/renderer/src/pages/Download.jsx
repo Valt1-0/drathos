@@ -93,25 +93,25 @@ const Download = () => {
   };
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
+    <div className="h-full bg-background text-text overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
       {/* Header avec stats */}
-      <div className="px-6 md:px-16 py-6 pb-12 max-w-7xl mx-auto">
+      <div className="px-8 py-8 max-w-7xl mx-auto">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
           {/* Title */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'var(--app-gradient-primary)' }}>
                 <FiDownload className="text-white text-xl" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-4xl font-black text-text">
                 {t('downloads.title')}
               </h1>
             </div>
-            <p className="text-gray-400 text-sm ml-13">
+            <p className="text-text-secondary text-sm ml-15">
               {t('downloads.subtitle')}
             </p>
           </div>
@@ -123,27 +123,33 @@ const Download = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-6 hover:scale-105 transition-transform duration-300"
+              className="group relative overflow-hidden backdrop-blur-xl border rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300"
+              style={{
+                background: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.1)',
+                borderColor: 'var(--app-success)',
+                borderOpacity: 0.3
+              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(var(--app-success-rgb, 16, 185, 129), 0.15), transparent)' }} />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-gray-400 font-medium">
+                  <span className="text-sm text-text-secondary font-medium">
                     Total Speed
                   </span>
-                  <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-xl">
-                    <FiZap className="text-green-400 text-xl" />
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.2)' }}>
+                    <FiZap className="text-success text-xl" />
                   </div>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-white">
+                  <span className="text-3xl font-bold text-text">
                     {downloadStats.totalSpeed.toFixed(1)}
                   </span>
-                  <span className="text-sm text-gray-400">MB/s</span>
+                  <span className="text-sm text-text-secondary">MB/s</span>
                 </div>
-                <div className="h-2 bg-gray-700 rounded-full overflow-hidden mt-3">
+                <div className="h-2 bg-surface rounded-full overflow-hidden mt-3">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
+                    className="h-full rounded-full"
+                    style={{ background: 'var(--app-gradient-primary)' }}
                     initial={{ width: 0 }}
                     animate={{
                       width: `${Math.min(100, (downloadStats.totalSpeed / 100) * 100)}%`,
@@ -159,67 +165,77 @@ const Download = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="group relative overflow-hidden bg-gradient-to-br from-yellow-600/20 to-orange-800/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-6 hover:scale-105 transition-transform duration-300"
+              className="group relative overflow-hidden backdrop-blur-xl border rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300"
+              style={{
+                background: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.1)',
+                borderColor: 'var(--app-warning)',
+                borderOpacity: 0.3
+              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(var(--app-warning-rgb, 251, 191, 36), 0.15), transparent)' }} />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-gray-400 font-medium">
+                  <span className="text-sm text-text-secondary font-medium">
                     Free Space
                   </span>
-                  <div className="flex items-center justify-center w-10 h-10 bg-yellow-500/20 rounded-xl">
-                    <FiHardDrive className="text-yellow-400 text-xl" />
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.2)' }}>
+                    <FiHardDrive className="text-warning text-xl" />
                   </div>
                 </div>
 
                 {diskSpaceLoading ? (
                   <div className="flex items-center justify-center py-4">
-                    <FiLoader className="text-2xl text-yellow-400 animate-spin" />
-                    <span className="ml-3 text-gray-400 text-sm">Loading disk space...</span>
+                    <FiLoader className="text-2xl text-warning animate-spin" />
+                    <span className="ml-3 text-text-secondary text-sm">Loading disk space...</span>
                   </div>
                 ) : diskSpace.freeSpace > 0 ? (
                   <>
                     <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-3xl font-bold text-white">
+                      <span className="text-3xl font-bold text-text">
                         {diskSpace.freeSpace}
                       </span>
-                      <span className="text-sm text-gray-400">GB free</span>
+                      <span className="text-sm text-text-secondary">GB free</span>
                     </div>
                     {diskSpace.totalSpace > 0 && (
-                      <div className="text-sm text-gray-500 mb-2">
+                      <div className="text-sm text-text-secondary mb-2 opacity-70">
                         of {diskSpace.totalSpace} GB total
                       </div>
                     )}
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-2 bg-surface rounded-full overflow-hidden">
                       <motion.div
-                        className={`h-full rounded-full ${
-                          diskSpace.usedPercent > 90
-                            ? "bg-gradient-to-r from-red-500 to-red-400"
+                        className="h-full rounded-full"
+                        style={{
+                          background: diskSpace.usedPercent > 90
+                            ? 'var(--app-gradient-button)'
                             : diskSpace.usedPercent > 75
-                            ? "bg-gradient-to-r from-orange-500 to-yellow-400"
-                            : "bg-gradient-to-r from-yellow-500 to-green-400"
-                        }`}
+                            ? 'linear-gradient(to right, var(--app-warning), var(--app-warning))'
+                            : 'var(--app-gradient-primary)'
+                        }}
                         initial={{ width: 0 }}
                         animate={{ width: `${diskSpace.usedPercent || 0}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
                     {diskSpace.usedPercent > 0 && (
-                      <div className="text-sm text-gray-400 mt-2 text-right">
+                      <div className="text-sm text-text-secondary mt-2 text-right">
                         {diskSpace.usedPercent}% used
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-gray-300 text-sm leading-relaxed">
+                    <p className="text-text-secondary text-sm leading-relaxed">
                       No download location selected
                     </p>
                     <Link to="/settings">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-yellow-500/30"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium transition-all duration-300"
+                        style={{
+                          background: 'var(--app-gradient-button)',
+                          boxShadow: 'var(--app-shadow-primary)'
+                        }}
                       >
                         <FiSettings className="text-lg" />
                         <span>Configure</span>
@@ -242,9 +258,9 @@ const Download = () => {
               transition={{ duration: 0.5 }}
               className="mb-8"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></span>
-                <h2 className="text-xl font-bold text-white">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="w-2.5 h-2.5 bg-success rounded-full animate-pulse"></span>
+                <h2 className="text-2xl font-bold text-text">
                   Active Downloads ({activeDownloads.length})
                 </h2>
               </div>
@@ -275,9 +291,9 @@ const Download = () => {
               transition={{ duration: 0.5 }}
               className="mb-8"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <FiCheckCircle className="text-green-400 text-xl" />
-                <h2 className="text-xl font-bold text-white">
+              <div className="flex items-center gap-3 mb-6">
+                <FiCheckCircle className="text-success text-2xl" />
+                <h2 className="text-2xl font-bold text-text">
                   Completed ({completedDownloads.length})
                 </h2>
               </div>
@@ -289,10 +305,20 @@ const Download = () => {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group relative overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 hover:border-green-500/50 rounded-2xl p-4 transition-all duration-300"
+                    className="group relative overflow-hidden backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02]"
+                    style={{
+                      background: 'var(--app-backgroundSecondary)',
+                      borderColor: 'var(--app-border)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--app-success)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--app-border)';
+                    }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="relative w-16 h-16 bg-gray-700 rounded-xl overflow-hidden flex-shrink-0">
+                      <div className="relative w-16 h-16 bg-surface rounded-xl overflow-hidden flex-shrink-0">
                         <GameCover
                           src={download.image}
                           alt="Cover"
@@ -300,23 +326,23 @@ const Download = () => {
                           size="thumb"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <FiCheckCircle className="text-green-400 text-2xl" />
+                          <FiCheckCircle className="text-success text-2xl" />
                         </div>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-semibold truncate">
+                        <h3 className="text-text font-semibold truncate">
                           {download.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-green-400 text-sm font-medium flex items-center gap-1">
+                          <span className="text-success text-sm font-medium flex items-center gap-1">
                             <FiCheckCircle className="text-xs" />
                             Installed
                           </span>
                           {download.totalTime && (
                             <>
-                              <span className="text-gray-500">•</span>
-                              <span className="text-gray-400 text-xs">
+                              <span className="text-text-secondary opacity-50">•</span>
+                              <span className="text-text-secondary text-xs">
                                 {Math.floor(download.totalTime / 1000)}s
                               </span>
                             </>
@@ -341,25 +367,29 @@ const Download = () => {
               transition={{ duration: 0.5 }}
               className="mb-8"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <FiXCircle className="text-red-400 text-xl" />
-                <h2 className="text-xl font-bold text-white">
+              <div className="flex items-center gap-3 mb-6">
+                <FiXCircle className="text-error text-2xl" />
+                <h2 className="text-2xl font-bold text-text">
                   Failed ({failedDownloads.length})
                 </h2>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {failedDownloads.map((download, index) => (
                   <motion.div
                     key={download.id}
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-gradient-to-br from-red-900/20 to-red-800/20 border border-red-700/50 rounded-2xl p-4 backdrop-blur-sm"
+                    className="backdrop-blur-xl border rounded-2xl p-4"
+                    style={{
+                      background: 'rgba(var(--app-error-rgb, 239, 68, 68), 0.1)',
+                      borderColor: 'var(--app-error)'
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-700 rounded-xl overflow-hidden">
+                        <div className="w-14 h-14 bg-surface rounded-xl overflow-hidden">
                           <GameCover
                             src={download.image}
                             alt="Cover"
@@ -369,10 +399,10 @@ const Download = () => {
                         </div>
 
                         <div>
-                          <h3 className="text-white font-semibold">
+                          <h3 className="text-text font-semibold">
                             {download.name}
                           </h3>
-                          <p className="text-red-300 text-sm flex items-center gap-1 mt-1">
+                          <p className="text-error text-sm flex items-center gap-1 mt-1">
                             <FiXCircle className="text-xs" />
                             {download.error || "Unknown error"}
                           </p>
@@ -383,7 +413,11 @@ const Download = () => {
                         onClick={() => handleRetryDownload(download)}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+                        className="px-4 py-2.5 text-white rounded-xl text-sm font-medium transition-all flex items-center gap-2"
+                        style={{
+                          background: 'var(--app-gradient-button)',
+                          boxShadow: 'var(--app-shadow-primary)'
+                        }}
                       >
                         <FiDownload className="text-sm" />
                         Retry
@@ -402,18 +436,18 @@ const Download = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="text-center py-12"
+            className="text-center py-16"
           >
-            <div className="relative w-24 h-24 mx-auto mb-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-full blur-xl"></div>
-              <div className="relative flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border border-gray-700">
-                <FiDownload className="text-4xl text-gray-500" />
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full blur-xl" style={{ background: 'linear-gradient(135deg, var(--app-primary), var(--app-secondary))', opacity: 0.2 }}></div>
+              <div className="relative flex items-center justify-center w-full h-full rounded-full border" style={{ background: 'var(--app-backgroundSecondary)', borderColor: 'var(--app-border)' }}>
+                <FiDownload className="text-4xl text-text-secondary opacity-50" />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">
+            <h3 className="text-2xl font-bold text-text mb-2">
               No Downloads Yet
             </h3>
-            <p className="text-gray-400 text-sm">
+            <p className="text-text-secondary text-sm">
               Your downloads will appear here once you start installing games
             </p>
           </motion.div>
@@ -425,20 +459,21 @@ const Download = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.6 }}
-            className="mt-8 pt-4 border-t border-gray-800"
+            className="mt-8 pt-6 border-t"
+            style={{ borderColor: 'var(--app-border)' }}
           >
-            <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-400">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-text-secondary">
               <p>
                 Downloads continue in the background even if you close this page
               </p>
 
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-2">
-                  <FiZap className="text-blue-400" /> Optimized Engine
+                  <FiZap className="text-primary" /> Optimized Engine
                 </span>
-                <span>•</span>
+                <span className="opacity-50">•</span>
                 <span className="flex items-center gap-2">
-                  <FiActivity className="text-green-400" /> Real-time Metrics
+                  <FiActivity className="text-success" /> Real-time Metrics
                 </span>
               </div>
             </div>

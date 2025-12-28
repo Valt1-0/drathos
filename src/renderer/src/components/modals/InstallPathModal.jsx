@@ -69,10 +69,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-2xl bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden"
+            className="relative w-full max-w-2xl glass backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+            <div className="bg-gradient-primary p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/20 rounded-xl backdrop-blur-sm flex items-center justify-center">
@@ -82,7 +82,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                     <h2 className="text-2xl font-black text-white">
                       Before installing {gameName}
                     </h2>
-                    <p className="text-blue-100 text-sm mt-1">
+                    <p className="text-white/80 text-sm mt-1">
                       Choose where to install your games
                     </p>
                   </div>
@@ -99,16 +99,16 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
             {/* Content */}
             <div className="p-6">
               {/* Info Banner */}
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-6">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <FiAlertCircle className="text-blue-400 text-xl" />
+                    <FiAlertCircle className="text-primary text-xl" />
                   </div>
                   <div>
-                    <h3 className="text-blue-300 font-bold mb-1">
+                    <h3 className="text-primary font-bold mb-1">
                       Installation folder configuration
                     </h3>
-                    <p className="text-slate-300 text-sm leading-relaxed">
+                    <p className="text-text-secondary text-sm leading-relaxed">
                       You must select a folder where all your games will be
                       installed. Make sure to choose a disk with enough free
                       space. A "DrathosGames" subfolder will be created
@@ -119,26 +119,26 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
               </div>
 
               {/* Folder Selection */}
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50 mb-4">
+              <div className="bg-surface rounded-xl p-6 border border-border mb-4">
                 <label className="block">
-                  <span className="text-white font-semibold text-base mb-3 block">
+                  <span className="text-text font-semibold text-base mb-3 block">
                     Select your installation folder
                   </span>
                   <div className="flex gap-3">
                     <div className="flex-1 relative">
-                      <FiFolder className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
+                      <FiFolder className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-lg" />
                       <input
                         type="text"
                         value={downloadPath || "No folder selected"}
                         readOnly
-                        className="w-full pl-10 pr-3 py-3 rounded-lg bg-slate-900/50 border border-slate-600 text-slate-300 text-sm cursor-not-allowed"
+                        className="w-full pl-10 pr-3 py-3 rounded-lg bg-background border border-border text-text-secondary text-sm cursor-not-allowed"
                         placeholder="Click Browse..."
                       />
                     </div>
                     <button
                       onClick={selectDownloadPath}
                       disabled={isSelecting}
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 py-3 bg-gradient-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-primary hover:shadow-glow-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSelecting ? (
                         <>
@@ -160,56 +160,56 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 bg-slate-900/50 rounded-lg p-4 border border-slate-700/50"
+                    className="mt-4 bg-background/50 rounded-lg p-4 border border-border"
                   >
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-                        <FiHardDrive className="text-green-400 text-lg" />
+                      <div className="w-8 h-8 bg-success/20 rounded-lg flex items-center justify-center">
+                        <FiHardDrive className="text-success text-lg" />
                       </div>
-                      <h4 className="text-white font-semibold text-sm">
+                      <h4 className="text-text font-semibold text-sm">
                         Available disk space
                       </h4>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Free space</span>
-                        <span className="text-green-400 font-bold">
+                        <span className="text-text-secondary">Free space</span>
+                        <span className="text-success font-bold">
                           {diskSpace.freeGB} GB
                         </span>
                       </div>
 
                       {/* Progress bar */}
-                      <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-surface rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             diskSpace.usedPercent > 90
-                              ? "bg-gradient-to-r from-red-500 to-orange-500"
+                              ? "bg-error"
                               : diskSpace.usedPercent > 75
-                              ? "bg-gradient-to-r from-yellow-500 to-orange-500"
-                              : "bg-gradient-to-r from-blue-500 to-green-500"
+                              ? "bg-warning"
+                              : "bg-success"
                           }`}
                           style={{ width: `${diskSpace.usedPercent}%` }}
                         />
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">
+                        <span className="text-text-secondary">
                           {diskSpace.usedGB} GB used
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-text-secondary">
                           {diskSpace.usedPercent}% used
                         </span>
                       </div>
                     </div>
 
                     {diskSpace.usedPercent > 90 && (
-                      <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-start gap-2">
-                        <FiAlertCircle className="text-red-400 text-base flex-shrink-0 mt-0.5" />
+                      <div className="mt-3 bg-error/10 border border-error/30 rounded-lg p-3 flex items-start gap-2">
+                        <FiAlertCircle className="text-error text-base flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-red-300 text-xs font-semibold mb-0.5">
+                          <p className="text-error text-xs font-semibold mb-0.5">
                             Warning: Low disk space
                           </p>
-                          <p className="text-red-200/80 text-xs">
+                          <p className="text-text-secondary text-xs">
                             Your disk is almost full. Make sure you have
                             enough space to install your games.
                           </p>
@@ -224,14 +224,14 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
               <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={handleClose}
-                  className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-all duration-200"
+                  className="px-6 py-2.5 bg-surface hover:bg-surface/80 text-text rounded-lg font-medium transition-all duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirm}
                   disabled={!downloadPath}
-                  className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-green-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center gap-2"
+                  className="px-6 py-2.5 bg-success hover:bg-success/80 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-glow-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center gap-2"
                 >
                   <FiDownload className="text-lg" />
                   <span>Continue installation</span>

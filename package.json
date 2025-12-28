@@ -23,6 +23,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "7zip-bin": "^5.2.0",
+    "country-flag-icons": "^1.6.4",
     "crypto": "^1.0.1",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",

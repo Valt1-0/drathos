@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { useUpload } from "../contexts/uploadContext";
+import { useTheme } from "../contexts/themeContext";
 import {
   FiLoader,
   FiCheckCircle,
@@ -9,45 +11,8 @@ import {
   FiClock,
 } from "react-icons/fi";
 
-// Fonction pour formater la vitesse
-const formatSpeed = (bytesPerSecond) => {
-  if (bytesPerSecond === 0) return "Calculating...";
-  const mbps = bytesPerSecond / (1024 * 1024);
-  if (mbps >= 1) {
-    return `${mbps.toFixed(2)} MB/s`;
-  }
-  const kbps = bytesPerSecond / 1024;
-  return `${kbps.toFixed(2)} KB/s`;
-};
-
-// Fonction pour formater le temps restant
-const formatETA = (seconds) => {
-  if (seconds === 0 || !isFinite(seconds)) return "Calculating...";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${secs}s`;
-  } else {
-    return `${secs}s`;
-  }
-};
-
-// Fonction pour formater les bytes
-const formatBytes = (bytes) => {
-  if (bytes === 0) return "0 B";
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 1) {
-    return `${mb.toFixed(2)} MB`;
-  }
-  const kb = bytes / 1024;
-  return `${kb.toFixed(2)} KB`;
-};
-
 const UploadNotification = () => {
+  const { t } = useTranslation();
   const {
     isUploading,
     uploadState,
@@ -61,6 +26,45 @@ const UploadNotification = () => {
     queueInfo,
     dismissUpload,
   } = useUpload();
+  const { isLight, getTextClass } = useTheme();
+
+  // Fonction pour formater la vitesse
+  const formatSpeed = (bytesPerSecond) => {
+    if (bytesPerSecond === 0) return t('upload.calculating');
+    const mbps = bytesPerSecond / (1024 * 1024);
+    if (mbps >= 1) {
+      return `${mbps.toFixed(2)} MB/s`;
+    }
+    const kbps = bytesPerSecond / 1024;
+    return `${kbps.toFixed(2)} KB/s`;
+  };
+
+  // Fonction pour formater le temps restant
+  const formatETA = (seconds) => {
+    if (seconds === 0 || !isFinite(seconds)) return t('upload.calculating');
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  // Fonction pour formater les bytes
+  const formatBytes = (bytes) => {
+    if (bytes === 0) return "0 B";
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) {
+      return `${mb.toFixed(2)} MB`;
+    }
+    const kb = bytes / 1024;
+    return `${kb.toFixed(2)} KB`;
+  };
 
   if (!isUploading) return null;
 
@@ -73,17 +77,17 @@ const UploadNotification = () => {
         transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
         className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-3rem)]"
       >
-        <div className="bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
+        <div className="backdrop-blur-xl rounded-2xl shadow-2xl border overflow-hidden bg-surface border-border">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+          <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-3">
               {uploadState === "queued" && (
                 <motion.div
                   animate={{ scale: [1, 1.1, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center"
                 >
-                  <FiClock className="text-2xl text-yellow-400" />
+                  <FiClock className="text-2xl text-warning" />
                 </motion.div>
               )}
 
@@ -91,9 +95,9 @@ const UploadNotification = () => {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"
                 >
-                  <FiLoader className="text-2xl text-blue-400" />
+                  <FiLoader className="text-2xl text-primary" />
                 </motion.div>
               )}
 
@@ -102,9 +106,9 @@ const UploadNotification = () => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center"
                 >
-                  <FiCheckCircle className="text-2xl text-green-400" />
+                  <FiCheckCircle className="text-2xl text-success" />
                 </motion.div>
               )}
 
@@ -113,23 +117,23 @@ const UploadNotification = () => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center"
+                  className="w-10 h-10 rounded-xl bg-error/20 flex items-center justify-center"
                 >
-                  <FiAlertTriangle className="text-2xl text-red-400" />
+                  <FiAlertTriangle className="text-2xl text-error" />
                 </motion.div>
               )}
 
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-white text-sm truncate">
-                  {uploadState === "queued" && "Upload queued"}
-                  {uploadState === "uploading" && "Upload in progress"}
-                  {uploadState === "success" && "Upload complete"}
-                  {uploadState === "error" && "Upload error"}
+                <h3 className={`font-bold text-sm truncate ${getTextClass('primary')}`}>
+                  {uploadState === "queued" && t('upload.queued')}
+                  {uploadState === "uploading" && t('upload.uploading')}
+                  {uploadState === "success" && t('upload.complete')}
+                  {uploadState === "error" && t('upload.error')}
                 </h3>
-                <p className="text-xs text-slate-400 truncate">{uploadGameName}</p>
+                <p className={`text-xs truncate ${getTextClass('secondary')}`}>{uploadGameName}</p>
                 {uploadState === "queued" && queueInfo && (
-                  <p className="text-xs text-yellow-400 mt-1">
-                    {queueInfo.active} active • {queueInfo.queued} queued
+                  <p className="text-xs text-warning mt-1">
+                    {t('upload.queueInfo', { active: queueInfo.active, queued: queueInfo.queued })}
                   </p>
                 )}
               </div>
@@ -139,7 +143,7 @@ const UploadNotification = () => {
             {uploadState !== "uploading" && (
               <button
                 onClick={dismissUpload}
-                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all"
+                className={`p-1.5 rounded-lg transition-all hover:bg-background-secondary ${getTextClass('secondary')}`}
               >
                 <FiX className="text-lg" />
               </button>
@@ -149,14 +153,12 @@ const UploadNotification = () => {
           {/* Body */}
           <div className="p-4">
             {uploadState === "queued" && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                <p className="text-sm text-yellow-200">
-                  Your upload is in the queue. It will start when other uploads complete.
+              <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
+                <p className={`text-sm ${getTextClass('primary')}`}>
+                  {t('upload.queueMessage')}
                 </p>
                 {queueInfo && (
-                  <p className="text-xs text-yellow-300 mt-2">
-                    <strong>{queueInfo.active}</strong> upload(s) in progress • <strong>{queueInfo.queued}</strong> waiting
-                  </p>
+                  <p className={`text-xs mt-2 ${getTextClass('secondary')}`} dangerouslySetInnerHTML={{ __html: t('upload.queueStats', { active: queueInfo.active, queued: queueInfo.queued }) }} />
                 )}
               </div>
             )}
@@ -166,12 +168,12 @@ const UploadNotification = () => {
                 {/* Progress Bar */}
                 <div className="mb-4">
                   <div className="flex justify-between text-xs mb-2">
-                    <span className="text-slate-400">Progress</span>
-                    <span className="text-blue-400 font-bold">{uploadProgress}%</span>
+                    <span className={getTextClass('secondary')}>{t('upload.progress')}</span>
+                    <span className="text-primary font-bold">{uploadProgress}%</span>
                   </div>
-                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="w-full h-2 rounded-full overflow-hidden bg-background-secondary">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
+                      className="h-full bg-gradient-primary rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${uploadProgress}%` }}
                       transition={{ duration: 0.3 }}
@@ -182,33 +184,33 @@ const UploadNotification = () => {
                 {/* Statistics */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   {/* Speed */}
-                  <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                  <div className="rounded-lg p-3 border bg-background-secondary border-border">
                     <div className="flex items-center gap-2 mb-1">
-                      <FiZap className="text-blue-400 text-sm" />
-                      <span className="text-xs text-slate-400">Speed</span>
+                      <FiZap className="text-primary text-sm" />
+                      <span className={`text-xs ${getTextClass('secondary')}`}>{t('upload.speed')}</span>
                     </div>
-                    <p className="text-sm font-bold text-white">
+                    <p className={`text-sm font-bold ${getTextClass('primary')}`}>
                       {formatSpeed(uploadSpeed)}
                     </p>
                   </div>
 
                   {/* Time Remaining */}
-                  <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                  <div className="rounded-lg p-3 border bg-background-secondary border-border">
                     <div className="flex items-center gap-2 mb-1">
-                      <FiClock className="text-purple-400 text-sm" />
-                      <span className="text-xs text-slate-400">Remaining</span>
+                      <FiClock className="text-secondary text-sm" />
+                      <span className={`text-xs ${getTextClass('secondary')}`}>{t('upload.remaining')}</span>
                     </div>
-                    <p className="text-sm font-bold text-white">
+                    <p className={`text-sm font-bold ${getTextClass('primary')}`}>
                       {formatETA(uploadETA)}
                     </p>
                   </div>
                 </div>
 
                 {/* Upload Size */}
-                <div className="bg-slate-800/30 rounded-lg p-2 border border-slate-700/30">
+                <div className="rounded-lg p-2 border bg-background border-border">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-400">Sent</span>
-                    <span className="text-xs font-semibold text-white">
+                    <span className={`text-xs ${getTextClass('secondary')}`}>{t('upload.sent')}</span>
+                    <span className={`text-xs font-semibold ${getTextClass('primary')}`}>
                       {formatBytes(uploadLoaded)} / {formatBytes(uploadTotal)}
                     </span>
                   </div>
@@ -218,22 +220,22 @@ const UploadNotification = () => {
 
             {uploadState === "success" && (
               <div className="text-center py-2">
-                <p className="text-green-400 font-semibold text-sm mb-1">
-                  Game added successfully!
+                <p className="text-success font-semibold text-sm mb-1">
+                  {t('upload.success')}
                 </p>
-                <p className="text-slate-400 text-xs">
-                  This notification will close automatically
+                <p className={`text-xs ${getTextClass('secondary')}`}>
+                  {t('upload.autoClose')}
                 </p>
               </div>
             )}
 
             {uploadState === "error" && (
               <div className="text-center py-2">
-                <p className="text-red-400 font-semibold text-sm mb-2">
-                  Upload failed
+                <p className="text-error font-semibold text-sm mb-2">
+                  {t('upload.failed')}
                 </p>
-                <p className="text-slate-300 text-xs break-words">
-                  {uploadError || "An error occurred"}
+                <p className={`text-xs break-words ${getTextClass('primary')}`}>
+                  {uploadError || t('upload.errorOccurred')}
                 </p>
               </div>
             )}

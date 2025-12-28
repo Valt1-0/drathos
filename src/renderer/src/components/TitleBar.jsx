@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
-import { FaGamepad } from "react-icons/fa6";
+import { motion } from "framer-motion";
 import ConnectionIndicator from "./ConnectionIndicator";
 
 const TitleBar = () => {
@@ -26,51 +26,112 @@ const TitleBar = () => {
 
   return (
     <div
-      className="flex items-center justify-between h-8 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800/50 select-none"
-      style={{ WebkitAppRegion: 'drag' }}
+      className="relative flex items-center justify-between h-9 select-none overflow-hidden"
+      style={{
+        WebkitAppRegion: 'drag',
+        backgroundColor: 'var(--app-backgroundSecondary)',
+        borderBottom: '1px solid var(--app-border)',
+      }}
     >
+      {/* Gradient overlay pour effet glassmorphism */}
+      <div
+        className="absolute inset-0 opacity-50"
+        style={{
+          background: 'var(--app-gradient-primary)',
+          mixBlendMode: 'soft-light',
+        }}
+      />
+
+      {/* Blur backdrop */}
+      <div className="absolute inset-0 backdrop-blur-xl bg-black/10" />
+
       {/* Logo and Title - Draggable Area */}
-      <div className="flex items-center gap-2 px-4 flex-1 h-full">
-        <span className="text-xs font-semibold text-slate-300">Drathos</span>
+      <div className="relative flex items-center gap-3 px-4 flex-1 h-full z-10">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-2"
+        >
+          <div
+            className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-black"
+            style={{
+              background: 'var(--app-gradient-button)',
+              boxShadow: '0 2px 8px var(--app-primary)',
+            }}
+          >
+            D
+          </div>
+          <span
+            className="text-sm font-bold tracking-wide"
+            style={{ color: 'var(--app-text)' }}
+          >
+            Drathos
+          </span>
+        </motion.div>
       </div>
 
       {/* Connection Indicator */}
-      <div className="mr-2" style={{ WebkitAppRegion: 'no-drag' }}>
+      <div className="relative z-10 mr-2" style={{ WebkitAppRegion: 'no-drag' }}>
         <ConnectionIndicator />
       </div>
 
       {/* Control Buttons */}
-      <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+      <div className="relative flex h-full z-10" style={{ WebkitAppRegion: 'no-drag' }}>
         {/* Minimize */}
-        <button
+        <motion.button
+          whileHover={{ opacity: 0.8 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleMinimize}
-          className="group w-12 h-full flex items-center justify-center hover:bg-slate-800 transition-colors"
+          className="group w-12 h-full flex items-center justify-center transition-all duration-200 hover:bg-surface"
           aria-label="Minimize"
         >
-          <FiMinus className="text-slate-400 group-hover:text-white transition-colors" size={16} />
-        </button>
+          <FiMinus
+            className="transition-all duration-200"
+            style={{ color: 'var(--app-textSecondary)' }}
+            size={16}
+          />
+        </motion.button>
 
         {/* Maximize/Restore */}
-        <button
+        <motion.button
+          whileHover={{ opacity: 0.8 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleMaximize}
-          className="group w-12 h-full flex items-center justify-center hover:bg-slate-800 transition-colors"
+          className="group w-12 h-full flex items-center justify-center transition-all duration-200 hover:bg-surface"
           aria-label={isMaximized ? "Restore" : "Maximize"}
         >
           {isMaximized ? (
-            <FiMinimize className="text-slate-400 group-hover:text-white transition-colors" size={14} />
+            <FiMinimize
+              className="transition-all duration-200"
+              style={{ color: 'var(--app-textSecondary)' }}
+              size={14}
+            />
           ) : (
-            <FiMaximize className="text-slate-400 group-hover:text-white transition-colors" size={14} />
+            <FiMaximize
+              className="transition-all duration-200"
+              style={{ color: 'var(--app-textSecondary)' }}
+              size={14}
+            />
           )}
-        </button>
+        </motion.button>
 
         {/* Close */}
-        <button
+        <motion.button
+          whileHover={{
+            backgroundColor: 'var(--app-error)',
+          }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleClose}
-          className="group w-12 h-full flex items-center justify-center hover:bg-red-600 transition-colors"
+          className="group w-12 h-full flex items-center justify-center transition-all duration-200"
           aria-label="Close"
         >
-          <FiX className="text-slate-400 group-hover:text-white transition-colors" size={18} />
-        </button>
+          <FiX
+            className="transition-all duration-200"
+            style={{ color: 'var(--app-textSecondary)' }}
+            size={18}
+          />
+        </motion.button>
       </div>
     </div>
   );

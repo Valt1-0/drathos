@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
 import { formatStats as formatStatsAPI } from "../api/gameStats";
@@ -8,6 +9,7 @@ import uninstallQueue from "../utils/uninstallQueue";
 import { useDownloadActions } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useAuth } from "../contexts/authContext";
+import { useTheme } from "../contexts/themeContext";
 import { checkServerStatus } from "../api/server";
 import gameManager from "../services/gameManager";
 import { useGameStats } from "../hooks/games/useGameStats";
@@ -26,13 +28,14 @@ import { toast } from "sonner";
 
 const Games = () => {
   const { t } = useTranslation();
+  const { isLight, getTextClass } = useTheme();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [installedGames, setInstalledGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [selectedGenre, setSelectedGenre] = useState("All");
+  const [selectedGenre, setSelectedGenre] = useState(t('games.allGenres'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [gameSize, setGameSize] = useState(null);
@@ -635,33 +638,56 @@ const Games = () => {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">{t('games.loadingLibrary')}</p>
-        </div>
+      <div className={`h-full flex items-center justify-center ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className={`relative w-16 h-16 mx-auto mb-6 ${isLight ? 'bg-blue-100' : 'bg-blue-500/20'} rounded-2xl flex items-center justify-center`}>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+          </div>
+          <p className={`text-lg font-medium ${getTextClass('primary')}`}>{t('games.loadingLibrary')}</p>
+          <p className={`text-sm mt-2 ${getTextClass('secondary')}`}>{t('games.pleaseWait')}</p>
+        </motion.div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
+      <div className={`h-full flex items-center justify-center ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`max-w-md w-full mx-4 rounded-2xl p-8 border ${isLight ? 'bg-white border-red-200' : 'bg-gray-800/50 border-red-500/30'}`}
+        >
+          <div className={`w-16 h-16 rounded-xl mx-auto mb-6 flex items-center justify-center ${isLight ? 'bg-red-100' : 'bg-red-500/20'}`}>
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className={`text-xl font-bold text-center mb-3 ${getTextClass('primary')}`}>
+            {t('errors.loadingFailed')}
+          </h2>
+          <p className={`text-center mb-6 text-sm ${isLight ? 'text-red-600' : 'text-red-400'}`}>{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+            className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              isLight
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
+                : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-blue-500/30'
+            }`}
           >
             {t('games.retry')}
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex bg-gray-900 text-white">
+    <div className={`h-full flex ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
       <GameLibrary
         games={games}
         selectedGameId={selectedGame?._id}

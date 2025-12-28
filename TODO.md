@@ -386,13 +386,6 @@
   - [ ] Supprimer le code mort
   - [ ] Documenter les fonctions complexes
 
-- [ ] **Linting & Formatting**
-
-  - [ ] Configurer ESLint strictement
-  - [ ] Prettier pour le formatage
-  - [ ] Pre-commit hooks avec Husky
-  - [ ] Automatiser le linting dans CI/CD
-
 - [ ] **TypeScript** (migration progressive)
   - [ ] Migrer progressivement vers TypeScript
   - [ ] Commencer par les utils et services

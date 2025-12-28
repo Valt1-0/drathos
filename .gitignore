@@ -71,3 +71,6 @@ pnpm-lock.yaml
 # Electron specific
 *.asar
 .claude/
+
+README2.md
+TODO.md
