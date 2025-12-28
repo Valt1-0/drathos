@@ -53,21 +53,7 @@ nsis:
 
 linux:
   target:
-    - target: AppImage
-      arch:
-        - x64
-    - target: deb
-      arch:
-        - x64
-    - target: rpm
-      arch:
-        - x64
-    - target: pacman
-      arch:
-        - x64
-    - target: snap
-      arch:
-        - x64
+    - AppImage
   category: Game
   icon: build/icon.png
   maintainer: "Valt <contact@drathos.gg>"
@@ -95,7 +81,7 @@ snap:
     - x11
 
 rpm:
-  compression: gz
+  compression: xz
   fpm:
     - "--rpm-rpmbuild-define=_build_id_links none"
 

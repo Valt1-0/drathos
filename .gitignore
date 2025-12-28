@@ -11,6 +11,9 @@ dist-electron/
 out/
 .vite/
 
+# Release builds (stockés localement uniquement)
+releases/
+
 # Keep build directory for icons
 !build/
 
