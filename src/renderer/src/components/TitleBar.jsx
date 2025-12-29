@@ -45,30 +45,8 @@ const TitleBar = () => {
       {/* Blur backdrop */}
       <div className="absolute inset-0 backdrop-blur-xl bg-black/10" />
 
-      {/* Logo and Title - Draggable Area */}
+      {/* Draggable Area */}
       <div className="relative flex items-center gap-3 px-4 flex-1 h-full z-10">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center gap-2"
-        >
-          <div
-            className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-black"
-            style={{
-              background: 'var(--app-gradient-button)',
-              boxShadow: '0 2px 8px var(--app-primary)',
-            }}
-          >
-            D
-          </div>
-          <span
-            className="text-sm font-bold tracking-wide"
-            style={{ color: 'var(--app-text)' }}
-          >
-            Drathos
-          </span>
-        </motion.div>
       </div>
 
       {/* Connection Indicator */}

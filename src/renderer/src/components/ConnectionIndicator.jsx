@@ -1,8 +1,10 @@
 // drathos/src/renderer/src/components/ConnectionIndicator.jsx
 
+import { useTranslation } from "react-i18next";
 import { useConnection } from "../contexts/connectionContext";
 
 export default function ConnectionIndicator() {
+  const { t } = useTranslation();
   const { isOnline } = useConnection();
 
   return (
@@ -18,7 +20,7 @@ export default function ConnectionIndicator() {
         )}
       </div>
       <span className={`text-xs font-medium transition-colors ${isOnline ? "text-green-400" : "text-red-400"}`}>
-        {isOnline ? "En ligne" : "Hors ligne"}
+        {isOnline ? t('nav.userOnline') : t('nav.userOffline')}
       </span>
     </div>
   );

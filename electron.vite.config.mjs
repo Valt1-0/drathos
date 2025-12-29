@@ -48,6 +48,7 @@ export default defineConfig({
       minify: 'esbuild',
       sourcemap: false,
       target: 'esnext', // Utiliser les fonctionnalités modernes pour éviter eval
+      chunkSizeWarningLimit: 2000, // Augmenter la limite pour Electron (app locale)
       rollupOptions: {
         input: {
           index: resolve(__dirname, "src/renderer/index.html"),
@@ -55,7 +56,11 @@ export default defineConfig({
         },
         output: {
           format: 'es', // Format ES modules (pas de eval)
-          manualChunks: undefined,
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router'],
+            'vendor-framer': ['framer-motion'],
+            'vendor-icons': ['react-icons'],
+          },
         },
       },
     },

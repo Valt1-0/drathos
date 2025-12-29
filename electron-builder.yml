@@ -54,6 +54,8 @@ nsis:
 linux:
   target:
     - AppImage
+    - deb
+    - pacman
   category: Game
   icon: build/icon.png
   maintainer: "Valt <contact@drathos.gg>"

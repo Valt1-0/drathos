@@ -351,7 +351,7 @@ const SettingsPage = () => {
                   {/* Account Card */}
                   <Card variant="glass" hover>
                     <Card.Header
-                      icon={<FiUser className="text-2xl" style={{ color: 'var(--app-primary)' }} />}
+                      icon={<FiUser className="text-2xl" style={{ color: 'var(--app-text)' }} />}
                       title={t('settings.account')}
                       subtitle={t('settings.manageProfile')}
                     />
@@ -368,7 +368,7 @@ const SettingsPage = () => {
                   {/* Language Card */}
                   <Card variant="glass" hover>
                     <Card.Header
-                      icon={<FiGlobe className="text-2xl" style={{ color: 'var(--app-success)' }} />}
+                      icon={<FiGlobe className="text-2xl" style={{ color: 'var(--app-text)' }} />}
                       title={t('settings.language')}
                       subtitle={t('settings.languageDesc')}
                     />
@@ -426,74 +426,10 @@ const SettingsPage = () => {
               {/* Appearance Settings */}
               {activeCategory === 'appearance' && (
                 <div className="space-y-6">
-                  {/* Theme Card */}
-                  <Card variant="glass" hover>
-                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.2)' }}>
-                          {isLightTheme ? (
-                            <FiSun className="text-2xl" style={{ color: 'var(--app-warning)' }} />
-                          ) : (
-                            <FiMoon className="text-2xl" style={{ color: 'var(--app-secondary)' }} />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.appearance')}</h3>
-                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.appTheme')}</p>
-                        </div>
-                      </div>
-
-                      {/* Toggle Switch Light/Dark */}
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleQuickThemeToggle}
-                        className="relative inline-flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-300 shadow-lg"
-                        style={{
-                          background: isLightTheme
-                            ? 'linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%)'
-                            : 'var(--app-gradient-primary)',
-                          boxShadow: isLightTheme
-                            ? '0 4px 20px rgba(245, 158, 11, 0.4)'
-                            : 'var(--app-shadow-primary)'
-                        }}
-                      >
-                        {isLightTheme ? (
-                          <>
-                            <FiSun className="text-xl" style={{ color: '#FFFFFF' }} />
-                            <span className="font-bold text-sm" style={{ color: '#FFFFFF' }}>Light</span>
-                          </>
-                        ) : (
-                          <>
-                            <FiMoon className="text-xl" style={{ color: '#FFFFFF' }} />
-                            <span className="font-bold text-sm" style={{ color: '#FFFFFF' }}>Dark</span>
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
-
-                    <Card.Body>
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-sm p-4 rounded-xl"
-                        style={{
-                          backgroundColor: 'var(--app-surface)',
-                          color: 'var(--app-textSecondary)'
-                        }}
-                      >
-                        {isLightTheme
-                          ? '☀️ Mode clair activé - Interface lumineuse et aérée'
-                          : '🌙 Mode sombre activé - Confort visuel nocturne'
-                        }
-                      </motion.p>
-                    </Card.Body>
-                  </Card>
-
                   {/* Color Theme Selector Card */}
                   <Card variant="glass" hover>
                     <Card.Header
-                      icon={<FiMonitor className="text-2xl" style={{ color: 'var(--app-secondary)' }} />}
+                      icon={<FiMonitor className="text-2xl" style={{ color: 'var(--app-text)' }} />}
                       title={t('settings.colorTheme')}
                       subtitle={t('settings.colorThemeDesc')}
                     />
@@ -505,10 +441,10 @@ const SettingsPage = () => {
                           return (
                             <motion.button
                               key={themeOption.id}
-                              whileHover={{ scale: 1.05, y: -4 }}
-                              whileTap={{ scale: 0.95 }}
+                              whileHover={{ scale: 1.03, y: -2 }}
+                              whileTap={{ scale: 0.97 }}
                               onClick={() => changeAppTheme(themeOption.id)}
-                              className={`relative p-4 rounded-2xl border-2 transition-all overflow-hidden ${
+                              className={`relative p-3 rounded-xl border-2 transition-all overflow-hidden ${
                                 isActive
                                   ? 'border-secondary shadow-lg shadow-secondary/30'
                                   : 'border-white/10 hover:border-secondary/50'
@@ -520,74 +456,46 @@ const SettingsPage = () => {
                               }}
                             >
                               {/* Preview circles */}
-                              <div className="flex gap-1.5 mb-3 justify-center">
+                              <div className="flex gap-1.5 mb-2 justify-center">
                                 <div
-                                  className="w-6 h-6 rounded-full shadow-lg"
+                                  className="w-5 h-5 rounded-full shadow-lg"
                                   style={{
                                     background: themeOption.gradients.primary,
-                                    boxShadow: `0 0 12px ${themeOption.colors.primary}60`
+                                    boxShadow: `0 0 8px ${themeOption.colors.primary}60`
                                   }}
                                 />
                                 <div
-                                  className="w-6 h-6 rounded-full shadow-lg"
+                                  className="w-5 h-5 rounded-full shadow-lg"
                                   style={{
                                     background: themeOption.gradients.secondary,
-                                    boxShadow: `0 0 12px ${themeOption.colors.secondary}60`
+                                    boxShadow: `0 0 8px ${themeOption.colors.secondary}60`
                                   }}
                                 />
                               </div>
 
                               {/* Theme info */}
-                              <div className="text-center mb-2">
-                                <div className="text-2xl mb-1">{themeOption.preview}</div>
-                                <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>{themeOption.name}</div>
-                                <div className="text-xs mt-0.5" style={{ color: 'var(--app-textSecondary)' }}>{themeOption.description}</div>
+                              <div className="text-center">
+                                <div className="text-xl mb-1">{themeOption.preview}</div>
+                                <div className="font-semibold text-xs" style={{ color: 'var(--app-text)' }}>{themeOption.name}</div>
                               </div>
 
                               {/* Active indicator */}
                               {isActive && (
                                 <motion.div
                                   layoutId="activeThemeIndicator"
-                                  className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
+                                  className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
                                   style={{
                                     background: themeOption.gradients.primary,
-                                    boxShadow: `0 0 12px ${themeOption.colors.primary}80`
+                                    boxShadow: `0 0 8px ${themeOption.colors.primary}80`
                                   }}
                                 >
-                                  <FiCheck className="text-sm" style={{ color: '#FFFFFF' }} />
+                                  <FiCheck className="text-xs" style={{ color: '#FFFFFF' }} />
                                 </motion.div>
                               )}
                             </motion.button>
                           );
                         })}
                       </div>
-
-                      {/* Current theme info */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-6 p-4 rounded-xl"
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          borderWidth: '1px',
-                          borderStyle: 'solid',
-                          borderColor: 'rgba(255, 255, 255, 0.1)'
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="text-2xl">
-                            {themesList.find(t => t.id === currentTheme)?.preview}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium" style={{ color: 'var(--app-text)' }}>
-                              {t('settings.currentTheme')}: {themesList.find(t => t.id === currentTheme)?.name}
-                            </p>
-                            <p className="text-xs" style={{ color: 'var(--app-textSecondary)' }}>
-                              {themesList.find(t => t.id === currentTheme)?.description}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
                     </Card.Body>
                   </Card>
                 </div>
@@ -599,7 +507,7 @@ const SettingsPage = () => {
                   {/* Download Path Card */}
                   <Card variant="glass" hover>
                     <Card.Header
-                      icon={<FiDownload className="text-2xl" style={{ color: 'var(--app-success)' }} />}
+                      icon={<FiDownload className="text-2xl" style={{ color: 'var(--app-text)' }} />}
                       title={t('settings.downloads')}
                       subtitle={t('settings.installPath')}
                     />

@@ -240,7 +240,7 @@ export const themes = {
     }
   },
 
-  // Mode Light Moderne - AMÉLIORÉ pour meilleur contraste
+  // Mode Light Moderne - Repensé
   lightModern: {
     id: 'lightModern',
     name: 'Light Modern',
@@ -253,25 +253,25 @@ export const themes = {
       secondaryHover: '#7C3AED',
       accent: '#14B8A6',
       accentHover: '#0D9488',
-      background: '#FAFAFA',        // Légèrement plus sombre que blanc pur
-      backgroundSecondary: '#F1F5F9', // Plus de contraste
-      surface: '#E2E8F0',           // Meilleure séparation
-      text: '#0F172A',              // Haute contraste (ratio ~14:1)
-      textSecondary: '#475569',     // Contraste moyen (ratio ~7:1)
-      border: 'rgba(99, 102, 241, 0.2)',
+      background: '#FFFFFF',
+      backgroundSecondary: '#F8FAFC',
+      surface: '#FFFFFF',
+      text: '#1E293B',
+      textSecondary: '#64748B',
+      border: 'rgba(148, 163, 184, 0.2)',
       success: '#22C55E',
       error: '#EF4444',
       warning: '#F59E0B',
     },
     gradients: {
-      primary: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-      secondary: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-      button: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+      primary: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+      secondary: 'linear-gradient(135deg, #14B8A6 0%, #6366F1 100%)',
+      button: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
     },
     shadows: {
-      primary: '0 8px 32px rgba(99, 102, 241, 0.25)',   // Shadows plus fortes pour profondeur
-      secondary: '0 8px 32px rgba(139, 92, 246, 0.25)',
-      accent: '0 8px 32px rgba(20, 184, 166, 0.25)',
+      primary: '0 4px 12px rgba(99, 102, 241, 0.15)',
+      secondary: '0 4px 12px rgba(139, 92, 246, 0.15)',
+      accent: '0 4px 12px rgba(20, 184, 166, 0.15)',
     }
   },
 };

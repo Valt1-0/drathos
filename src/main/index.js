@@ -187,6 +187,7 @@ function createWindow() {
       contextIsolation: true, // ✅ Obligatoire pour la sécurité
       nodeIntegration: false, // ✅ Désactiver Node dans le renderer
       nodeIntegrationInWorker: false, // ✅ Pas nécessaire pour vos Worker Threads
+      partition: 'persist:drathos', // ✅ Permet IndexedDB en mode sandbox
       zoomFactor: 1.0, // Fix scaling Wayland
     },
   });

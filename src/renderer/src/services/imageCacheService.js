@@ -11,6 +11,8 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 jours en millisecondes
 class ImageCacheService {
   constructor() {
     this.db = null;
+    this.isAvailable = false;
+    this.initializationPromise = null;
     this.initDB();
   }
 
@@ -18,16 +20,34 @@ class ImageCacheService {
    * Initialise la base de données IndexedDB
    */
   async initDB() {
-    return new Promise((resolve, reject) => {
+    // Éviter les initialisations multiples
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = new Promise((resolve) => {
+      // Vérifier si IndexedDB est disponible
+      if (!window.indexedDB) {
+        console.warn('[ImageCache] IndexedDB non disponible dans cet environnement');
+        this.isAvailable = false;
+        resolve(null);
+        return;
+      }
+
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error('Erreur lors de l\'ouverture de la base de données:', request.error);
-        reject(request.error);
+        console.warn('[ImageCache] IndexedDB non disponible:', request.error?.message || 'Erreur inconnue');
+        console.warn('[ImageCache] Les images seront chargées directement sans cache');
+        this.isAvailable = false;
+        this.db = null;
+        resolve(null);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
+        this.isAvailable = true;
+        console.log('[ImageCache] IndexedDB initialisé avec succès');
         resolve(this.db);
       };
 
@@ -41,6 +61,8 @@ class ImageCacheService {
         }
       };
     });
+
+    return this.initializationPromise;
   }
 
   /**
@@ -49,42 +71,51 @@ class ImageCacheService {
    * @returns {Promise<string|null>} URL blob de l'image ou null si non trouvée/expirée
    */
   async getImage(url) {
-    if (!this.db) {
+    // Si IndexedDB n'est pas disponible, retourner null
+    if (!this.isAvailable) {
       await this.initDB();
+      if (!this.isAvailable) {
+        return null;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([STORE_NAME], 'readonly');
-      const objectStore = transaction.objectStore(STORE_NAME);
-      const request = objectStore.get(url);
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.get(url);
 
-      request.onerror = () => {
-        console.error('Erreur lors de la récupération de l\'image:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.warn('[ImageCache] Erreur lors de la récupération:', request.error?.message);
+          resolve(null);
+        };
 
-      request.onsuccess = () => {
-        const data = request.result;
+        request.onsuccess = () => {
+          const data = request.result;
 
-        // Vérifier si l'image existe et n'est pas expirée
-        if (data && data.blob && data.timestamp) {
-          const now = Date.now();
-          const age = now - data.timestamp;
+          // Vérifier si l'image existe et n'est pas expirée
+          if (data && data.blob && data.timestamp) {
+            const now = Date.now();
+            const age = now - data.timestamp;
 
-          if (age < CACHE_DURATION) {
-            // Créer une URL blob depuis le blob stocké
-            const blobUrl = URL.createObjectURL(data.blob);
-            resolve(blobUrl);
+            if (age < CACHE_DURATION) {
+              // Créer une URL blob depuis le blob stocké
+              const blobUrl = URL.createObjectURL(data.blob);
+              resolve(blobUrl);
+            } else {
+              // Image expirée, la supprimer
+              this.deleteImage(url).catch(() => {});
+              resolve(null);
+            }
           } else {
-            // Image expirée, la supprimer
-            this.deleteImage(url);
             resolve(null);
           }
-        } else {
-          resolve(null);
-        }
-      };
-    });
+        };
+      });
+    } catch (error) {
+      console.warn('[ImageCache] Exception lors de getImage:', error.message);
+      return null;
+    }
   }
 
   /**
@@ -94,31 +125,40 @@ class ImageCacheService {
    * @returns {Promise<void>}
    */
   async setImage(url, blob) {
-    if (!this.db) {
+    // Si IndexedDB n'est pas disponible, ne rien faire
+    if (!this.isAvailable) {
       await this.initDB();
+      if (!this.isAvailable) {
+        return;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([STORE_NAME], 'readwrite');
-      const objectStore = transaction.objectStore(STORE_NAME);
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
 
-      const data = {
-        url,
-        blob,
-        timestamp: Date.now()
-      };
+        const data = {
+          url,
+          blob,
+          timestamp: Date.now()
+        };
 
-      const request = objectStore.put(data);
+        const request = objectStore.put(data);
 
-      request.onerror = () => {
-        console.error('Erreur lors du stockage de l\'image:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.warn('[ImageCache] Erreur lors du stockage:', request.error?.message);
+          resolve(); // Résoudre quand même pour ne pas bloquer
+        };
 
-      request.onsuccess = () => {
-        resolve();
-      };
-    });
+        request.onsuccess = () => {
+          resolve();
+        };
+      });
+    } catch (error) {
+      console.warn('[ImageCache] Exception lors de setImage:', error.message);
+      return;
+    }
   }
 
   /**
@@ -127,24 +167,33 @@ class ImageCacheService {
    * @returns {Promise<void>}
    */
   async deleteImage(url) {
-    if (!this.db) {
+    // Si IndexedDB n'est pas disponible, ne rien faire
+    if (!this.isAvailable) {
       await this.initDB();
+      if (!this.isAvailable) {
+        return;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([STORE_NAME], 'readwrite');
-      const objectStore = transaction.objectStore(STORE_NAME);
-      const request = objectStore.delete(url);
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.delete(url);
 
-      request.onerror = () => {
-        console.error('Erreur lors de la suppression de l\'image:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.warn('[ImageCache] Erreur lors de la suppression:', request.error?.message);
+          resolve(); // Résoudre quand même
+        };
 
-      request.onsuccess = () => {
-        resolve();
-      };
-    });
+        request.onsuccess = () => {
+          resolve();
+        };
+      });
+    } catch (error) {
+      console.warn('[ImageCache] Exception lors de deleteImage:', error.message);
+      return;
+    }
   }
 
   /**
@@ -154,10 +203,12 @@ class ImageCacheService {
    */
   async fetchAndCache(url) {
     try {
-      // Vérifier d'abord si l'image est déjà dans le cache
-      const cachedUrl = await this.getImage(url);
-      if (cachedUrl) {
-        return cachedUrl;
+      // Vérifier d'abord si l'image est déjà dans le cache (si IndexedDB disponible)
+      if (this.isAvailable) {
+        const cachedUrl = await this.getImage(url);
+        if (cachedUrl) {
+          return cachedUrl;
+        }
       }
 
       // Télécharger l'image
@@ -168,13 +219,15 @@ class ImageCacheService {
 
       const blob = await response.blob();
 
-      // Stocker dans le cache
-      await this.setImage(url, blob);
+      // Stocker dans le cache (si IndexedDB disponible)
+      if (this.isAvailable) {
+        await this.setImage(url, blob);
+      }
 
       // Retourner l'URL blob
       return URL.createObjectURL(blob);
     } catch (error) {
-      console.error('Erreur lors du téléchargement et du cache de l\'image:', error);
+      console.warn('[ImageCache] Erreur lors du téléchargement:', error.message);
       // En cas d'erreur, retourner l'URL originale
       return url;
     }
@@ -185,43 +238,54 @@ class ImageCacheService {
    * @returns {Promise<number>} Nombre d'images supprimées
    */
   async cleanExpiredImages() {
-    if (!this.db) {
+    // Si IndexedDB n'est pas disponible, retourner 0
+    if (!this.isAvailable) {
       await this.initDB();
+      if (!this.isAvailable) {
+        return 0;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([STORE_NAME], 'readwrite');
-      const objectStore = transaction.objectStore(STORE_NAME);
-      const index = objectStore.index('timestamp');
-      const request = index.openCursor();
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const index = objectStore.index('timestamp');
+        const request = index.openCursor();
 
-      let deletedCount = 0;
-      const now = Date.now();
+        let deletedCount = 0;
+        const now = Date.now();
 
-      request.onerror = () => {
-        console.error('Erreur lors du nettoyage du cache:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.warn('[ImageCache] Erreur lors du nettoyage:', request.error?.message);
+          resolve(0);
+        };
 
-      request.onsuccess = (event) => {
-        const cursor = event.target.result;
+        request.onsuccess = (event) => {
+          const cursor = event.target.result;
 
-        if (cursor) {
-          const data = cursor.value;
-          const age = now - data.timestamp;
+          if (cursor) {
+            const data = cursor.value;
+            const age = now - data.timestamp;
 
-          if (age >= CACHE_DURATION) {
-            cursor.delete();
-            deletedCount++;
+            if (age >= CACHE_DURATION) {
+              cursor.delete();
+              deletedCount++;
+            }
+
+            cursor.continue();
+          } else {
+            if (deletedCount > 0) {
+              console.log(`[ImageCache] ${deletedCount} image(s) expirée(s) supprimée(s)`);
+            }
+            resolve(deletedCount);
           }
-
-          cursor.continue();
-        } else {
-          console.log(`Cache nettoyé: ${deletedCount} image(s) expirée(s) supprimée(s)`);
-          resolve(deletedCount);
-        }
-      };
-    });
+        };
+      });
+    } catch (error) {
+      console.warn('[ImageCache] Exception lors de cleanExpiredImages:', error.message);
+      return 0;
+    }
   }
 
   /**
@@ -229,25 +293,34 @@ class ImageCacheService {
    * @returns {Promise<void>}
    */
   async clearCache() {
-    if (!this.db) {
+    // Si IndexedDB n'est pas disponible, ne rien faire
+    if (!this.isAvailable) {
       await this.initDB();
+      if (!this.isAvailable) {
+        return;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([STORE_NAME], 'readwrite');
-      const objectStore = transaction.objectStore(STORE_NAME);
-      const request = objectStore.clear();
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.clear();
 
-      request.onerror = () => {
-        console.error('Erreur lors de la suppression du cache:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.warn('[ImageCache] Erreur lors de la suppression:', request.error?.message);
+          resolve();
+        };
 
-      request.onsuccess = () => {
-        console.log('Cache d\'images vidé avec succès');
-        resolve();
-      };
-    });
+        request.onsuccess = () => {
+          console.log('[ImageCache] Cache vidé avec succès');
+          resolve();
+        };
+      });
+    } catch (error) {
+      console.warn('[ImageCache] Exception lors de clearCache:', error.message);
+      return;
+    }
   }
 
   /**
@@ -255,33 +328,48 @@ class ImageCacheService {
    * @returns {Promise<number>} Nombre d'images dans le cache
    */
   async getCacheSize() {
-    if (!this.db) {
+    // Si IndexedDB n'est pas disponible, retourner 0
+    if (!this.isAvailable) {
       await this.initDB();
+      if (!this.isAvailable) {
+        return 0;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([STORE_NAME], 'readonly');
-      const objectStore = transaction.objectStore(STORE_NAME);
-      const request = objectStore.count();
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.count();
 
-      request.onerror = () => {
-        console.error('Erreur lors du comptage du cache:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.warn('[ImageCache] Erreur lors du comptage:', request.error?.message);
+          resolve(0);
+        };
 
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
-    });
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+      });
+    } catch (error) {
+      console.warn('[ImageCache] Exception lors de getCacheSize:', error.message);
+      return 0;
+    }
   }
 }
 
 // Créer une instance unique du service
 const imageCacheService = new ImageCacheService();
 
-// Nettoyer le cache au démarrage de l'application
-imageCacheService.cleanExpiredImages().catch(err => {
-  console.error('Erreur lors du nettoyage initial du cache:', err);
+// Nettoyer le cache au démarrage de l'application (uniquement si IndexedDB est disponible)
+imageCacheService.initDB().then(() => {
+  if (imageCacheService.isAvailable) {
+    imageCacheService.cleanExpiredImages().catch(err => {
+      console.warn('[ImageCache] Erreur lors du nettoyage initial:', err.message);
+    });
+  }
+}).catch(() => {
+  // Erreur déjà loggée dans initDB
 });
 
 export default imageCacheService;

@@ -7,7 +7,7 @@ import {
   FaDownload,
   FaGear,
 } from "react-icons/fa6";
-import { FaHome } from "react-icons/fa";
+import { FaHome, FaFolderOpen } from "react-icons/fa";
 import { FiX, FiLogOut, FiUser } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
@@ -26,6 +26,7 @@ const Drawer = ({ children }) => {
   const menuItems = [
     { label: t('nav.home'), icon: FaHome, path: "/" },
     { label: t('nav.library'), icon: FaGamepad, path: "/games" },
+    { label: t('nav.collections'), icon: FaFolderOpen, path: "/collections" },
     { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
     { label: t('nav.settings'), icon: FaGear, path: "/settings" },
   ];
@@ -71,14 +72,6 @@ const Drawer = ({ children }) => {
           borderRight: '1px solid var(--app-border)',
         }}
       >
-        {/* Decorative gradient overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-50"
-          style={{
-            background: 'linear-gradient(135deg, var(--app-primary) 0%, transparent 50%, var(--app-secondary) 100%)',
-            mixBlendMode: 'soft-light',
-          }}
-        />
 
         {/* Header with toggle button */}
         <motion.div
@@ -332,7 +325,9 @@ const Drawer = ({ children }) => {
                       <p className="text-sm font-semibold text-text truncate">
                         {user.username}
                       </p>
-                      <p className="text-xs text-text-secondary">{t('nav.userOnline')}</p>
+                      <p className="text-xs text-text-secondary">
+                        {user.role || t('nav.userOnline')}
+                      </p>
                     </motion.div>
                   )}
                 </AnimatePresence>

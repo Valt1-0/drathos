@@ -12,6 +12,7 @@ import { ConnectionProvider } from "./contexts/connectionContext";
 import { UploadProvider } from "./contexts/uploadContext";
 import { UpdateProvider } from "./contexts/updateContext";
 import { ThemeProvider } from "./contexts/themeContext";
+import { CollectionsProvider } from "./contexts/collectionsContext";
 
 import Drawer from "./components/Drawer";
 import TitleBar from "./components/TitleBar";
@@ -25,6 +26,7 @@ import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 const Home = lazy(() => import("./pages/Home"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const Games = lazy(() => import("./pages/Games"));
+const Collections = lazy(() => import("./pages/Collections"));
 const Download = lazy(() => import("./pages/Download"));
 const Settings = lazy(() => import("./pages/Settings"));
 
@@ -86,6 +88,16 @@ function AppRoutes() {
               }
             />
             <Route
+              path="/collections"
+              element={
+                <ProtectedRoute>
+                  <Drawer>
+                    <Collections />
+                  </Drawer>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/download"
               element={
                 <ProtectedRoute>
@@ -140,8 +152,9 @@ export default function App() {
           <ConnectionProvider>
             <DownloadProvider>
               <UploadProvider>
-                <UpdateProvider>
-                  <Router>
+                <CollectionsProvider>
+                  <UpdateProvider>
+                    <Router>
                   <div className="flex flex-col h-screen overflow-hidden">
                     <TitleBar />
                     <div className="flex-1 overflow-hidden">
@@ -170,8 +183,9 @@ export default function App() {
                       descriptionClassName: 'sonner-description',
                     }}
                   />
-                  </Router>
-                </UpdateProvider>
+                    </Router>
+                  </UpdateProvider>
+                </CollectionsProvider>
               </UploadProvider>
             </DownloadProvider>
           </ConnectionProvider>

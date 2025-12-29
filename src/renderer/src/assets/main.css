@@ -210,15 +210,22 @@ html, body, #root {
   transition: opacity 0s;
 }
 
-/* ===== NOTE =====
-  La plupart des effets ont été migrés vers Tailwind (voir tailwind.config.js):
-  - .glass → Utiliser la classe Tailwind "glass"
-  - .glass-frosted → Utiliser la classe Tailwind "glass-frosted"
-  - .gradient-text → Utiliser la classe Tailwind "gradient-text"
-  - .btn-press → Utiliser la classe Tailwind "btn-press"
-  - .glow-hover → Utiliser la classe Tailwind "hover-glow"
-  - .hover-lift → Utiliser la classe Tailwind "hover-lift"
-  - Animations → Utiliser animate-{name} (fadeIn, slideIn, shimmer, glow-pulse, etc.)
 
-  Voir TAILWIND_DESIGN_GUIDE.md pour tous les exemples
-================ */
+
+/* SCROLLBAR HIDE - Pour les rangées horizontales */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* GLASS STRONG - Pour headers sticky avec plus d'opacité */
+.glass-strong {
+  background: var(--app-glass-bg);
+  backdrop-filter: blur(calc(var(--app-glass-blur) * 1.5));
+  -webkit-backdrop-filter: blur(calc(var(--app-glass-blur) * 1.5));
+  background: rgba(var(--app-background), 0.85);
+}
