@@ -138,7 +138,6 @@
     "playNow": "Play now",
     "launchGame": "Launch game",
     "folder": "Folder",
-    "openFolder": "Open folder",
     "removeGame": "Remove game",
     "gameStatistics": "Game statistics",
     "totalTime": "Total time",
@@ -156,7 +155,24 @@
     "platforms": "Platforms:",
     "installedSize": "Installed size:",
     "calculating": "Calculating...",
-    "downloadSize": "Download size:"
+    "downloadSize": "Download size:",
+    "multiplayer": "Multiplayer",
+    "gameMode": "Game Mode",
+    "filterAll": "All",
+    "filterMultiplayer": "Multi",
+    "filterSingleplayer": "Solo",
+    "multiplayerType": {
+      "online": "Online",
+      "local": "Local",
+      "both": "Online+Local"
+    },
+    "multiplayerModes": {
+      "co-op": "Co-op",
+      "pvp": "PvP"
+    },
+    "versionsAvailable": "Available versions",
+    "versionCount": "{{count}} version total",
+    "versionCount_plural": "{{count}} versions total"
   },
   "collections": {
     "title": "Collections",

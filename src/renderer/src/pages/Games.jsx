@@ -709,6 +709,8 @@ const Games = () => {
 
       <GameDetails
         game={selectedGame}
+        allGames={games}
+        onSelectVersion={setSelectedGame}
         gameStats={selectedGame ? gameStats[selectedGame._id] : null}
         gameSize={gameSize}
         isInstalled={isInstalled(selectedGame?._id)}

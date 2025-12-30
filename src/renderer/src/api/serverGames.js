@@ -28,6 +28,7 @@ export const addGameToServer = async (
   igdbId,
   onProgress = null,
   executableName = null,
+  multiplayer = null, // Nouveau format: { enabled, type, maxPlayers, modes }
   options = {}
 ) => {
   try {
@@ -46,6 +47,7 @@ export const addGameToServer = async (
       file: zipFile,
       version,
       isPublic,
+      multiplayer,
       igdbId,
       executableName,
       url,

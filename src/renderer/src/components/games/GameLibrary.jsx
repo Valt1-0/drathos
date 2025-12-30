@@ -1,7 +1,123 @@
-import React, { useMemo, useCallback, useState, useEffect } from "react";
+import React, { useMemo, useCallback, useState, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { FiSearch, FiClock, FiTrash2, FiPlus } from "react-icons/fi";
+import { FiSearch, FiClock, FiTrash2, FiPlus, FiUsers, FiLayers } from "react-icons/fi";
 import GameCover from "../GameCover";
+
+// Composant GameRow extrait et mémorisé pour optimiser les performances
+const GameRow = memo(({
+  game,
+  style,
+  isSelected,
+  isInstalled,
+  isGamePlaying,
+  isGameUninstalling,
+  isPendingUninstall,
+  gameStats,
+  getGenresArray,
+  onSelectGame,
+  t
+}) => {
+  if (!game) return null;
+
+  const installed = isInstalled(game._id);
+  const playing = isGamePlaying(game._id);
+  const stats = gameStats[game._id];
+  const uninstalling = isGameUninstalling(game._id);
+  const pending = isPendingUninstall(game._id);
+  const gameGenres = getGenresArray(game);
+
+  return (
+    <div style={style} className="px-3 py-0.5">
+      <div
+        onClick={() => onSelectGame(game)}
+        className={`group relative cursor-pointer transition-all duration-200 rounded-md p-2 ${
+          isSelected
+            ? "bg-primary/10 ring-1 ring-primary/50"
+            : "hover:bg-surface/60"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          {/* Cover compact */}
+          <div className="relative w-12 h-12 bg-surface rounded-md flex-shrink-0 overflow-hidden">
+            <GameCover
+              src={game.coverUrl}
+              alt={game.name}
+              className="w-full h-full object-cover"
+              size="thumb"
+            />
+
+            {/* Badge playing */}
+            {playing && (
+              <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--app-success)' }}></div>
+              </div>
+            )}
+
+            {/* Badge installed */}
+            {installed && !playing && (
+              <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--app-success)' }}></div>
+            )}
+          </div>
+
+          {/* Info du jeu */}
+          <div className="flex-1 min-w-0">
+            <h3 className={`font-medium truncate text-sm mb-0.5 ${
+              isSelected ? "text-text" : "text-text"
+            }`}>
+              {game.name}
+              {(game.versionCount && game.versionCount > 1) && (
+                <span className="inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 rounded bg-accent/20 border border-accent/30 align-middle">
+                  <FiLayers className="w-2.5 h-2.5 text-accent" />
+                  <span className="text-[10px] font-bold text-accent leading-none">
+                    {game.versionCount}
+                  </span>
+                </span>
+              )}
+            </h3>
+
+            {/* Statut */}
+            <div className="flex items-center gap-1.5 text-xs">
+              {stats && stats.totalPlayTime && stats.totalPlayTime !== "< 1 minute" && !stats.totalPlayTime.includes("NaN") && (
+                <div className="flex items-center gap-1 text-text-secondary">
+                  <FiClock className="w-2.5 h-2.5" />
+                  <span>{stats.totalPlayTime}</span>
+                </div>
+              )}
+
+              {uninstalling && (
+                <div className="flex items-center gap-1 text-warning">
+                  <FiTrash2 className="w-2.5 h-2.5" />
+                  <span>{t('games.removing')}</span>
+                </div>
+              )}
+
+              {pending && !uninstalling && (
+                <div className="flex items-center gap-1 text-warning">
+                  <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{t('games.pending')}</span>
+                </div>
+              )}
+
+              {!stats && !installed && !uninstalling && !pending && gameGenres.length > 0 && (
+                <span className="text-text-secondary truncate">{gameGenres[0]}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Indicateur de sélection */}
+          {isSelected && (
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-l"></div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+GameRow.displayName = 'GameRow';
 
 const GameLibrary = ({
   games,
@@ -23,6 +139,7 @@ const GameLibrary = ({
 }) => {
   const { t } = useTranslation();
   const [FixedSizeList, setFixedSizeList] = useState(null);
+  const [showOnlyMultiplayer, setShowOnlyMultiplayer] = useState(false);
 
   // Charger react-window de manière asynchrone pour éviter les problèmes d'imports
   useEffect(() => {
@@ -35,8 +152,37 @@ const GameLibrary = ({
       });
   }, []);
 
+  // Group and count versions
+  const { uniqueGames, versionCounts, gamesByIgdbId } = useMemo(() => {
+    const counts = new Map();
+    const byIgdb = new Map();
+    const seen = new Set();
+    const unique = [];
+
+    games.forEach(game => {
+      const key = game.igdbId || game._id;
+
+      // Count versions
+      counts.set(key, (counts.get(key) || 0) + 1);
+
+      // Group by igdbId
+      if (!byIgdb.has(key)) {
+        byIgdb.set(key, []);
+      }
+      byIgdb.get(key).push(game);
+
+      // Keep only first occurrence for unique list
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(game);
+      }
+    });
+
+    return { uniqueGames: unique, versionCounts: counts, gamesByIgdbId: byIgdb };
+  }, [games]);
+
   const filteredGames = useMemo(() => {
-    return games.filter((game) => {
+    return uniqueGames.filter((game) => {
       const matchesSearch = game.name
         .toLowerCase()
         .includes(debouncedSearchTerm.toLowerCase());
@@ -45,9 +191,14 @@ const GameLibrary = ({
       const matchesGenre =
         selectedGenre === t('games.allGenres') || gameGenres.includes(selectedGenre);
 
-      return matchesSearch && matchesGenre;
+      // Check if any version of this game has multiplayer
+      const key = game.igdbId || game._id;
+      const versions = gamesByIgdbId.get(key) || [game];
+      const matchesMultiplayer = !showOnlyMultiplayer || versions.some(v => v.multiplayer?.enabled);
+
+      return matchesSearch && matchesGenre && matchesMultiplayer;
     });
-  }, [games, debouncedSearchTerm, selectedGenre, getGenresArray]);
+  }, [uniqueGames, gamesByIgdbId, debouncedSearchTerm, selectedGenre, showOnlyMultiplayer, getGenresArray, t]);
 
   const allGenres = useMemo(() => {
     return [
@@ -65,101 +216,28 @@ const GameLibrary = ({
   const isGameUninstalling = useCallback((gameId) => uninstallingGames.has(gameId), [uninstallingGames]);
   const isPendingUninstall = useCallback((gameId) => pendingUninstalls.has(gameId), [pendingUninstalls]);
 
-  // Composant pour chaque ligne de jeu (virtualisé)
-  const GameRow = ({ index, style }) => {
+  // Wrapper pour GameRow pour react-window (extrait les données de l'index)
+  const VirtualGameRow = useCallback(({ index, style }) => {
     const game = filteredGames[index];
-    if (!game) return null; // Protection si index invalide
-
-    const installed = isInstalled(game._id);
-    const playing = isGamePlaying(game._id);
-    const stats = gameStats[game._id];
-    const uninstalling = isGameUninstalling(game._id);
-    const pending = isPendingUninstall(game._id);
-    const gameGenres = getGenresArray(game);
-    const isSelected = selectedGameId === game._id;
+    const key = game.igdbId || game._id;
+    const count = versionCounts.get(key) || 1;
 
     return (
-      <div style={style} className="px-3 py-0.5">
-        <div
-          onClick={() => onSelectGame(game)}
-          className={`group relative cursor-pointer transition-all duration-200 rounded-md p-2 ${
-            isSelected
-              ? "bg-primary/10 ring-1 ring-primary/50"
-              : "hover:bg-surface/60"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {/* Cover compact */}
-            <div className="relative w-12 h-12 bg-surface rounded-md flex-shrink-0 overflow-hidden">
-              <GameCover
-                src={game.coverUrl}
-                alt={game.name}
-                className="w-full h-full object-cover"
-                size="thumb"
-              />
-
-              {/* Badge playing */}
-              {playing && (
-                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--app-success)' }}></div>
-                </div>
-              )}
-
-              {/* Badge installed */}
-              {installed && !playing && (
-                <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--app-success)' }}></div>
-              )}
-            </div>
-
-            {/* Info du jeu */}
-            <div className="flex-1 min-w-0">
-              <h3 className={`font-medium truncate text-sm mb-0.5 ${
-                isSelected ? "text-text" : "text-text"
-              }`}>
-                {game.name}
-              </h3>
-
-              {/* Statut */}
-              <div className="flex items-center gap-1.5 text-xs">
-                {stats && stats.totalPlayTime && stats.totalPlayTime !== "< 1 minute" && !stats.totalPlayTime.includes("NaN") && (
-                  <div className="flex items-center gap-1 text-text-secondary">
-                    <FiClock className="w-2.5 h-2.5" />
-                    <span>{stats.totalPlayTime}</span>
-                  </div>
-                )}
-
-                {uninstalling && (
-                  <div className="flex items-center gap-1 text-warning">
-                    <FiTrash2 className="w-2.5 h-2.5" />
-                    <span>{t('games.removing')}</span>
-                  </div>
-                )}
-
-                {pending && !uninstalling && (
-                  <div className="flex items-center gap-1 text-warning">
-                    <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>{t('games.pending')}</span>
-                  </div>
-                )}
-
-                {!stats && !installed && !uninstalling && !pending && gameGenres.length > 0 && (
-                  <span className="text-text-secondary truncate">{gameGenres[0]}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Indicateur de sélection */}
-            {isSelected && (
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-l"></div>
-            )}
-          </div>
-        </div>
-      </div>
+      <GameRow
+        game={{ ...game, versionCount: count }}
+        style={style}
+        isSelected={selectedGameId === game._id}
+        isInstalled={isInstalled}
+        isGamePlaying={isGamePlaying}
+        isGameUninstalling={isGameUninstalling}
+        isPendingUninstall={isPendingUninstall}
+        gameStats={gameStats}
+        getGenresArray={getGenresArray}
+        onSelectGame={onSelectGame}
+        t={t}
+      />
     );
-  };
+  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, gameStats, getGenresArray, onSelectGame, t]);
 
   return (
     <div className="w-56 xl:w-64 bg-background flex flex-col" style={{ borderRight: '1px solid var(--app-border)' }}>
@@ -190,6 +268,35 @@ const GameLibrary = ({
             </option>
           ))}
         </select>
+
+        {/* Multiplayer Filter Toggle */}
+        <button
+          onClick={() => setShowOnlyMultiplayer(!showOnlyMultiplayer)}
+          className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-300 ${
+            showOnlyMultiplayer
+              ? 'bg-secondary/20 border-secondary/40'
+              : 'bg-background-secondary border-border hover:bg-surface'
+          }`}
+          style={{ border: '1px solid' }}
+        >
+          <div className={`relative w-10 h-5 rounded-full transition-all duration-300 ${
+            showOnlyMultiplayer ? 'bg-secondary' : 'bg-surface'
+          }`}
+            style={!showOnlyMultiplayer ? { border: '2px solid var(--app-border)' } : {}}
+          >
+            <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300 ${
+              showOnlyMultiplayer ? 'translate-x-5' : 'translate-x-0'
+            }`} />
+          </div>
+          <FiUsers className={`w-4 h-4 transition-colors ${
+            showOnlyMultiplayer ? 'text-secondary' : 'text-text-secondary'
+          }`} />
+          <span className={`text-sm font-medium flex-1 text-left transition-colors ${
+            showOnlyMultiplayer ? 'text-text' : 'text-text-secondary'
+          }`}>
+            {t('games.multiplayer')}
+          </span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -208,7 +315,7 @@ const GameLibrary = ({
             width="100%"
             className="scrollbar-thin scrollbar-thumb-surface scrollbar-track-background"
           >
-            {GameRow}
+            {VirtualGameRow}
           </FixedSizeList>
         ) : (
           <div
@@ -217,9 +324,27 @@ const GameLibrary = ({
               height: user?.role === "admin" ? `calc(100vh - 340px)` : `calc(100vh - 280px)`
             }}
           >
-            {filteredGames.map((game, index) => (
-              <GameRow key={game._id} index={index} style={{}} />
-            ))}
+            {filteredGames.map((game) => {
+              const key = game.igdbId || game._id;
+              const count = versionCounts.get(key) || 1;
+
+              return (
+                <GameRow
+                  key={game._id}
+                  game={{ ...game, versionCount: count }}
+                  style={{}}
+                  isSelected={selectedGameId === game._id}
+                  isInstalled={isInstalled}
+                  isGamePlaying={isGamePlaying}
+                  isGameUninstalling={isGameUninstalling}
+                  isPendingUninstall={isPendingUninstall}
+                  gameStats={gameStats}
+                  getGenresArray={getGenresArray}
+                  onSelectGame={onSelectGame}
+                  t={t}
+                />
+              );
+            })}
           </div>
         )}
       </div>

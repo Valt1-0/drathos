@@ -154,6 +154,12 @@ class UploadManager {
       formData.append("zipFile", config.file);
       formData.append("version", config.version);
       formData.append("isPublic", config.isPublic);
+
+      // Nouveau format multiplayer
+      if (config.multiplayer) {
+        formData.append("multiplayer", JSON.stringify(config.multiplayer));
+      }
+
       formData.append("igdbId", config.igdbId);
 
       if (config.executableName) {
@@ -251,11 +257,6 @@ class UploadManager {
   async resumeUpload(upload, resumeData) {
     // For now, restart the upload (full resumable upload requires server support)
     // This clears the saved progress and starts fresh
-    console.log(
-      "[UploadManager] Resuming upload from",
-      resumeData.loaded,
-      "bytes"
-    );
     return this.executeUpload(upload);
   }
 

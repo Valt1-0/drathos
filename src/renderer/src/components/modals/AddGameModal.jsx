@@ -15,6 +15,7 @@ import {
   FiUnlock,
   FiAlertTriangle,
   FiCpu,
+  FiUsers,
 } from "react-icons/fi";
 import { FaWindows, FaLinux, FaApple } from "react-icons/fa";
 
@@ -37,6 +38,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const [availableExecutables, setAvailableExecutables] = useState([]);
   const [isLoadingExecutables, setIsLoadingExecutables] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
+  const [multiplayer, setMultiplayer] = useState({
+    enabled: false,
+    type: null,
+    maxPlayers: null,
+    modes: []
+  });
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -129,6 +136,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
         id: selectedGame.id,
         version,
         isPublic,
+        multiplayer,
         executableName: executableName || null,
       };
       const fileInfo = { ...zipFile };
@@ -160,7 +168,8 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
             gameInfo.isPublic,
             gameInfo.id,
             updateUploadProgress,
-            gameInfo.executableName
+            gameInfo.executableName,
+            gameInfo.multiplayer
           );
 
           // Upload réussi
@@ -190,6 +199,13 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
     setExecutableName("");
     setAvailableExecutables([]);
     setIsLoadingExecutables(false);
+    setIsPublic(true);
+    setMultiplayer({
+      enabled: false,
+      type: null,
+      maxPlayers: null,
+      modes: []
+    });
     setQuery("");
     setSuggestions([]);
     setErrorMessage("");
@@ -554,6 +570,120 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             transition={{ duration: 0.2 }}
                           />
                         </button>
+                      </div>
+
+                      {/* Multiplayer Section */}
+                      <div className="space-y-3">
+                        {/* Toggle Principal */}
+                        <div className="flex items-center justify-between p-4 bg-surface rounded-xl border border-border">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              multiplayer.enabled ? "bg-secondary/20" : "bg-surface"
+                            }`}>
+                              <FiUsers className={`text-xl ${
+                                multiplayer.enabled ? "text-secondary" : "text-text-secondary"
+                              }`} />
+                            </div>
+                            <div>
+                              <p className="font-medium text-text">
+                                {multiplayer.enabled ? "Multiplayer Game" : "Single Player Game"}
+                              </p>
+                              <p className="text-xs text-text-secondary">
+                                {multiplayer.enabled
+                                  ? "Supports multiplayer mode"
+                                  : "Single player only"}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setMultiplayer(prev => ({ ...prev, enabled: !prev.enabled }))}
+                            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
+                              multiplayer.enabled ? "bg-secondary" : "bg-surface"
+                            }`}
+                          >
+                            <motion.div
+                              className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg"
+                              animate={{ x: multiplayer.enabled ? 28 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Détails Multiplayer (conditionnels) */}
+                        <AnimatePresence>
+                          {multiplayer.enabled && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-3 overflow-hidden"
+                            >
+                              {/* Type */}
+                              <div className="p-4 bg-surface rounded-xl border border-border">
+                                <label className="block text-sm font-medium text-text mb-2">Connection Type</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {['online', 'local', 'both'].map((type) => (
+                                    <button
+                                      key={type}
+                                      onClick={() => setMultiplayer(prev => ({ ...prev, type }))}
+                                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                        multiplayer.type === type
+                                          ? 'bg-secondary text-white'
+                                          : 'bg-background hover:bg-background-secondary text-text-secondary'
+                                      }`}
+                                    >
+                                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Max Players */}
+                              <div className="p-4 bg-surface rounded-xl border border-border">
+                                <label className="block text-sm font-medium text-text mb-2">Max Players</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="999"
+                                  value={multiplayer.maxPlayers || ''}
+                                  onChange={(e) => setMultiplayer(prev => ({
+                                    ...prev,
+                                    maxPlayers: e.target.value ? parseInt(e.target.value) : null
+                                  }))}
+                                  placeholder="e.g., 4"
+                                  className="w-full px-4 py-2 bg-background rounded-lg border border-border text-text focus:outline-none focus:ring-2 focus:ring-secondary"
+                                />
+                              </div>
+
+                              {/* Modes */}
+                              <div className="p-4 bg-surface rounded-xl border border-border">
+                                <label className="block text-sm font-medium text-text mb-2">Game Modes</label>
+                                <div className="flex gap-3">
+                                  {['co-op', 'pvp'].map((mode) => (
+                                    <button
+                                      key={mode}
+                                      onClick={() => {
+                                        setMultiplayer(prev => ({
+                                          ...prev,
+                                          modes: prev.modes.includes(mode)
+                                            ? prev.modes.filter(m => m !== mode)
+                                            : [...prev.modes, mode]
+                                        }));
+                                      }}
+                                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                        multiplayer.modes.includes(mode)
+                                          ? 'bg-secondary text-white'
+                                          : 'bg-background hover:bg-background-secondary text-text-secondary'
+                                      }`}
+                                    >
+                                      {mode === 'co-op' ? 'Co-op' : 'PvP'}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       {/* Action Buttons */}
