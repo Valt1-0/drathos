@@ -29,6 +29,7 @@ import {
   FiCheck,
 } from "react-icons/fi";
 import GameCover from "../GameCover";
+import ModManager from "../mods/ModManager";
 
 const VersionSelector = ({ currentVersion, versions, onSelectVersion }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -484,6 +485,18 @@ const GameDetails = ({
               {/* Stats */}
               {isInstalled && gameStats && gameStats.totalSessions > 0 && (
                 <GameStatistics stats={gameStats} isPlaying={isPlaying} />
+              )}
+
+              {/* Mods */}
+              {isInstalled && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="rounded-2xl bg-surface border border-border overflow-hidden"
+                >
+                  <ModManager gameId={game._id} />
+                </motion.div>
               )}
             </div>
 

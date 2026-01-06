@@ -158,6 +158,14 @@ const api = {
 
   // Recharger l'application complètement
   reloadApp: () => ipcRenderer.send("reload-app"),
+
+  // Mod management
+  mods: {
+    downloadMod: ({ modId, gameId }) =>
+      ipcRenderer.invoke("mod:download", { modId, gameId }),
+    deleteModFile: ({ modId }) =>
+      ipcRenderer.invoke("mod:deleteFile", { modId }),
+  },
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

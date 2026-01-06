@@ -611,6 +611,194 @@ ipcMain.handle("shell:openExternal", async (event, url) => {
   await shell.openExternal(url);
 });
 
+/**
+ * Validates and resolves a relative mod installation path
+ * @param {string} gameInstallPath - Absolute path to game installation
+ * @param {string} relativeModPath - Relative path for mod installation
+ * @returns {string} - Validated absolute path
+ * @throws {Error} - If path is invalid or contains security issues
+ */
+function validateAndResolvePath(gameInstallPath, relativeModPath) {
+  // Security validations
+  if (!relativeModPath || typeof relativeModPath !== 'string') {
+    throw new Error("Invalid installation path");
+  }
+
+  // Normalize the relative path (handles both / and \)
+  const normalized = path.normalize(relativeModPath);
+
+  // Check for path traversal attempts
+  if (normalized.includes('..')) {
+    throw new Error("Path traversal not allowed in installation path");
+  }
+
+  // Check for absolute paths
+  if (path.isAbsolute(normalized)) {
+    throw new Error("Installation path must be relative to game directory");
+  }
+
+  // Resolve the full path
+  const fullPath = path.resolve(gameInstallPath, normalized);
+
+  // Verify the resolved path is still inside the game directory
+  const relativePath = path.relative(gameInstallPath, fullPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error("Installation path must be inside game directory");
+  }
+
+  return fullPath;
+}
+
+//* Mod management handlers */
+ipcMain.handle("mod:download", async (event, { modId, gameId }) => {
+  try {
+    const serverAddress = store.get("serverAddress");
+    const token = store.get("userToken");
+
+    if (!serverAddress || !token) {
+      throw new Error("Server address or token not configured");
+    }
+
+    console.log(`[Mods] Downloading mod ${modId} for game ${gameId}`);
+
+    // Verify game is installed and get installation path
+    const installedGames = store.get("installedGamesCache") || {};
+    const gameData = installedGames[gameId];
+
+    if (!gameData || !gameData.path) {
+      throw new Error("Game not installed. Please install the game before installing mods.");
+    }
+
+    // Fetch mod metadata to get installPath
+    const modInfoUrl = `${serverAddress}/api/mods/${modId}`;
+    const modInfoResponse = await fetch(modInfoUrl, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!modInfoResponse.ok) {
+      throw new Error(`Failed to fetch mod info: ${modInfoResponse.statusText}`);
+    }
+
+    const modInfo = await modInfoResponse.json();
+
+    if (!modInfo.installPath) {
+      throw new Error("Mod does not have an installation path configured");
+    }
+
+    // Validate and resolve installation path
+    const validatedPath = validateAndResolvePath(
+      gameData.path,
+      modInfo.installPath
+    );
+
+    // Create mod directory inside game installation
+    if (!fs.existsSync(validatedPath)) {
+      fs.mkdirSync(validatedPath, { recursive: true });
+    }
+
+    // Download mod from server
+    const url = `${serverAddress}/api/mods/download/${modId}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to download mod: ${response.statusText}`);
+    }
+
+    // Get filename from headers
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = `${modId}.zip`;
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    // Save to game's mod directory
+    const modPath = path.join(validatedPath, filename);
+
+    // Save file
+    const buffer = Buffer.from(await response.arrayBuffer());
+    fs.writeFileSync(modPath, buffer);
+
+    // Update store
+    const installedMods = store.get("installedMods") || {};
+    if (!installedMods[gameId]) {
+      installedMods[gameId] = {};
+    }
+
+    installedMods[gameId][modId] = {
+      id: modId,
+      path: modPath,
+      installPath: modInfo.installPath, // Store for reference
+      enabled: true,
+      installedAt: new Date().toISOString()
+    };
+
+    store.set("installedMods", installedMods);
+
+    console.log(`[Mods] Mod ${modId} installed successfully to ${modPath}`);
+
+    return {
+      success: true,
+      path: modPath
+    };
+  } catch (error) {
+    console.error("[Mods] Error downloading mod:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+ipcMain.handle("mod:deleteFile", async (event, { modId }) => {
+  try {
+    const installedMods = store.get("installedMods") || {};
+
+    // Trouver le mod dans le store
+    let modInfo = null;
+    for (const gameId in installedMods) {
+      if (installedMods[gameId][modId]) {
+        modInfo = installedMods[gameId][modId];
+        break;
+      }
+    }
+
+    if (!modInfo) {
+      console.warn(`[Mods] Mod ${modId} not found in installed mods`);
+      return { success: true }; // Déjà supprimé
+    }
+
+    // Supprimer le fichier
+    if (fs.existsSync(modInfo.path)) {
+      fs.unlinkSync(modInfo.path);
+      console.log(`[Mods] Deleted mod file: ${modInfo.path}`);
+    }
+
+    // Supprimer du store
+    for (const gameId in installedMods) {
+      if (installedMods[gameId][modId]) {
+        delete installedMods[gameId][modId];
+      }
+    }
+
+    store.set("installedMods", installedMods);
+
+    return { success: true };
+  } catch (error) {
+    console.error("[Mods] Error deleting mod file:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
 //* Open file dialog */
 ipcMain.handle("dialog:selectAndCreate", async () => {
   const mainWindow = BrowserWindow.getAllWindows()[0];

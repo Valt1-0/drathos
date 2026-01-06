@@ -8,7 +8,7 @@ import {
   FaGear,
 } from "react-icons/fa6";
 import { FaHome, FaFolderOpen } from "react-icons/fa";
-import { FiX, FiLogOut, FiUser } from "react-icons/fi";
+import { FiX, FiLogOut, FiUser, FiPackage } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +26,7 @@ const Drawer = ({ children }) => {
   const menuItems = [
     { label: t('nav.home'), icon: FaHome, path: "/" },
     { label: t('nav.library'), icon: FaGamepad, path: "/games" },
+    ...(user?.role === 'admin' ? [{ label: t('nav.mods'), icon: FiPackage, path: "/mods" }] : []),
     { label: t('nav.collections'), icon: FaFolderOpen, path: "/collections" },
     { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
     { label: t('nav.settings'), icon: FaGear, path: "/settings" },

@@ -29,6 +29,7 @@ const Games = lazy(() => import("./pages/Games"));
 const Collections = lazy(() => import("./pages/Collections"));
 const Download = lazy(() => import("./pages/Download"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Mods = lazy(() => import("./pages/Mods"));
 
 // Loading fallback component
 function PageLoader() {
@@ -113,6 +114,16 @@ function AppRoutes() {
                 <ProtectedRoute>
                   <Drawer>
                     <Settings />
+                  </Drawer>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mods"
+              element={
+                <ProtectedRoute>
+                  <Drawer>
+                    <Mods />
                   </Drawer>
                 </ProtectedRoute>
               }

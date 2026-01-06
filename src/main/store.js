@@ -14,6 +14,10 @@ const schema = {
     type: "object",
     default: {},
   },
+  installedMods: {
+    type: "object",
+    default: {},
+  },
 };
 
 // 🔐 Encryption key depuis les variables d'environnement
