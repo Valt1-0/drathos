@@ -47,13 +47,12 @@ const optimizeIGDBImageUrl = (url, size = 'cover_small') => {
  * @param {boolean} props.blur - Appliquer un effet de flou
  */
 const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, blur = false }) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
     // Réinitialiser l'état lors du changement de source
-    setIsLoading(true);
     setHasError(false);
 
     if (!src) {
@@ -65,7 +64,22 @@ const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, bl
     // Optimiser l'URL IGDB
     const optimizedUrl = optimizeIGDBImageUrl(src, size);
 
-    // Charger l'image depuis le cache ou télécharger et mettre en cache
+    // Vérifier d'abord le cache mémoire de façon synchrone
+    const memoryCache = imageCacheService.memoryCache;
+    if (memoryCache && memoryCache.has(optimizedUrl)) {
+      const cached = memoryCache.get(optimizedUrl);
+      if (cached && cached.blobUrl) {
+        // Image en cache mémoire - chargement instantané sans loader
+        setImageSrc(cached.blobUrl);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Si pas en cache mémoire, afficher le loader et charger
+    setIsLoading(true);
+
+    // Charger l'image depuis IndexedDB ou réseau
     const loadImage = async () => {
       try {
         const cachedImageUrl = await imageCacheService.fetchAndCache(optimizedUrl);
@@ -86,7 +100,7 @@ const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, bl
   const placeholderClasses = `${className} bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center`;
 
   // Classes pour l'image avec effet de flou si nécessaire
-  const imageClasses = `${className} ${blur ? 'blur-sm' : ''} transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`;
+  const imageClasses = `${className} ${blur ? 'blur-sm' : ''} transition-opacity duration-300 ${imageSrc ? 'opacity-100' : 'opacity-0'}`;
 
   // Si erreur de chargement, afficher un placeholder avec icône
   if (hasError) {
@@ -111,25 +125,27 @@ const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, bl
 
   return (
     <>
-      {/* Placeholder pendant le chargement */}
-      {isLoading && (
+      {/* Placeholder simple sans loader si pas d'image */}
+      {!imageSrc && !hasError && (
         <div className={placeholderClasses}>
-          <div className="relative">
-            {/* Spinner animé */}
-            <div className="w-12 h-12 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-            {/* Icône de jeu au centre */}
-            <svg
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-blue-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
+          {isLoading && (
+            <div className="relative">
+              {/* Spinner animé seulement si vraiment en train de charger */}
+              <div className="w-12 h-12 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
+              {/* Icône de jeu au centre */}
+              <svg
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-blue-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+          )}
         </div>
       )}
 

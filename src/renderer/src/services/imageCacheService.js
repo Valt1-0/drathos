@@ -13,6 +13,7 @@ class ImageCacheService {
     this.db = null;
     this.isAvailable = false;
     this.initializationPromise = null;
+    this.memoryCache = new Map(); // Cache mémoire pour éviter IndexedDB à chaque fois
     this.initDB();
   }
 
@@ -167,6 +168,9 @@ class ImageCacheService {
    * @returns {Promise<void>}
    */
   async deleteImage(url) {
+    // Supprimer du cache mémoire
+    this.memoryCache.delete(url);
+
     // Si IndexedDB n'est pas disponible, ne rien faire
     if (!this.isAvailable) {
       await this.initDB();
@@ -203,29 +207,43 @@ class ImageCacheService {
    */
   async fetchAndCache(url) {
     try {
-      // Vérifier d'abord si l'image est déjà dans le cache (si IndexedDB disponible)
+      // 1. Vérifier d'abord le cache mémoire (instantané)
+      if (this.memoryCache.has(url)) {
+        const cached = this.memoryCache.get(url);
+        // Vérifier que l'URL blob est toujours valide
+        if (cached && cached.blobUrl) {
+          return cached.blobUrl;
+        }
+      }
+
+      // 2. Vérifier IndexedDB si disponible
       if (this.isAvailable) {
         const cachedUrl = await this.getImage(url);
         if (cachedUrl) {
+          // Mettre en cache mémoire pour la prochaine fois
+          this.memoryCache.set(url, { blobUrl: cachedUrl, timestamp: Date.now() });
           return cachedUrl;
         }
       }
 
-      // Télécharger l'image
+      // 3. Télécharger l'image
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
       const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
 
-      // Stocker dans le cache (si IndexedDB disponible)
+      // 4. Stocker dans IndexedDB (si disponible)
       if (this.isAvailable) {
         await this.setImage(url, blob);
       }
 
-      // Retourner l'URL blob
-      return URL.createObjectURL(blob);
+      // 5. Stocker dans le cache mémoire
+      this.memoryCache.set(url, { blobUrl, timestamp: Date.now() });
+
+      return blobUrl;
     } catch (error) {
       console.warn('[ImageCache] Erreur lors du téléchargement:', error.message);
       // En cas d'erreur, retourner l'URL originale
@@ -293,6 +311,9 @@ class ImageCacheService {
    * @returns {Promise<void>}
    */
   async clearCache() {
+    // Vider le cache mémoire
+    this.memoryCache.clear();
+
     // Si IndexedDB n'est pas disponible, ne rien faire
     if (!this.isAvailable) {
       await this.initDB();

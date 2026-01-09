@@ -64,7 +64,14 @@ export const searchGamesFromIGDB = async (query) => {
     const requestPromise = (async () => {
       try {
         const serverAddress = await window.store.get("serverAddress");
-        const response = await fetch(buildServerUrl(serverAddress, `/api/igdb/search?game=${encodeURIComponent(query)}`));
+        const token = await window.store.get("userToken");
+
+        const response = await fetch(buildServerUrl(serverAddress, `/api/igdb/search?game=${encodeURIComponent(query)}`), {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (!response.ok) {
           throw new Error(`Erreur lors de la recherche de jeux : ${response.status}`);

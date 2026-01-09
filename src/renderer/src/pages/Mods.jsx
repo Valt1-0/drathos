@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPlus, FiPackage, FiDownload, FiRefreshCw } from "react-icons/fi";
+import { FiPlus, FiPackage, FiRefreshCw, FiTrash2, FiUser, FiCalendar } from "react-icons/fi";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../contexts/themeContext";
 import { useAuth } from "../contexts/authContext";
-import { getAllGamesForAdmin } from "../api/mods";
-import UploadModModal from "../components/modals/UploadModModal";
-import ModManager from "../components/mods/ModManager";
+import { getAllGamesForAdmin, getModsForGame, deleteMod } from "../api/mods";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+
+// Lazy load modal pour optimiser
+const UploadModModal = lazy(() => import("../components/modals/UploadModModal"));
 
 const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => {
   const colorGradients = {
@@ -53,10 +54,18 @@ const Mods = () => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
+  const [mods, setMods] = useState([]);
+  const [loadingMods, setLoadingMods] = useState(false);
 
   useEffect(() => {
     loadGames();
   }, []);
+
+  useEffect(() => {
+    if (selectedGame) {
+      loadMods();
+    }
+  }, [selectedGame]);
 
   const loadGames = async () => {
     setLoading(true);
@@ -71,9 +80,38 @@ const Mods = () => {
     }
   };
 
+  const loadMods = async () => {
+    if (!selectedGame) return;
+    setLoadingMods(true);
+    try {
+      const data = await getModsForGame(selectedGame._id, { limit: 100 });
+      setMods(data.mods || []);
+    } catch (error) {
+      console.error("Error loading mods:", error);
+      toast.error("Erreur lors du chargement des mods");
+    } finally {
+      setLoadingMods(false);
+    }
+  };
+
   const handleUploadSuccess = () => {
     loadGames();
-    toast.success(t('mods.uploadSuccess'));
+    if (selectedGame) {
+      loadMods();
+    }
+  };
+
+  const handleDeleteMod = async (modId) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer ce mod du serveur ?")) return;
+
+    try {
+      await deleteMod(modId);
+      setMods(prev => prev.filter(m => m._id !== modId));
+      toast.success("Mod supprimé du serveur");
+    } catch (error) {
+      console.error("Error deleting mod:", error);
+      toast.error(error.message || "Erreur lors de la suppression");
+    }
   };
 
   if (!user || user.role !== 'admin') {
@@ -156,7 +194,7 @@ const Mods = () => {
           ) : (
             <div className="space-y-6">
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <StatCard
                   icon={FiPackage}
                   label={t('mods.gamesAvailable')}
@@ -165,18 +203,11 @@ const Mods = () => {
                   delay={0}
                 />
                 <StatCard
-                  icon={FiDownload}
-                  label={t('mods.modsUploaded')}
-                  value="-"
+                  icon={FiPackage}
+                  label="Mods sur le serveur"
+                  value={selectedGame ? mods.length : '-'}
                   color="green"
                   delay={0.1}
-                />
-                <StatCard
-                  icon={FiPackage}
-                  label={t('mods.modsActive')}
-                  value="-"
-                  color="purple"
-                  delay={0.2}
                 />
               </div>
 
@@ -249,7 +280,109 @@ const Mods = () => {
                   animate={{ opacity: 1, y: 0 }}
                 >
                   <Card variant="glass">
-                    <ModManager gameId={selectedGame._id} />
+                    <Card.Header
+                      icon={<FiPackage className="w-6 h-6" />}
+                      title={`Mods pour ${selectedGame.name}`}
+                      subtitle="Gérer les mods côté serveur"
+                    />
+
+                    <Card.Body>
+                      {loadingMods ? (
+                        <div className="text-center py-12">
+                          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                          <p className={`${getTextClass('secondary')}`}>Chargement des mods...</p>
+                        </div>
+                      ) : mods.length === 0 ? (
+                        <div className="text-center py-12">
+                          <FiPackage className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--app-textSecondary)' }} />
+                          <p className="text-lg font-medium mb-2" style={{ color: 'var(--app-text)' }}>
+                            Aucun mod sur le serveur
+                          </p>
+                          <p className="text-sm mb-4" style={{ color: 'var(--app-textSecondary)' }}>
+                            Uploadez le premier mod pour ce jeu
+                          </p>
+                          <Button
+                            variant="primary"
+                            gradient={true}
+                            size="md"
+                            icon={<FiPlus />}
+                            onClick={() => setShowUploadModal(true)}
+                          >
+                            Uploader un mod
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {mods.map((mod) => (
+                            <motion.div
+                              key={mod._id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-4 rounded-xl border transition-all hover:shadow-lg"
+                              style={{
+                                background: 'var(--app-surface)',
+                                borderColor: 'var(--app-border)'
+                              }}
+                            >
+                              <div className="flex items-start gap-4">
+                                {/* Icon */}
+                                <div
+                                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                                  style={{ background: 'var(--app-gradient-primary)' }}
+                                >
+                                  <FiPackage className="w-6 h-6" />
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--app-text)' }}>
+                                    {mod.name}
+                                  </h3>
+                                  {mod.description && (
+                                    <p className="text-sm mb-2" style={{ color: 'var(--app-textSecondary)' }}>
+                                      {mod.description}
+                                    </p>
+                                  )}
+                                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                                    {mod.author && (
+                                      <div className="flex items-center gap-1.5">
+                                        <FiUser className="w-3.5 h-3.5" style={{ color: 'var(--app-primary)' }} />
+                                        <span style={{ color: 'var(--app-textSecondary)' }}>{mod.author}</span>
+                                      </div>
+                                    )}
+                                    {mod.version && (
+                                      <span className="px-2 py-0.5 rounded" style={{ background: 'var(--app-primary)', opacity: 0.2, color: 'var(--app-primary)' }}>
+                                        v{mod.version}
+                                      </span>
+                                    )}
+                                    {mod.createdAt && (
+                                      <div className="flex items-center gap-1.5">
+                                        <FiCalendar className="w-3.5 h-3.5" style={{ color: 'var(--app-textSecondary)' }} />
+                                        <span style={{ color: 'var(--app-textSecondary)' }}>
+                                          {new Date(mod.createdAt).toLocaleDateString('fr-FR')}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={<FiTrash2 />}
+                                  onClick={() => handleDeleteMod(mod._id)}
+                                  className="flex-shrink-0"
+                                  style={{ color: 'var(--app-error)' }}
+                                >
+                                  Supprimer
+                                </Button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </Card.Body>
                   </Card>
                 </motion.div>
               )}
@@ -261,10 +394,12 @@ const Mods = () => {
       {/* Upload Modal */}
       <AnimatePresence>
         {showUploadModal && (
-          <UploadModModal
-            onClose={() => setShowUploadModal(false)}
-            onSuccess={handleUploadSuccess}
-          />
+          <Suspense fallback={null}>
+            <UploadModModal
+              onClose={() => setShowUploadModal(false)}
+              onSuccess={handleUploadSuccess}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
     </div>

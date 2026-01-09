@@ -38,8 +38,10 @@ const api = {
   openGameFolder: (gamePath) => ipcRenderer.invoke("openGameFolder", gamePath),
   // Lister le contenu d'une archive (zip, 7z, rar, tar, etc.)
   listArchiveFiles: (filePath) => ipcRenderer.invoke("listArchiveFiles", filePath),
-  // Sélectionner et scanner une archive
+  // Sélectionner et scanner une archive (pour les jeux)
   selectAndScanArchive: () => ipcRenderer.invoke("selectAndScanArchive"),
+  // Sélectionner un fichier archive (pour les mods - sans scan)
+  selectArchiveFile: () => ipcRenderer.invoke("selectArchiveFile"),
   // Lire un fichier archive en tant que buffer
   readArchiveFile: (filePath) => ipcRenderer.invoke("readArchiveFile", filePath),
   // Obtenir les infos d'un processus de jeu
@@ -165,6 +167,8 @@ const api = {
       ipcRenderer.invoke("mod:download", { modId, gameId }),
     deleteModFile: ({ modId }) =>
       ipcRenderer.invoke("mod:deleteFile", { modId }),
+    verifyIntegrity: ({ modId, gameId }) =>
+      ipcRenderer.invoke("mod:verifyIntegrity", { modId, gameId }),
   },
 };
 

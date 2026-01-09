@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiX, FiUpload, FiFile, FiCheck, FiAlertCircle } from "react-icons/fi";
+import { FiX, FiUpload, FiFile, FiCheck, FiAlertCircle, FiPackage } from "react-icons/fi";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../contexts/themeContext";
 import { uploadMod, getAllGamesForAdmin } from "../../api/mods";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
+import GameCover from "../GameCover";
 
 // Sanitize installation path to prevent security issues
 function sanitizeInstallPath(input) {
@@ -29,10 +30,10 @@ const UploadModModal = ({ onClose, onSuccess }) => {
   const { t } = useTranslation();
   const { getTextClass, isLight } = useTheme();
 
-  const fileInputRef = useRef(null);
-
   const [games, setGames] = useState([]);
-  const [loadingGames, setLoadingGames] = useState(true);
+  const [loadingGames, setLoadingGames] = useState(false);
+  const [gamesLoaded, setGamesLoaded] = useState(false);
+  const [showGamesList, setShowGamesList] = useState(false);
 
   const [formData, setFormData] = useState({
     gameId: "",
@@ -46,14 +47,18 @@ const UploadModModal = ({ onClose, onSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  useEffect(() => {
-    loadGames();
-  }, []);
-
   const loadGames = async () => {
+    if (gamesLoaded) {
+      setShowGamesList(true);
+      return;
+    }
+
+    setLoadingGames(true);
+    setShowGamesList(true);
     try {
       const gamesList = await getAllGamesForAdmin();
       setGames(gamesList);
+      setGamesLoaded(true);
     } catch (error) {
       console.error("Error loading games:", error);
       toast.error(t('mods.loadingError'));
@@ -62,22 +67,39 @@ const UploadModModal = ({ onClose, onSuccess }) => {
     }
   };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleSelectGame = (game) => {
+    setFormData({ ...formData, gameId: game._id });
+    setShowGamesList(false);
+  };
 
-    const ext = file.name.toLowerCase();
-    if (!ext.endsWith('.zip') && !ext.endsWith('.7z') && !ext.endsWith('.rar')) {
-      toast.error(t('mods.invalidFileType'));
-      return;
+
+  const handleFileSelect = async () => {
+    try {
+      const result = await window.api.selectArchiveFile();
+
+      if (result.canceled || !result.success) {
+        return;
+      }
+
+      // Vérifier la taille du fichier (sans charger le fichier en mémoire)
+      if (result.fileSize > 5 * 1024 * 1024 * 1024) { // 5GB
+        toast.error(t('mods.fileTooLarge'));
+        return;
+      }
+
+      // Créer un objet File-like pour la compatibilité
+      const file = {
+        name: result.fileName,
+        size: result.fileSize,
+        path: result.filePath,
+        type: 'application/octet-stream'
+      };
+
+      setSelectedFile(file);
+    } catch (error) {
+      console.error("Error selecting file:", error);
+      toast.error("Erreur lors de la sélection du fichier");
     }
-
-    if (file.size > 5 * 1024 * 1024 * 1024) { // 5GB
-      toast.error(t('mods.fileTooLarge'));
-      return;
-    }
-
-    setSelectedFile(file);
   };
 
 
@@ -93,7 +115,19 @@ const UploadModModal = ({ onClose, onSuccess }) => {
     setUploadProgress(0);
 
     try {
-      await uploadMod(formData, selectedFile, setUploadProgress);
+      // Si le fichier a une propriété path (depuis l'API native), lire le fichier
+      let fileToUpload = selectedFile;
+      if (selectedFile.path) {
+        const buffer = await window.api.readArchiveFile(selectedFile.path);
+        if (!buffer.success) {
+          throw new Error(buffer.error || 'Failed to read file');
+        }
+        // Créer un Blob depuis le buffer
+        const blob = new Blob([buffer.buffer], { type: 'application/octet-stream' });
+        fileToUpload = new File([blob], selectedFile.name, { type: 'application/octet-stream' });
+      }
+
+      await uploadMod(formData, fileToUpload, setUploadProgress);
       toast.success(t('mods.uploadSuccess'));
       onSuccess?.();
       onClose();
@@ -142,8 +176,8 @@ const UploadModModal = ({ onClose, onSuccess }) => {
                 {t('mods.modFile')} *
               </label>
               <div
-                onClick={() => !uploading && fileInputRef.current?.click()}
-                className="relative border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer overflow-hidden"
+                onClick={() => !uploading && handleFileSelect()}
+                className="relative border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer overflow-hidden hover:border-opacity-100"
                 style={{
                   borderColor: selectedFile ? 'var(--app-primary)' : 'var(--app-border)'
                 }}
@@ -154,14 +188,6 @@ const UploadModModal = ({ onClose, onSuccess }) => {
                     style={{ background: 'var(--app-primary)', opacity: 0.1 }}
                   />
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".zip,.7z,.rar"
-                  onChange={handleFileSelect}
-                  disabled={uploading}
-                  className="hidden"
-                />
                 <div className="relative z-10">
                   {selectedFile ? (
                     <div className="flex items-center gap-3">
@@ -201,25 +227,141 @@ const UploadModModal = ({ onClose, onSuccess }) => {
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                 {t('mods.gameLabel')} *
               </label>
-              <select
-                value={formData.gameId}
-                onChange={(e) => setFormData({ ...formData, gameId: e.target.value })}
-                disabled={uploading || loadingGames}
-                className="w-full px-4 py-2.5 rounded-lg border transition-colors focus:outline-none"
-                style={{
-                  background: 'var(--app-surface)',
-                  borderColor: 'var(--app-border)',
-                  color: 'var(--app-text)'
-                }}
-                required
-              >
-                <option value="">{t('mods.selectGamePlaceholder')}</option>
-                {games.map(game => (
-                  <option key={game._id} value={game._id}>
-                    {game.name} (v{game.version})
-                  </option>
-                ))}
-              </select>
+
+              {/* Selected Game Display */}
+              {selectedGame ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 rounded-xl border cursor-pointer transition-all hover:shadow-lg"
+                  style={{
+                    background: 'var(--app-surface)',
+                    borderColor: 'var(--app-primary)'
+                  }}
+                  onClick={() => !uploading && loadGames()}
+                >
+                  <div className="flex items-center gap-3">
+                    {selectedGame.coverUrl ? (
+                      <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-lg">
+                        <GameCover
+                          src={selectedGame.coverUrl}
+                          alt={selectedGame.name}
+                          className="w-full h-full object-cover"
+                          size="cover_small"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="w-12 h-16 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--app-gradient-primary)' }}
+                      >
+                        <FiPackage className="w-6 h-6 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate" style={{ color: 'var(--app-text)' }}>
+                        {selectedGame.name}
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
+                        Version {selectedGame.version}
+                      </p>
+                    </div>
+                    <FiCheck className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--app-success)' }} />
+                  </div>
+                </motion.div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => !uploading && loadGames()}
+                  disabled={uploading}
+                  className="w-full p-4 rounded-xl border-2 border-dashed transition-all hover:border-opacity-100"
+                  style={{
+                    borderColor: 'var(--app-border)',
+                    background: 'var(--app-surface)'
+                  }}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <FiPackage className="w-5 h-5" style={{ color: 'var(--app-textSecondary)' }} />
+                    <span style={{ color: 'var(--app-text)' }}>
+                      {t('mods.selectGamePlaceholder')}
+                    </span>
+                  </div>
+                </button>
+              )}
+
+              {/* Games List Modal */}
+              <AnimatePresence>
+                {showGamesList && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-3 p-4 rounded-xl border max-h-96 overflow-y-auto"
+                    style={{
+                      background: 'var(--app-backgroundSecondary)',
+                      borderColor: 'var(--app-border)'
+                    }}
+                  >
+                    {loadingGames ? (
+                      <div className="text-center py-8">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 mb-3" style={{ borderColor: 'var(--app-primary)' }}></div>
+                        <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>Chargement des jeux...</p>
+                      </div>
+                    ) : games.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FiPackage className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--app-textSecondary)' }} />
+                        <p style={{ color: 'var(--app-text)' }}>Aucun jeu disponible</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        {games.map((game) => (
+                          <motion.button
+                            key={game._id}
+                            type="button"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleSelectGame(game)}
+                            className="p-3 rounded-lg border text-left transition-all"
+                            style={{
+                              background: formData.gameId === game._id ? 'var(--app-primary)' : 'var(--app-surface)',
+                              borderColor: formData.gameId === game._id ? 'var(--app-primary)' : 'var(--app-border)',
+                              opacity: formData.gameId === game._id ? 0.2 : 1
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              {game.coverUrl ? (
+                                <div className="w-10 h-14 rounded overflow-hidden flex-shrink-0 shadow">
+                                  <GameCover
+                                    src={game.coverUrl}
+                                    alt={game.name}
+                                    className="w-full h-full object-cover"
+                                    size="cover_small"
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className="w-10 h-14 rounded flex items-center justify-center flex-shrink-0"
+                                  style={{ background: 'var(--app-gradient-primary)' }}
+                                >
+                                  <FiPackage className="w-5 h-5 text-white" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate" style={{ color: 'var(--app-text)' }}>
+                                  {game.name}
+                                </p>
+                                <p className="text-xs" style={{ color: 'var(--app-textSecondary)' }}>
+                                  v{game.version}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Mod Name */}

@@ -5,8 +5,15 @@ import uploadManager from "../services/uploadManager";
 export const getAllServerGames = async () => {
   try {
     const serverAddress = await window.store.get("serverAddress");
+    const token = await window.store.get("userToken");
     const response = await fetchWithConnectionTracking(
       buildServerUrl(serverAddress, '/api/serverGame/getAllGames'),
+      {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
     );
     if (!response.ok) {
       throw new Error(

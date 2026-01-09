@@ -28,6 +28,7 @@ import { moduleLoader } from "./utils/moduleLoader.js";
 import { memoryManager } from "./utils/memoryManager.js";
 import { AutoUpdateManager } from "./autoUpdater.js";
 import { SplashWindow } from "./splashWindow.js";
+import { extractionEngine } from "./extractionEngine.js";
 import store from "./store.js";
 import logger from "./utils/logger.js";
 
@@ -187,7 +188,7 @@ function createWindow() {
       contextIsolation: true, // ✅ Obligatoire pour la sécurité
       nodeIntegration: false, // ✅ Désactiver Node dans le renderer
       nodeIntegrationInWorker: false, // ✅ Pas nécessaire pour vos Worker Threads
-      partition: 'persist:drathos', // ✅ Permet IndexedDB en mode sandbox
+      partition: "persist:drathos", // ✅ Permet IndexedDB en mode sandbox
       zoomFactor: 1.0, // Fix scaling Wayland
     },
   });
@@ -235,7 +236,7 @@ Menu.setApplicationMenu(null);
 app.whenReady().then(async () => {
   // Initialiser le système de logging
   await logger.initialize();
-  logger.info('[App] Starting Drathos...', { version: app.getVersion() });
+  logger.info("[App] Starting Drathos...", { version: app.getVersion() });
 
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
@@ -243,7 +244,7 @@ app.whenReady().then(async () => {
   // Créer et afficher le splash screen
   const splash = new SplashWindow(icon);
   splashWindow = splash.create();
-  logger.info('[App] Splash screen created');
+  logger.info("[App] Splash screen created");
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const serverAddress = store.get("serverAddress", "");
@@ -362,16 +363,16 @@ app.whenReady().then(async () => {
   });
 
   // Register global shortcuts for app reload
-  globalShortcut.register('CommandOrControl+Shift+R', () => {
-    console.log('[Shortcut] Ctrl+Shift+R pressed - Hard reloading app...');
+  globalShortcut.register("CommandOrControl+Shift+R", () => {
+    console.log("[Shortcut] Ctrl+Shift+R pressed - Hard reloading app...");
     const window = BrowserWindow.getFocusedWindow();
     if (window) {
       window.webContents.reloadIgnoringCache();
     }
   });
 
-  globalShortcut.register('F5', () => {
-    console.log('[Shortcut] F5 pressed - Reloading app...');
+  globalShortcut.register("F5", () => {
+    console.log("[Shortcut] F5 pressed - Reloading app...");
     const window = BrowserWindow.getFocusedWindow();
     if (window) {
       window.webContents.reload();
@@ -428,10 +429,10 @@ app.whenReady().then(async () => {
   // Initialiser l'auto-updater
   autoUpdateManager = new AutoUpdateManager();
   autoUpdateManager.setMainWindow(mainWindow);
-  logger.info('[AutoUpdater] Manager initialized');
+  logger.info("[AutoUpdater] Manager initialized");
 
   // Attendre pour l'animation du splash
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // Fermer le splash et afficher la fenêtre principale
   splash.close();
@@ -441,21 +442,21 @@ app.whenReady().then(async () => {
     mainWindow.show();
   }
 
-  logger.info('[App] Main window shown');
+  logger.info("[App] Main window shown");
 
   // Vérifier les mises à jour APRÈS l'affichage de la fenêtre pour ne pas ralentir le démarrage
   setTimeout(async () => {
     try {
-      logger.info('[App] Starting initial update check...');
+      logger.info("[App] Starting initial update check...");
       const updateResult = await autoUpdateManager.checkForUpdates();
 
       if (updateResult.available) {
-        logger.info('[App] Update available:', updateResult.latestVersion);
+        logger.info("[App] Update available:", updateResult.latestVersion);
       } else {
-        logger.info('[App] No updates available');
+        logger.info("[App] No updates available");
       }
     } catch (error) {
-      logger.error('[App] Error checking for updates:', error);
+      logger.error("[App] Error checking for updates:", error);
     }
   }, 3000); // Attendre 3 secondes après l'affichage
 
@@ -611,16 +612,39 @@ ipcMain.handle("shell:openExternal", async (event, url) => {
   await shell.openExternal(url);
 });
 
-/**
- * Validates and resolves a relative mod installation path
- * @param {string} gameInstallPath - Absolute path to game installation
- * @param {string} relativeModPath - Relative path for mod installation
- * @returns {string} - Validated absolute path
- * @throws {Error} - If path is invalid or contains security issues
- */
+function validateFilename(filename) {
+  if (!filename || typeof filename !== "string") {
+    throw new Error("Invalid filename");
+  }
+
+  // Remove any path components
+  let basename = path.basename(filename);
+
+  // Remove quotes and dangerous characters
+  basename = basename.replace(/[<>:"|?*\x00-\x1f]/g, '');
+
+  // Replace multiple spaces with single space
+  basename = basename.replace(/\s+/g, ' ').trim();
+
+  // Check for reserved Windows names
+  const reserved = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i;
+  if (reserved.test(basename)) {
+    basename = '_' + basename;
+  }
+
+  // Limit filename length
+  if (basename.length > 255) {
+    const ext = path.extname(basename);
+    const nameWithoutExt = basename.slice(0, -ext.length);
+    basename = nameWithoutExt.slice(0, 255 - ext.length) + ext;
+  }
+
+  return basename;
+}
+
 function validateAndResolvePath(gameInstallPath, relativeModPath) {
   // Security validations
-  if (!relativeModPath || typeof relativeModPath !== 'string') {
+  if (!relativeModPath || typeof relativeModPath !== "string") {
     throw new Error("Invalid installation path");
   }
 
@@ -628,7 +652,7 @@ function validateAndResolvePath(gameInstallPath, relativeModPath) {
   const normalized = path.normalize(relativeModPath);
 
   // Check for path traversal attempts
-  if (normalized.includes('..')) {
+  if (normalized.includes("..")) {
     throw new Error("Path traversal not allowed in installation path");
   }
 
@@ -637,12 +661,23 @@ function validateAndResolvePath(gameInstallPath, relativeModPath) {
     throw new Error("Installation path must be relative to game directory");
   }
 
+  // Additional security: check for null bytes
+  if (normalized.includes("\0")) {
+    throw new Error("Null bytes not allowed in path");
+  }
+
+  // Check for dangerous characters in path
+  const dangerousChars = /[<>:"|?*\x00-\x1f]/g;
+  if (dangerousChars.test(normalized)) {
+    throw new Error("Path contains invalid characters");
+  }
+
   // Resolve the full path
   const fullPath = path.resolve(gameInstallPath, normalized);
 
   // Verify the resolved path is still inside the game directory
   const relativePath = path.relative(gameInstallPath, fullPath);
-  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
     throw new Error("Installation path must be inside game directory");
   }
 
@@ -651,6 +686,8 @@ function validateAndResolvePath(gameInstallPath, relativeModPath) {
 
 //* Mod management handlers */
 ipcMain.handle("mod:download", async (event, { modId, gameId }) => {
+  let tempArchivePath = null;
+
   try {
     const serverAddress = store.get("serverAddress");
     const token = store.get("userToken");
@@ -666,17 +703,21 @@ ipcMain.handle("mod:download", async (event, { modId, gameId }) => {
     const gameData = installedGames[gameId];
 
     if (!gameData || !gameData.path) {
-      throw new Error("Game not installed. Please install the game before installing mods.");
+      throw new Error(
+        "Game not installed. Please install the game before installing mods."
+      );
     }
 
     // Fetch mod metadata to get installPath
     const modInfoUrl = `${serverAddress}/api/mods/${modId}`;
     const modInfoResponse = await fetch(modInfoUrl, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!modInfoResponse.ok) {
-      throw new Error(`Failed to fetch mod info: ${modInfoResponse.statusText}`);
+      throw new Error(
+        `Failed to fetch mod info: ${modInfoResponse.statusText}`
+      );
     }
 
     const modInfo = await modInfoResponse.json();
@@ -686,44 +727,130 @@ ipcMain.handle("mod:download", async (event, { modId, gameId }) => {
     }
 
     // Validate and resolve installation path
-    const validatedPath = validateAndResolvePath(
+    const extractPath = validateAndResolvePath(
       gameData.path,
       modInfo.installPath
     );
 
     // Create mod directory inside game installation
-    if (!fs.existsSync(validatedPath)) {
-      fs.mkdirSync(validatedPath, { recursive: true });
+    if (!fs.existsSync(extractPath)) {
+      fs.mkdirSync(extractPath, { recursive: true });
     }
 
     // Download mod from server
     const url = `${serverAddress}/api/mods/download/${modId}`;
     const response = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {
       throw new Error(`Failed to download mod: ${response.statusText}`);
     }
 
-    // Get filename from headers
-    const contentDisposition = response.headers.get('content-disposition');
-    let filename = `${modId}.zip`;
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch) {
-        filename = filenameMatch[1];
-      }
+    // Log response headers for debugging
+    const contentType = response.headers.get("content-type");
+    const contentLength = response.headers.get("content-length");
+    const contentDisposition = response.headers.get("content-disposition");
+
+    console.log(`[Mods] Response content-type: ${contentType}`);
+    console.log(`[Mods] Response content-length: ${contentLength ? (parseInt(contentLength) / (1024 * 1024)).toFixed(2) + ' MB' : 'unknown'}`);
+    console.log(`[Mods] Response content-disposition: ${contentDisposition}`);
+
+    // Verify this is a file download, not an error response
+    if (contentType && contentType.includes("application/json")) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || errorData.details || "Server returned an error instead of the file");
     }
 
-    // Save to game's mod directory
-    const modPath = path.join(validatedPath, filename);
+    if (!contentDisposition || !contentDisposition.includes("attachment")) {
+      throw new Error("Invalid response: expected file download but got different content");
+    }
 
-    // Save file
+    // Get filename from headers
+    let filename = `${modId}.zip`;
+    const filenameMatch = contentDisposition.match(/filename="(.+?)"|filename=([^;\s]+)/);
+    if (filenameMatch) {
+      filename = filenameMatch[1] || filenameMatch[2];
+    }
+
+    // Validate and sanitize filename
+    filename = validateFilename(filename);
+
+    // Verify file extension is supported
+    const ext = extractionEngine.getFileExtension(filename);
+    if (!extractionEngine.isSupported(ext)) {
+      throw new Error(
+        `File extension ${ext} not supported. Supported: ${extractionEngine.getSupportedFormats().join(", ")}`
+      );
+    }
+
+    // Save to temporary location first
+    const tempDir = path.join(app.getPath("temp"), "drathos-mods");
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    tempArchivePath = path.join(tempDir, `${modId}_${Date.now()}_${filename}`);
+
+    // Download file
     const buffer = Buffer.from(await response.arrayBuffer());
-    fs.writeFileSync(modPath, buffer);
+    console.log(`[Mods] Downloaded buffer size: ${(buffer.length / (1024 * 1024)).toFixed(2)} MB`);
+
+    // Security: Verify file size (max 5GB)
+    const maxSize = 5 * 1024 * 1024 * 1024; // 5GB
+    if (buffer.length > maxSize) {
+      throw new Error(
+        `File too large: ${(buffer.length / (1024 * 1024 * 1024)).toFixed(
+          2
+        )}GB exceeds 5GB limit`
+      );
+    }
+
+    if (buffer.length === 0) {
+      throw new Error("Downloaded file is empty. Server may have returned an error response.");
+    }
+
+    // Verify minimum file size (at least 1KB for a valid archive)
+    if (buffer.length < 1024) {
+      console.warn(`[Mods] Suspiciously small file: ${buffer.length} bytes`);
+      console.warn(`[Mods] First 100 bytes: ${buffer.toString('utf8', 0, Math.min(100, buffer.length))}`);
+      throw new Error(`Downloaded file is too small (${buffer.length} bytes). This may be an error response. Check server logs.`);
+    }
+
+    // Calculate SHA256 hash for integrity verification
+    const crypto = require("crypto");
+    const hash = crypto.createHash("sha256");
+    hash.update(buffer);
+    const fileHash = hash.digest("hex");
+
+    console.log(`[Mods] File hash (SHA256): ${fileHash}`);
+
+    // Verify hash if provided by server
+    if (modInfo.fileHash && modInfo.fileHash !== fileHash) {
+      throw new Error(
+        `File integrity check failed. Expected hash: ${modInfo.fileHash}, got: ${fileHash}`
+      );
+    }
+
+    // Write temp archive
+    fs.writeFileSync(tempArchivePath, buffer);
+    console.log(`[Mods] Archive downloaded to temp: ${tempArchivePath}`);
+
+    // Extract archive to game directory
+    console.log(`[Mods] Extracting to: ${extractPath}`);
+    await extractionEngine.extract(tempArchivePath, extractPath, (progress, extracted, total, file) => {
+      console.log(`[Mods] Extraction progress: ${progress}% (${extracted}/${total}) - ${file}`);
+    });
+
+    console.log(`[Mods] Extraction complete`);
+
+    // Delete temp archive
+    if (fs.existsSync(tempArchivePath)) {
+      fs.unlinkSync(tempArchivePath);
+      console.log(`[Mods] Temp archive deleted`);
+    }
 
     // Update store
     const installedMods = store.get("installedMods") || {};
@@ -733,25 +860,39 @@ ipcMain.handle("mod:download", async (event, { modId, gameId }) => {
 
     installedMods[gameId][modId] = {
       id: modId,
-      path: modPath,
-      installPath: modInfo.installPath, // Store for reference
+      path: extractPath,
+      installPath: modInfo.installPath,
       enabled: true,
-      installedAt: new Date().toISOString()
+      installedAt: new Date().toISOString(),
+      fileHash: fileHash,
+      fileSize: buffer.length,
     };
 
     store.set("installedMods", installedMods);
 
-    console.log(`[Mods] Mod ${modId} installed successfully to ${modPath}`);
+    console.log(`[Mods] Mod ${modId} installed successfully to ${extractPath}`);
 
     return {
       success: true,
-      path: modPath
+      path: extractPath,
+      hash: fileHash,
     };
   } catch (error) {
     console.error("[Mods] Error downloading mod:", error);
+
+    // Cleanup temp file on error
+    if (tempArchivePath && fs.existsSync(tempArchivePath)) {
+      try {
+        fs.unlinkSync(tempArchivePath);
+        console.log(`[Mods] Temp archive cleaned up after error`);
+      } catch (cleanupError) {
+        console.error("[Mods] Failed to cleanup temp archive:", cleanupError);
+      }
+    }
+
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 });
@@ -762,9 +903,11 @@ ipcMain.handle("mod:deleteFile", async (event, { modId }) => {
 
     // Trouver le mod dans le store
     let modInfo = null;
+    let gameIdToUpdate = null;
     for (const gameId in installedMods) {
       if (installedMods[gameId][modId]) {
         modInfo = installedMods[gameId][modId];
+        gameIdToUpdate = gameId;
         break;
       }
     }
@@ -774,27 +917,111 @@ ipcMain.handle("mod:deleteFile", async (event, { modId }) => {
       return { success: true }; // Déjà supprimé
     }
 
-    // Supprimer le fichier
+    // Supprimer le dossier/fichier du mod
     if (fs.existsSync(modInfo.path)) {
-      fs.unlinkSync(modInfo.path);
-      console.log(`[Mods] Deleted mod file: ${modInfo.path}`);
+      const stats = fs.statSync(modInfo.path);
+      if (stats.isDirectory()) {
+        // Supprimer récursivement le dossier
+        fs.rmSync(modInfo.path, { recursive: true, force: true });
+        console.log(`[Mods] Deleted mod directory: ${modInfo.path}`);
+      } else {
+        // Supprimer le fichier (ancien format)
+        fs.unlinkSync(modInfo.path);
+        console.log(`[Mods] Deleted mod file: ${modInfo.path}`);
+      }
     }
 
     // Supprimer du store
-    for (const gameId in installedMods) {
-      if (installedMods[gameId][modId]) {
-        delete installedMods[gameId][modId];
-      }
+    if (gameIdToUpdate && installedMods[gameIdToUpdate]) {
+      delete installedMods[gameIdToUpdate][modId];
     }
 
     store.set("installedMods", installedMods);
 
     return { success: true };
   } catch (error) {
-    console.error("[Mods] Error deleting mod file:", error);
+    console.error("[Mods] Error deleting mod:", error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
+    };
+  }
+});
+
+/**
+ * Verify mod installation by checking if files exist
+ */
+ipcMain.handle("mod:verifyIntegrity", async (event, { modId, gameId }) => {
+  try {
+    const installedMods = store.get("installedMods") || {};
+
+    if (!installedMods[gameId] || !installedMods[gameId][modId]) {
+      return {
+        success: false,
+        error: "Mod not found in installed mods",
+      };
+    }
+
+    const modInfo = installedMods[gameId][modId];
+
+    if (!modInfo.path || !fs.existsSync(modInfo.path)) {
+      return {
+        success: true,
+        integrity: "missing",
+        message: "Mod files not found",
+      };
+    }
+
+    // Check if it's a directory (new format) or file (old format)
+    const stats = fs.statSync(modInfo.path);
+
+    if (stats.isDirectory()) {
+      // New format: extracted directory
+      const files = fs.readdirSync(modInfo.path);
+
+      if (files.length === 0) {
+        return {
+          success: true,
+          integrity: "corrupted",
+          message: "Mod directory is empty",
+        };
+      }
+
+      return {
+        success: true,
+        integrity: "valid",
+        message: `Mod installed (${files.length} files/folders)`,
+        fileCount: files.length,
+      };
+    } else {
+      // Old format: archive file - verify hash
+      const crypto = require("crypto");
+      const fileBuffer = fs.readFileSync(modInfo.path);
+      const hash = crypto.createHash("sha256");
+      hash.update(fileBuffer);
+      const currentHash = hash.digest("hex");
+
+      if (!modInfo.fileHash) {
+        return {
+          success: true,
+          integrity: "unknown",
+          message: "No hash stored (old installation)",
+        };
+      }
+
+      const isValid = currentHash === modInfo.fileHash;
+
+      return {
+        success: true,
+        integrity: isValid ? "valid" : "corrupted",
+        message: isValid ? "Archive integrity verified" : "Archive corrupted",
+      };
+    }
+  } catch (error) {
+    console.error("[Mods] Error verifying mod:", error);
+    return {
+      success: false,
+      error: error.message,
     };
   }
 });
@@ -1321,11 +1548,13 @@ ipcMain.handle("selectAndScanArchive", async () => {
 
     const filePath = result.filePaths[0];
     const scanResult = await scanArchiveForExecutables(filePath);
+    const stats = fs.statSync(filePath);
 
     return {
       ...scanResult,
       filePath,
       fileName: path.basename(filePath),
+      fileSize: stats.size,
     };
   } catch (error) {
     console.error("[Main] ❌ Erreur dans selectAndScanArchive:", error);
@@ -1335,6 +1564,41 @@ ipcMain.handle("selectAndScanArchive", async () => {
 
 ipcMain.handle("listArchiveFiles", async (event, filePath) => {
   return await scanArchiveForExecutables(filePath);
+});
+
+ipcMain.handle("selectArchiveFile", async () => {
+  try {
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openFile"],
+      filters: [
+        {
+          name: "Archives",
+          extensions: ["zip", "7z", "rar", "tar", "gz", "bz2", "xz", "tgz"],
+        },
+        { name: "Tous les fichiers", extensions: ["*"] },
+      ],
+      title: "Sélectionner une archive",
+    });
+
+    if (result.canceled || !result.filePaths.length) {
+      return { success: false, canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    const stats = fs.statSync(filePath);
+
+    return {
+      success: true,
+      filePath,
+      fileName: path.basename(filePath),
+      fileSize: stats.size,
+    };
+  } catch (error) {
+    console.error("[Main] Erreur dans selectArchiveFile:", error);
+    return { success: false, error: error.message };
+  }
 });
 
 //------------------------------\\
@@ -1409,6 +1673,42 @@ ipcMain.handle(
         // Gérer la fin de la désinstallation
         if (data.stage === "uninstalled") {
           console.log(`[Main] ✅ Désinstallation terminée: ${gameName}`);
+
+          // 🧹 Désinstaller tous les mods associés au jeu
+          try {
+            const installedMods = store.get("installedMods") || {};
+            if (installedMods[gameId] && Object.keys(installedMods[gameId]).length > 0) {
+              const modsToDelete = Object.keys(installedMods[gameId]);
+              console.log(`[Main] 🗑️ Désinstallation de ${modsToDelete.length} mod(s) pour ${gameName}...`);
+
+              for (const modId of modsToDelete) {
+                try {
+                  const modInfo = installedMods[gameId][modId];
+
+                  // Supprimer le dossier/fichier du mod
+                  if (modInfo && modInfo.path && fs.existsSync(modInfo.path)) {
+                    const stats = fs.statSync(modInfo.path);
+                    if (stats.isDirectory()) {
+                      fs.rmSync(modInfo.path, { recursive: true, force: true });
+                      console.log(`[Main] 🗑️ Mod directory deleted: ${modInfo.path}`);
+                    } else {
+                      fs.unlinkSync(modInfo.path);
+                      console.log(`[Main] 🗑️ Mod file deleted: ${modInfo.path}`);
+                    }
+                  }
+                } catch (modError) {
+                  console.error(`[Main] ⚠️ Erreur suppression mod ${modId}:`, modError.message);
+                }
+              }
+
+              // Supprimer tous les mods du jeu du store
+              delete installedMods[gameId];
+              store.set("installedMods", installedMods);
+              console.log(`[Main] ✅ ${modsToDelete.length} mod(s) désinstallé(s)`);
+            }
+          } catch (modsCleanupError) {
+            console.error(`[Main] ⚠️ Erreur nettoyage mods:`, modsCleanupError);
+          }
 
           // 🧹 Nettoyage de installedGamesCache
           try {
@@ -1805,16 +2105,16 @@ ipcMain.handle("discord-rpc:disconnect", async () => {
 ipcMain.handle("logger:log", async (event, { level, message, data }) => {
   try {
     switch (level) {
-      case 'debug':
+      case "debug":
         logger.debug(message, data);
         break;
-      case 'info':
+      case "info":
         logger.info(message, data);
         break;
-      case 'warn':
+      case "warn":
         logger.warn(message, data);
         break;
-      case 'error':
+      case "error":
         logger.error(message, data?.error, data?.context);
         break;
       default:
@@ -1856,40 +2156,45 @@ ipcMain.handle("logger:getSystemInfo", async () => {
 /**
  * Exporte un rapport de bug complet
  */
-ipcMain.handle("logger:exportBugReport", async (event, { description, userEmail }) => {
-  try {
-    const reportPath = await logger.exportBugReport();
+ipcMain.handle(
+  "logger:exportBugReport",
+  async (event, { description, userEmail }) => {
+    try {
+      const reportPath = await logger.exportBugReport();
 
-    if (reportPath) {
-      // Ajouter les infos utilisateur au rapport
-      const fs = require('fs');
-      const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-      report.userDescription = description;
-      report.userEmail = userEmail;
-      fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
+      if (reportPath) {
+        // Ajouter les infos utilisateur au rapport
+        const fs = require("fs");
+        const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+        report.userDescription = description;
+        report.userEmail = userEmail;
+        fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
 
-      logger.info('[Logger] Bug report exported with user info', { reportPath });
+        logger.info("[Logger] Bug report exported with user info", {
+          reportPath,
+        });
 
-      return {
-        success: true,
-        reportPath,
-        message: 'Bug report created successfully'
-      };
+        return {
+          success: true,
+          reportPath,
+          message: "Bug report created successfully",
+        };
+      }
+
+      return { success: false, error: "Failed to create report" };
+    } catch (error) {
+      logger.error("[Logger] Failed to export bug report", error);
+      return { success: false, error: error.message };
     }
-
-    return { success: false, error: 'Failed to create report' };
-  } catch (error) {
-    logger.error("[Logger] Failed to export bug report", error);
-    return { success: false, error: error.message };
   }
-});
+);
 
 /**
  * Ouvre le dossier de logs
  */
 ipcMain.handle("logger:openLogsFolder", async () => {
   try {
-    const { shell } = require('electron');
+    const { shell } = require("electron");
     await shell.openPath(logger.logsDir);
     return { success: true };
   } catch (error) {
@@ -1906,7 +2211,7 @@ ipcMain.handle("logger:openLogsFolder", async () => {
 ipcMain.handle("updater:checkForUpdates", async () => {
   try {
     if (!autoUpdateManager) {
-      return { success: false, error: 'AutoUpdateManager not initialized' };
+      return { success: false, error: "AutoUpdateManager not initialized" };
     }
     const result = await autoUpdateManager.checkForUpdates();
     return { success: true, ...result };
@@ -1922,7 +2227,7 @@ ipcMain.handle("updater:checkForUpdates", async () => {
 ipcMain.handle("updater:downloadAndInstall", async () => {
   try {
     if (!autoUpdateManager) {
-      return { success: false, error: 'AutoUpdateManager not initialized' };
+      return { success: false, error: "AutoUpdateManager not initialized" };
     }
     const result = await autoUpdateManager.downloadUpdate();
     return result;
@@ -1938,7 +2243,7 @@ ipcMain.handle("updater:downloadAndInstall", async () => {
 ipcMain.handle("updater:quitAndInstall", async () => {
   try {
     if (!autoUpdateManager) {
-      return { success: false, error: 'AutoUpdateManager not initialized' };
+      return { success: false, error: "AutoUpdateManager not initialized" };
     }
     const result = autoUpdateManager.quitAndInstall();
     return result;
@@ -1956,7 +2261,7 @@ ipcMain.handle("updater:getStatus", async () => {
     if (!autoUpdateManager) {
       return {
         success: false,
-        status: 'idle',
+        status: "idle",
         currentVersion: app.getVersion(),
       };
     }
@@ -1974,7 +2279,7 @@ ipcMain.handle("updater:getStatus", async () => {
 ipcMain.handle("updater:skipVersion", async (event, { version }) => {
   try {
     if (!autoUpdateManager) {
-      return { success: false, error: 'AutoUpdateManager not initialized' };
+      return { success: false, error: "AutoUpdateManager not initialized" };
     }
     const result = autoUpdateManager.skipVersion(version);
     return { success: true, ...result };

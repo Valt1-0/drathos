@@ -1,5 +1,5 @@
 // src/main/extractionEngine.js - Multi-format extraction engine 🗜️
-// Supports: ZIP, TAR, TAR.GZ, TGZ, 7Z
+// Supports: ZIP, TAR, TAR.GZ, TGZ, 7Z, RAR
 
 import fs from "fs";
 import path from "path";
@@ -14,7 +14,7 @@ import sevenBin from "7zip-bin";
  */
 export class ExtractionEngine {
   constructor() {
-    this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".7z"];
+    this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".7z", ".rar"];
 
     // Get the path to embedded 7z binary
     let binPath = sevenBin.path7za;
@@ -71,6 +71,7 @@ export class ExtractionEngine {
         return await this.extractTarGz(archivePath, extractPath, onProgress);
 
       case ".7z":
+      case ".rar":
         return await this.extract7z(archivePath, extractPath, onProgress);
 
       default:

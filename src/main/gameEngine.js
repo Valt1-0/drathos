@@ -257,11 +257,23 @@ export class GameEngine {
     }
   }
 
+  sanitizeGameName(gameName) {
+    // Remove or replace filesystem-unsafe characters: / \ : * ? " < > |
+    // Also remove leading/trailing spaces and dots (Windows restrictions)
+    return gameName
+      .replace(/[/\\:*?"<>|]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^\.+|\.+$/g, '');
+  }
+
   async extractGameFile(filePath, serverGame) {
     const gameId = serverGame._id;
-    const extractPath = path.join(this.downloadPath, gameId);
+    const sanitizedName = this.sanitizeGameName(serverGame.name);
+    const extractPath = path.join(this.downloadPath, sanitizedName);
 
     console.log(`[GameEngine] Extraction: ${path.basename(filePath)}`);
+    console.log(`[GameEngine] Install path: ${extractPath}`);
 
     if (!fs.existsSync(extractPath)) {
       fs.mkdirSync(extractPath, { recursive: true });

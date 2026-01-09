@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -18,13 +18,15 @@ import { useDebounce } from "../hooks/useDebounce";
 import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import GameLibrary from "../components/games/GameLibrary";
 import GameDetails from "../components/games/GameDetails";
-import UninstallModal from "../components/modals/UninstallModal";
-import InstallPathModal from "../components/modals/InstallPathModal";
-import DeleteGameModal from "../components/modals/DeleteGameModal";
-import ConfirmationModal from "../components/modals/ConfirmationModal";
-import AddGameModal from "../components/modals/AddGameModal";
-import WineRequiredModal from "../components/modals/WineRequiredModal";
 import { toast } from "sonner";
+
+// Lazy load modals pour optimiser le chargement initial
+const UninstallModal = lazy(() => import("../components/modals/UninstallModal"));
+const InstallPathModal = lazy(() => import("../components/modals/InstallPathModal"));
+const DeleteGameModal = lazy(() => import("../components/modals/DeleteGameModal"));
+const ConfirmationModal = lazy(() => import("../components/modals/ConfirmationModal"));
+const AddGameModal = lazy(() => import("../components/modals/AddGameModal"));
+const WineRequiredModal = lazy(() => import("../components/modals/WineRequiredModal"));
 
 const Games = () => {
   const { t } = useTranslation();
@@ -730,59 +732,61 @@ const Games = () => {
         getPlatformsArray={getPlatformsArray}
       />
 
-      <UninstallModal
-        isOpen={modals.uninstallModal.isOpen}
-        onClose={modals.uninstallModal.close}
-        onConfirm={confirmUninstall}
-        game={modals.uninstallModal.game}
-        gameSize={modals.uninstallModal.game?._id === selectedGame?._id ? gameSize : null}
-      />
+      <Suspense fallback={null}>
+        <UninstallModal
+          isOpen={modals.uninstallModal.isOpen}
+          onClose={modals.uninstallModal.close}
+          onConfirm={confirmUninstall}
+          game={modals.uninstallModal.game}
+          gameSize={modals.uninstallModal.game?._id === selectedGame?._id ? gameSize : null}
+        />
 
-      <InstallPathModal
-        isOpen={modals.installPathModal.isOpen}
-        onClose={modals.installPathModal.close}
-        onConfirm={handleInstallPathConfirm}
-        gameName={modals.installPathModal.game?.name}
-      />
+        <InstallPathModal
+          isOpen={modals.installPathModal.isOpen}
+          onClose={modals.installPathModal.close}
+          onConfirm={handleInstallPathConfirm}
+          gameName={modals.installPathModal.game?.name}
+        />
 
-      <DeleteGameModal
-        isOpen={modals.deleteGameModal.isOpen}
-        onClose={modals.deleteGameModal.close}
-        onConfirm={confirmDeleteGame}
-        game={modals.deleteGameModal.game}
-        loading={modals.deleteGameModal.loading}
-        result={modals.deleteGameModal.result}
-      />
+        <DeleteGameModal
+          isOpen={modals.deleteGameModal.isOpen}
+          onClose={modals.deleteGameModal.close}
+          onConfirm={confirmDeleteGame}
+          game={modals.deleteGameModal.game}
+          loading={modals.deleteGameModal.loading}
+          result={modals.deleteGameModal.result}
+        />
 
-      <ConfirmationModal
-        isOpen={modals.confirmationModal.isOpen}
-        onClose={modals.confirmationModal.close}
-        onConfirm={
-          modals.confirmationModal.data.onConfirm ? () => modals.confirmationModal.data.onConfirm() : modals.confirmationModal.close
-        }
-        title={modals.confirmationModal.data.title}
-        message={modals.confirmationModal.data.message}
-        confirmText={modals.confirmationModal.data.confirmText}
-        cancelText={modals.confirmationModal.data.cancelText}
-        confirmColor={modals.confirmationModal.data.confirmColor}
-        icon={modals.confirmationModal.data.icon}
-        showLockInfo={modals.confirmationModal.data.showLockInfo}
-        loading={modals.confirmationModal.data.loading}
-        error={modals.confirmationModal.data.error}
-        success={modals.confirmationModal.data.success}
-      />
+        <ConfirmationModal
+          isOpen={modals.confirmationModal.isOpen}
+          onClose={modals.confirmationModal.close}
+          onConfirm={
+            modals.confirmationModal.data.onConfirm ? () => modals.confirmationModal.data.onConfirm() : modals.confirmationModal.close
+          }
+          title={modals.confirmationModal.data.title}
+          message={modals.confirmationModal.data.message}
+          confirmText={modals.confirmationModal.data.confirmText}
+          cancelText={modals.confirmationModal.data.cancelText}
+          confirmColor={modals.confirmationModal.data.confirmColor}
+          icon={modals.confirmationModal.data.icon}
+          showLockInfo={modals.confirmationModal.data.showLockInfo}
+          loading={modals.confirmationModal.data.loading}
+          error={modals.confirmationModal.data.error}
+          success={modals.confirmationModal.data.success}
+        />
 
-      <AddGameModal
-        isOpen={modals.addGameModal.isOpen}
-        onClose={modals.addGameModal.close}
-        onSuccess={handleAddGameSuccess}
-      />
+        <AddGameModal
+          isOpen={modals.addGameModal.isOpen}
+          onClose={modals.addGameModal.close}
+          onSuccess={handleAddGameSuccess}
+        />
 
-      <WineRequiredModal
-        isOpen={modals.wineModal.isOpen}
-        onClose={modals.wineModal.close}
-        instructions={modals.wineModal.instructions}
-      />
+        <WineRequiredModal
+          isOpen={modals.wineModal.isOpen}
+          onClose={modals.wineModal.close}
+          instructions={modals.wineModal.instructions}
+        />
+      </Suspense>
     </div>
   );
 };
