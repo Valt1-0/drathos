@@ -17,10 +17,10 @@ import {
   FiAlertTriangle,
   FiRefreshCw,
   FiGlobe,
-  FiSearch,
   FiMonitor,
   FiLayers,
 } from "react-icons/fi";
+import { SearchBar } from "../components/ui";
 import { SiDiscord } from "react-icons/si";
 import GB from "country-flag-icons/react/3x2/GB";
 import FR from "country-flag-icons/react/3x2/FR";
@@ -278,20 +278,20 @@ const SettingsPage = () => {
             </div>
 
             {/* Search Bar - Compact */}
-            <div className="relative w-80">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-              <input
-                type="text"
-                placeholder={t('settings.search')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-white/10 focus:border-primary focus:outline-none transition-all text-sm text-text placeholder-text-secondary"
-              />
-            </div>
+            <SearchBar
+              placeholder={t('settings.search')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              size="md"
+              className="w-80"
+            />
           </div>
 
           {/* Horizontal Tabs Navigation */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2">
+          <div className="relative">
+            {/* Right fade indicator for scroll hint */}
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background-secondary to-transparent z-10 pointer-events-none" />
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-2 scrollbar-hide">
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.id;
@@ -330,6 +330,7 @@ const SettingsPage = () => {
                 {t('settings.reportBug')}
               </span>
             </motion.button>
+          </div>
           </div>
         </div>
       </motion.div>

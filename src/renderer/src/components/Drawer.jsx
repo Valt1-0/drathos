@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FaBars,
@@ -8,7 +8,7 @@ import {
   FaGear,
 } from "react-icons/fa6";
 import { FaHome, FaFolderOpen } from "react-icons/fa";
-import { FiX, FiLogOut, FiUser, FiPackage } from "react-icons/fi";
+import { FiX, FiUser, FiPackage } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,40 +23,32 @@ const Drawer = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { label: t('nav.home'), icon: FaHome, path: "/" },
     { label: t('nav.library'), icon: FaGamepad, path: "/games" },
     ...(user?.role === 'admin' ? [{ label: t('nav.mods'), icon: FiPackage, path: "/mods" }] : []),
     { label: t('nav.collections'), icon: FaFolderOpen, path: "/collections" },
     { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
     { label: t('nav.settings'), icon: FaGear, path: "/settings" },
-  ];
+  ], [t, user?.role]);
 
   // Listen to sync queue changes
   useEffect(() => {
-    const updatePendingCount = (count) => {
-      setPendingSyncs(count);
-    };
-
-    // Initial load
     setPendingSyncs(syncQueue.getPendingCount());
-
-    // Subscribe to changes
-    const listenerId = syncQueue.addListener(updatePendingCount);
-
-    return () => {
-      syncQueue.removeListener(listenerId);
-    };
+    const listenerId = syncQueue.addListener(setPendingSyncs);
+    return () => syncQueue.removeListener(listenerId);
   }, []);
 
-  const handlerDeleteUserData = async () => {
+  const toggleDrawer = useCallback(() => setIsOpen(prev => !prev), []);
+  const openDeleteModal = useCallback(() => setShowDeleteModal(true), []);
+  const closeDeleteModal = useCallback(() => setShowDeleteModal(false), []);
+
+  const handlerDeleteUserData = useCallback(async () => {
     await window.store.clear();
     window.api.reloadApp();
-  };
+  }, []);
 
-  const isActiveRoute = (path) => {
-    return location.pathname === path;
-  };
+  const isActiveRoute = useCallback((path) => location.pathname === path, [location.pathname]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -85,16 +77,15 @@ const Drawer = ({ children }) => {
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
           <motion.button
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={toggleDrawer}
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isOpen}
             className="p-3 rounded-xl flex items-center justify-center transition-all duration-300"
             style={{
               background: 'var(--app-surface)',
               color: 'var(--app-primary)',
             }}
-            whileHover={{
-              scale: 1.05,
-              boxShadow: '0 4px 12px var(--app-primary)',
-            }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <AnimatePresence mode="wait">
@@ -125,6 +116,7 @@ const Drawer = ({ children }) => {
 
         {/* Navigation Menu */}
         <nav
+          aria-label="Main navigation"
           className={`relative z-10 flex-1 py-6 space-y-2 ${isOpen ? "px-3" : "px-2"}`}
           style={{ overflowY: 'auto', overflowX: 'hidden' }}
         >
@@ -133,7 +125,7 @@ const Drawer = ({ children }) => {
             const isActive = isActiveRoute(item.path);
 
             return (
-              <Link key={index} to={item.path}>
+              <Link key={index} to={item.path} aria-current={isActive ? "page" : undefined}>
                 <motion.div
                   className="group relative overflow-hidden rounded-xl border"
                   style={{
@@ -208,7 +200,7 @@ const Drawer = ({ children }) => {
                               ease: [0.4, 0, 1, 1]
                             }
                           }}
-                          className={`ml-4 font-medium whitespace-nowrap ${
+                          className={`ml-4 text-sm font-medium whitespace-nowrap ${
                             isActive ? "text-text" : "text-text-secondary group-hover:text-text"
                           }`}
                         >
@@ -234,15 +226,8 @@ const Drawer = ({ children }) => {
         >
           {/* Delete Data Button */}
           <button
-            onClick={() => setShowDeleteModal(true)}
-            className="group relative overflow-hidden w-full rounded-xl transition-all duration-300"
-            style={{ border: '1px solid var(--app-border)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--app-error)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--app-border)';
-            }}
+            onClick={openDeleteModal}
+            className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-border hover:border-error"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <motion.div
@@ -264,7 +249,7 @@ const Drawer = ({ children }) => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="ml-4 font-medium text-text-secondary group-hover:text-error"
+                    className="ml-4 text-sm font-medium text-text-secondary group-hover:text-error"
                   >
                     {t('nav.clearData')}
                   </motion.span>
@@ -323,10 +308,10 @@ const Drawer = ({ children }) => {
                       transition={{ duration: 0.2 }}
                       className="flex-1 min-w-0"
                     >
-                      <p className="text-sm font-semibold text-text truncate">
+                      <p className="text-xs font-semibold text-text truncate">
                         {user.username}
                       </p>
-                      <p className="text-xs text-text-secondary">
+                      <p className="text-[10px] text-text-secondary">
                         {user.role || t('nav.userOnline')}
                       </p>
                     </motion.div>
@@ -346,7 +331,7 @@ const Drawer = ({ children }) => {
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={closeDeleteModal}
         onConfirm={handlerDeleteUserData}
         title={t('modals.clearData.title')}
         message={t('modals.clearData.message')}
@@ -358,5 +343,7 @@ const Drawer = ({ children }) => {
     </div>
   );
 };
+
+Drawer.displayName = 'Drawer';
 
 export default Drawer;

@@ -167,8 +167,13 @@ const api = {
       ipcRenderer.invoke("mod:download", { modId, gameId }),
     deleteModFile: ({ modId }) =>
       ipcRenderer.invoke("mod:deleteFile", { modId }),
-    verifyIntegrity: ({ modId, gameId }) =>
-      ipcRenderer.invoke("mod:verifyIntegrity", { modId, gameId }),
+    onDownloadProgress: (callback) => {
+      ipcRenderer.removeAllListeners("mod:downloadProgress");
+      ipcRenderer.on("mod:downloadProgress", (_event, data) => callback(data));
+    },
+    removeDownloadProgressListener: () => {
+      ipcRenderer.removeAllListeners("mod:downloadProgress");
+    },
   },
 };
 

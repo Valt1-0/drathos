@@ -1,7 +1,8 @@
 import React, { useMemo, useCallback, useState, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { FiSearch, FiClock, FiTrash2, FiPlus, FiUsers, FiLayers } from "react-icons/fi";
+import { FiClock, FiTrash2, FiPlus, FiUsers, FiLayers } from "react-icons/fi";
 import GameCover from "../GameCover";
+import { SearchBar } from "../ui";
 
 // Composant GameRow extrait et mémorisé pour optimiser les performances
 const GameRow = memo(({
@@ -138,18 +139,27 @@ const GameLibrary = ({
   getGenresArray,
 }) => {
   const { t } = useTranslation();
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
   const [FixedSizeList, setFixedSizeList] = useState(null);
   const [showOnlyMultiplayer, setShowOnlyMultiplayer] = useState(false);
 
-  // Charger react-window de manière asynchrone pour éviter les problèmes d'imports
+  // Window resize + react-window loading
   useEffect(() => {
+    let resizeTimer;
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => setWindowHeight(window.innerHeight), 100);
+    };
+    window.addEventListener('resize', onResize);
+
     import('react-window')
-      .then((module) => {
-        setFixedSizeList(() => module.FixedSizeList);
-      })
-      .catch((err) => {
-        console.warn('[GameLibrary] Failed to load react-window, using fallback:', err);
-      });
+      .then((module) => setFixedSizeList(() => module.FixedSizeList))
+      .catch((err) => console.warn('[GameLibrary] react-window fallback:', err));
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(resizeTimer);
+    };
   }, []);
 
   // Group and count versions
@@ -244,17 +254,12 @@ const GameLibrary = ({
       <div className="p-3 xl:p-4 space-y-3">
         <h1 className="text-lg xl:text-xl font-bold text-text">{t('nav.library')}</h1>
 
-        <div className="relative">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm" />
-          <input
-            type="text"
-            placeholder={t('games.searchPlaceholder')}
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-background-secondary text-text text-sm pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder-text-secondary"
-            style={{ border: '1px solid var(--app-border)' }}
-          />
-        </div>
+        <SearchBar
+          placeholder={t('games.searchPlaceholder')}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="text-sm"
+        />
 
         <select
           value={selectedGenre}
@@ -284,9 +289,13 @@ const GameLibrary = ({
           }`}
             style={!showOnlyMultiplayer ? { border: '2px solid var(--app-border)' } : {}}
           >
-            <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300 ${
-              showOnlyMultiplayer ? 'translate-x-5' : 'translate-x-0'
-            }`} />
+            <div
+              className="absolute w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300"
+              style={{
+                top: '50%',
+                transform: `translateY(-50%) translateX(${showOnlyMultiplayer ? '20px' : '2px'})`,
+              }}
+            />
           </div>
           <FiUsers className={`w-4 h-4 transition-colors ${
             showOnlyMultiplayer ? 'text-secondary' : 'text-text-secondary'
@@ -309,7 +318,7 @@ const GameLibrary = ({
           </div>
         ) : FixedSizeList ? (
           <FixedSizeList
-            height={window.innerHeight - (user?.role === "admin" ? 340 : 280)}
+            height={windowHeight - (user?.role === "admin" ? 340 : 280)}
             itemCount={filteredGames.length}
             itemSize={64}
             width="100%"
@@ -324,7 +333,8 @@ const GameLibrary = ({
               height: user?.role === "admin" ? `calc(100vh - 340px)` : `calc(100vh - 280px)`
             }}
           >
-            {filteredGames.map((game) => {
+            {/* Fallback: limit to 30 items to avoid DOM explosion */}
+            {filteredGames.slice(0, 30).map((game) => {
               const key = game.igdbId || game._id;
               const count = versionCounts.get(key) || 1;
 
@@ -345,6 +355,11 @@ const GameLibrary = ({
                 />
               );
             })}
+            {filteredGames.length > 30 && (
+              <div className="text-center py-4 text-text-secondary text-sm">
+                +{filteredGames.length - 30} {t('games.more')}
+              </div>
+            )}
           </div>
         )}
       </div>

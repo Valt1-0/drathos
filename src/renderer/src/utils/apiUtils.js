@@ -1,10 +1,7 @@
-import { updateConnectionStatus } from "../contexts/connectionContext";
-
 const DEFAULT_TIMEOUT = 5000;
 
 export async function fetchWithConnectionTracking(url, options = {}) {
   const timeout = options.timeout || DEFAULT_TIMEOUT;
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -13,17 +10,12 @@ export async function fetchWithConnectionTracking(url, options = {}) {
       ...options,
       signal: controller.signal,
     });
-
     clearTimeout(timeoutId);
-    updateConnectionStatus(true);
-
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    updateConnectionStatus(false);
-
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout');
+    if (error.name === "AbortError") {
+      throw new Error("Request timeout");
     }
     throw error;
   }

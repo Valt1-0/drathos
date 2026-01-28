@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as collectionsAPI from '../api/collections';
 import { useAuth } from './authContext';
 import { useConnection } from './connectionContext';
@@ -7,41 +8,54 @@ import { toast } from 'sonner';
 const CollectionsContext = createContext();
 
 export const CollectionsProvider = ({ children }) => {
-  const [collections, setCollections] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
+  const [collections, setCollections] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const { user } = useAuth();
   const { isOnline } = useConnection();
 
-  // ==================== SYNC & CACHE ====================
+  // ==================== LAZY LOADING ====================
 
-  // Charger collections depuis cache
-  useEffect(() => {
-    const loadFromCache = async () => {
-      const cached = await window.store.get('collectionsCache');
-      if (cached?.custom) {
-        setCollections(cached.custom);
-      }
-      setLoading(false);
-    };
+  const fetchCollections = useCallback(async () => {
+    if (initialized || loading) return;
 
-    loadFromCache();
-  }, []);
+    setLoading(true);
 
-  // Sync avec backend si online
-  useEffect(() => {
-    if (isOnline && user) {
-      syncCollections();
+    // Load from cache first
+    const cached = await window.store.get('collectionsCache');
+    if (cached?.custom) {
+      setCollections(cached.custom);
     }
-  }, [isOnline, user]);
+
+    // Sync with backend if online
+    if (isOnline && user) {
+      try {
+        const data = await collectionsAPI.getUserCollections();
+        if (data) {
+          setCollections(data);
+          await window.store.set('collectionsCache', {
+            custom: data,
+            lastSync: Date.now()
+          });
+        }
+      } catch (error) {
+        console.error('[Collections] Failed to sync:', error);
+      }
+    }
+
+    setLoading(false);
+    setInitialized(true);
+  }, [initialized, loading, isOnline, user]);
 
   const syncCollections = useCallback(async () => {
+    if (!isOnline || !user) return;
+
     try {
       const data = await collectionsAPI.getUserCollections();
       if (data) {
         setCollections(data);
-
-        // Update cache
         await window.store.set('collectionsCache', {
           custom: data,
           lastSync: Date.now()
@@ -50,7 +64,7 @@ export const CollectionsProvider = ({ children }) => {
     } catch (error) {
       console.error('[Collections] Failed to sync collections:', error);
     }
-  }, []);
+  }, [isOnline, user]);
 
   // ==================== CRUD OPERATIONS ====================
 
@@ -59,15 +73,15 @@ export const CollectionsProvider = ({ children }) => {
       const response = await collectionsAPI.createCollection(collectionData);
       if (response.collection) {
         setCollections(prev => [...prev, response.collection]);
-        await syncCollections(); // Re-sync cache
-        toast.success('Collection créée avec succès');
+        await syncCollections();
+        toast.success(t('collections.createSuccess'));
         return response.collection;
       }
     } catch (error) {
-      toast.error(error.message || 'Erreur lors de la création de la collection');
+      toast.error(error.message || t('collections.createError'));
       throw error;
     }
-  }, [syncCollections]);
+  }, [syncCollections, t]);
 
   const updateCollection = useCallback(async (collectionId, updateData) => {
     try {
@@ -77,14 +91,14 @@ export const CollectionsProvider = ({ children }) => {
           prev.map(col => col._id === collectionId ? response.collection : col)
         );
         await syncCollections();
-        toast.success('Collection mise à jour avec succès');
+        toast.success(t('collections.updateSuccess'));
         return response.collection;
       }
     } catch (error) {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
+      toast.error(error.message || t('collections.updateError'));
       throw error;
     }
-  }, [syncCollections]);
+  }, [syncCollections, t]);
 
   const deleteCollection = useCallback(async (collectionId) => {
     try {
@@ -96,12 +110,12 @@ export const CollectionsProvider = ({ children }) => {
       }
 
       await syncCollections();
-      toast.success('Collection supprimée avec succès');
+      toast.success(t('collections.deleteSuccess'));
     } catch (error) {
-      toast.error(error.message || 'Erreur lors de la suppression');
+      toast.error(error.message || t('collections.deleteError'));
       throw error;
     }
-  }, [selectedCollection, syncCollections]);
+  }, [selectedCollection, syncCollections, t]);
 
   // ==================== GAMES MANAGEMENT ====================
 
@@ -113,14 +127,14 @@ export const CollectionsProvider = ({ children }) => {
           prev.map(col => col._id === collectionId ? response.collection : col)
         );
         await syncCollections();
-        toast.success(`${gameIds.length} jeu(x) ajouté(s) à la collection`);
+        toast.success(t('collections.gamesAdded', { count: gameIds.length }));
         return response.collection;
       }
     } catch (error) {
-      toast.error(error.message || 'Erreur lors de l\'ajout des jeux');
+      toast.error(error.message || t('collections.addGamesError'));
       throw error;
     }
-  }, [syncCollections]);
+  }, [syncCollections, t]);
 
   const removeGamesFromCollection = useCallback(async (collectionId, gameIds) => {
     try {
@@ -130,14 +144,14 @@ export const CollectionsProvider = ({ children }) => {
           prev.map(col => col._id === collectionId ? response.collection : col)
         );
         await syncCollections();
-        toast.success(`${gameIds.length} jeu(x) retiré(s) de la collection`);
+        toast.success(t('collections.gamesRemoved', { count: gameIds.length }));
         return response.collection;
       }
     } catch (error) {
-      toast.error(error.message || 'Erreur lors du retrait des jeux');
+      toast.error(error.message || t('collections.removeGamesError'));
       throw error;
     }
-  }, [syncCollections]);
+  }, [syncCollections, t]);
 
   // ==================== CONTEXT VALUE ====================
 
@@ -145,8 +159,10 @@ export const CollectionsProvider = ({ children }) => {
     () => ({
       collections,
       loading,
+      initialized,
       selectedCollection,
       setSelectedCollection,
+      fetchCollections,
       createCollection,
       updateCollection,
       deleteCollection,
@@ -157,7 +173,9 @@ export const CollectionsProvider = ({ children }) => {
     [
       collections,
       loading,
+      initialized,
       selectedCollection,
+      fetchCollections,
       createCollection,
       updateCollection,
       deleteCollection,
@@ -182,20 +200,4 @@ export const useCollections = () => {
     throw new Error('useCollections must be used within a CollectionsProvider');
   }
   return context;
-};
-
-// Hook pour obtenir une collection spécifique par ID
-export const useCollectionById = (id) => {
-  const { collections } = useCollections();
-  return useMemo(() => {
-    return collections.find(col => col._id === id) || null;
-  }, [collections, id]);
-};
-
-// Hook pour obtenir les collections épinglées
-export const usePinnedCollections = () => {
-  const { collections } = useCollections();
-  return useMemo(() => {
-    return collections.filter(col => col.isPinned);
-  }, [collections]);
 };

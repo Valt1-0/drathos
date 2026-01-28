@@ -1,23 +1,6 @@
 import { motion } from "framer-motion";
 import { FiLoader } from "react-icons/fi";
 
-/**
- * Button Component - Système de design Drathos
- *
- * Composant bouton réutilisable avec support complet des thèmes,
- * variants, tailles, icônes et animations.
- *
- * @param {string} variant - Style du bouton: 'primary', 'secondary', 'ghost', 'danger', 'success'
- * @param {string} size - Taille: 'sm', 'md', 'lg', 'xl'
- * @param {boolean} gradient - Utiliser un fond gradient (par défaut pour primary)
- * @param {React.ReactNode} icon - Icône à afficher
- * @param {string} iconPosition - Position de l'icône: 'left', 'right' (default: 'left')
- * @param {boolean} iconOnly - Afficher uniquement l'icône sans texte
- * @param {boolean} loading - État de chargement
- * @param {boolean} disabled - État désactivé
- * @param {string} className - Classes CSS additionnelles
- * @param {React.ReactNode} children - Contenu du bouton
- */
 const Button = ({
   variant = 'primary',
   size = 'md',
@@ -31,202 +14,128 @@ const Button = ({
   children,
   ...props
 }) => {
-  // Styles de base selon la taille
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
-    xl: 'px-8 py-4 text-xl',
+  const isDisabled = disabled || loading;
+
+  // Tailles compactes et modernes
+  const sizes = {
+    xs: iconOnly ? 'w-6 h-6' : 'px-2 py-1 text-[10px]',
+    sm: iconOnly ? 'w-7 h-7' : 'px-2.5 py-1 text-xs',
+    md: iconOnly ? 'w-8 h-8' : 'px-3 py-1.5 text-xs',
+    lg: iconOnly ? 'w-9 h-9' : 'px-4 py-2 text-sm',
+    xl: iconOnly ? 'w-11 h-11' : 'px-6 py-2.5 text-base',
   };
 
-  // Styles pour boutons icon-only
-  const iconOnlySizes = {
-    sm: 'w-8 h-8 p-0',
-    md: 'w-10 h-10 p-0',
-    lg: 'w-12 h-12 p-0',
-    xl: 'w-14 h-14 p-0',
-  };
+  const iconSizes = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 };
 
-  // Tailles d'icônes selon la taille du bouton
-  const iconSizes = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
-    xl: 'text-xl',
-  };
-
-  // Styles selon le variant
-  const getVariantStyles = () => {
-    const base = 'border transition-all duration-300 font-semibold';
-
-    switch (variant) {
-      case 'primary':
-        if (gradient) {
-          return `${base} border-transparent text-white`;
-        }
-        return `${base} border-transparent text-white`;
-
-      case 'secondary':
-        if (gradient) {
-          return `${base} border-transparent text-white`;
-        }
-        return `${base} border-transparent text-white`;
-
-      case 'ghost':
-        return `${base} bg-transparent border-current`;
-
-      case 'danger':
-        return `${base} border-transparent text-white`;
-
-      case 'success':
-        return `${base} border-transparent text-white`;
-
-      default:
-        return base;
-    }
-  };
-
-  // Styles inline pour les gradients et couleurs dynamiques
-  const getInlineStyles = () => {
-    if (disabled || loading) {
+  // Styles par variant
+  const getStyles = () => {
+    if (isDisabled) {
       return {
         background: 'var(--app-surface)',
         color: 'var(--app-textSecondary)',
+        border: '1px solid transparent',
+        opacity: 0.5,
         cursor: 'not-allowed',
-        opacity: 0.6,
       };
     }
 
-    const styles = {};
+    const base = { border: '1px solid transparent' };
 
     switch (variant) {
       case 'primary':
-        if (gradient) {
-          styles.background = 'var(--app-gradient-primary)';
-          styles.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-        } else {
-          styles.background = 'var(--app-primary)';
-        }
-        break;
-
-      case 'secondary':
-        if (gradient) {
-          styles.background = 'var(--app-gradient-secondary)';
-          styles.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-        } else {
-          styles.background = 'var(--app-secondary)';
-        }
-        break;
-
-      case 'ghost':
-        styles.color = 'var(--app-text)';
-        styles.borderColor = 'var(--app-border)';
-        break;
-
-      case 'danger':
-        styles.background = 'var(--app-error)';
-        break;
-
-      case 'success':
-        styles.background = 'var(--app-success)';
-        break;
-
-      default:
-        styles.background = 'var(--app-primary)';
-    }
-
-    return styles;
-  };
-
-  // Animations hover selon le variant
-  const getHoverAnimation = () => {
-    if (disabled || loading) return {};
-
-    const base = { scale: 1.02 };
-
-    switch (variant) {
-      case 'primary':
+        return {
+          ...base,
+          background: gradient ? 'var(--app-gradient-primary)' : 'var(--app-primary)',
+          color: '#fff',
+          boxShadow: gradient ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+        };
       case 'secondary':
         return {
           ...base,
-          boxShadow: 'var(--app-shadow-primary), 0 0 20px var(--app-primary)',
+          background: gradient ? 'var(--app-gradient-secondary)' : 'var(--app-secondary)',
+          color: '#fff',
+          boxShadow: gradient ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
         };
-
-      case 'danger':
-        return {
-          ...base,
-          boxShadow: '0 8px 24px rgba(239, 68, 68, 0.4)',
-        };
-
-      case 'success':
-        return {
-          ...base,
-          boxShadow: '0 8px 24px rgba(34, 197, 94, 0.4)',
-        };
-
       case 'ghost':
         return {
           ...base,
-          borderColor: 'var(--app-primary)',
-          color: 'var(--app-primary)',
+          background: 'transparent',
+          color: 'var(--app-text)',
+          border: '1px solid var(--app-border)',
         };
-
+      case 'danger':
+        return {
+          ...base,
+          background: 'var(--app-error)',
+          color: '#fff',
+        };
+      case 'success':
+        return {
+          ...base,
+          background: 'var(--app-success)',
+          color: '#fff',
+        };
       default:
-        return base;
+        return { ...base, background: 'var(--app-primary)', color: '#fff' };
     }
   };
 
-  // Rendu du contenu du bouton
+  // Animations hover
+  const hoverStyle = isDisabled ? {} : {
+    scale: 1.02,
+    filter: 'brightness(1.1)',
+    boxShadow: variant === 'ghost'
+      ? '0 0 0 1px var(--app-primary)'
+      : '0 4px 12px rgba(0,0,0,0.2)',
+  };
+
+  // Contenu du bouton
   const renderContent = () => {
+    const iconSize = iconSizes[size];
+
     if (loading) {
       return (
-        <div className="flex items-center justify-center gap-2">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          >
-            <FiLoader className={iconSizes[size]} />
-          </motion.div>
-          {!iconOnly && children && <span>Chargement...</span>}
-        </div>
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+          className="flex items-center justify-center"
+        >
+          <FiLoader size={iconSize} />
+        </motion.div>
       );
     }
 
     if (iconOnly && icon) {
-      return <div className="flex items-center justify-center">{icon}</div>;
+      return <span className="flex items-center justify-center" style={{ fontSize: iconSize }}>{icon}</span>;
     }
 
     if (icon && children) {
       return (
-        <div className="flex items-center justify-center gap-2">
-          {iconPosition === 'left' && <span className={iconSizes[size]}>{icon}</span>}
+        <span className="flex items-center justify-center gap-1.5">
+          {iconPosition === 'left' && <span style={{ fontSize: iconSize }}>{icon}</span>}
           <span>{children}</span>
-          {iconPosition === 'right' && <span className={iconSizes[size]}>{icon}</span>}
-        </div>
+          {iconPosition === 'right' && <span style={{ fontSize: iconSize }}>{icon}</span>}
+        </span>
       );
     }
 
-    if (icon && !children) {
-      return <div className="flex items-center justify-center">{icon}</div>;
-    }
-
-    return <span>{children}</span>;
+    return children;
   };
 
   return (
     <motion.button
       className={`
-        ${getVariantStyles()}
-        ${iconOnly ? iconOnlySizes[size] : sizeClasses[size]}
-        ${iconOnly ? 'flex items-center justify-center' : ''}
-        rounded-xl
+        ${sizes[size]}
+        rounded-lg font-medium
+        flex items-center justify-center
+        transition-colors duration-150
         ${className}
       `}
-      style={getInlineStyles()}
-      whileHover={getHoverAnimation()}
-      whileTap={disabled || loading ? {} : { scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      disabled={disabled || loading}
+      style={getStyles()}
+      whileHover={hoverStyle}
+      whileTap={isDisabled ? {} : { scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      disabled={isDisabled}
       {...props}
     >
       {renderContent()}

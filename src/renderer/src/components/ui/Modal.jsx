@@ -65,6 +65,9 @@ const Modal = ({
 
           {/* Modal Content */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? "modal-title" : undefined}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -106,6 +109,7 @@ const Modal = ({
                   {/* Titre */}
                   {title && (
                     <h2
+                      id="modal-title"
                       className="text-2xl font-bold"
                       style={{ color: 'var(--app-text)' }}
                     >
@@ -123,6 +127,7 @@ const Modal = ({
                     icon={<FiX />}
                     onClick={onClose}
                     className="shrink-0"
+                    aria-label="Close"
                   />
                 )}
               </div>

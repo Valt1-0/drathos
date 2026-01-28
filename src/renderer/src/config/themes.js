@@ -34,108 +34,6 @@ export const themes = {
     }
   },
 
-  fire: {
-    id: 'fire',
-    name: 'Fire & Energy',
-    description: 'Énergie et action',
-    preview: '🔥',
-    colors: {
-      primary: '#F97316',
-      primaryHover: '#EA580C',
-      secondary: '#EF4444',
-      secondaryHover: '#DC2626',
-      accent: '#FBBF24',
-      accentHover: '#F59E0B',
-      background: '#18181B',
-      backgroundSecondary: '#27272A',
-      surface: '#3F3F46',
-      text: '#FFFFFF',
-      textSecondary: '#A1A1AA',
-      border: 'rgba(249, 115, 22, 0.2)',
-      success: '#FBBF24',
-      error: '#EF4444',
-      warning: '#F97316',
-    },
-    gradients: {
-      primary: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-      secondary: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-      button: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-    },
-    shadows: {
-      primary: '0 4px 20px rgba(249, 115, 22, 0.4)',
-      secondary: '0 4px 20px rgba(239, 68, 68, 0.4)',
-      accent: '0 4px 20px rgba(251, 191, 36, 0.3)',
-    }
-  },
-
-  vaporwave: {
-    id: 'vaporwave',
-    name: 'Vaporwave',
-    description: 'Rétro-futur et chill',
-    preview: '🌸',
-    colors: {
-      primary: '#F0ABFC',
-      primaryHover: '#E879F9',
-      secondary: '#67E8F9',
-      secondaryHover: '#22D3EE',
-      accent: '#C084FC',
-      accentHover: '#A855F7',
-      background: '#1E1B4B',
-      backgroundSecondary: '#312E81',
-      surface: '#4C1D95',
-      text: '#FFFFFF',
-      textSecondary: '#DDD6FE',
-      border: 'rgba(240, 171, 252, 0.2)',
-      success: '#67E8F9',
-      error: '#FB7185',
-      warning: '#FDBA74',
-    },
-    gradients: {
-      primary: 'linear-gradient(135deg, #F0ABFC 0%, #E879F9 100%)',
-      secondary: 'linear-gradient(135deg, #67E8F9 0%, #22D3EE 100%)',
-      button: 'linear-gradient(135deg, #F0ABFC 0%, #E879F9 100%)',
-    },
-    shadows: {
-      primary: '0 4px 20px rgba(240, 171, 252, 0.4)',
-      secondary: '0 4px 20px rgba(103, 232, 249, 0.4)',
-      accent: '0 4px 20px rgba(192, 132, 252, 0.4)',
-    }
-  },
-
-  matrix: {
-    id: 'matrix',
-    name: 'Matrix Green',
-    description: 'Hacker et tech',
-    preview: '💚',
-    colors: {
-      primary: '#00FF41',
-      primaryHover: '#00DD38',
-      secondary: '#10B981',
-      secondaryHover: '#059669',
-      accent: '#84CC16',
-      accentHover: '#65A30D',
-      background: '#000000',
-      backgroundSecondary: '#0A0F0A',
-      surface: '#1A2F1A',
-      text: '#00FF41',
-      textSecondary: '#4ADE80',
-      border: 'rgba(0, 255, 65, 0.2)',
-      success: '#00FF41',
-      error: '#FF4141',
-      warning: '#FFFF41',
-    },
-    gradients: {
-      primary: 'linear-gradient(135deg, #00FF41 0%, #00DD38 100%)',
-      secondary: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-      button: 'linear-gradient(135deg, #00FF41 0%, #00DD38 100%)',
-    },
-    shadows: {
-      primary: '0 4px 20px rgba(0, 255, 65, 0.5)',
-      secondary: '0 4px 20px rgba(16, 185, 129, 0.4)',
-      accent: '0 4px 20px rgba(132, 204, 22, 0.3)',
-    }
-  },
-
   gold: {
     id: 'gold',
     name: 'Premium Gold',
@@ -305,30 +203,19 @@ export const applyTheme = (themeId) => {
   const theme = getThemeById(themeId);
   const root = document.documentElement;
 
-  console.log('[Themes] Applying theme:', themeId);
-  console.log('[Themes] Primary color:', theme.colors.primary);
-
-  // Ajouter un attribut data-theme pour forcer le changement visuel
   root.setAttribute('data-theme', themeId);
 
-  // Appliquer les couleurs avec !important pour écraser le CSS
   Object.entries(theme.colors).forEach(([key, value]) => {
-    const varName = `--app-${key}`;
-    root.style.setProperty(varName, value, 'important');
+    root.style.setProperty(`--app-${key}`, value, 'important');
   });
 
-  // Appliquer les gradients
   Object.entries(theme.gradients).forEach(([key, value]) => {
-    const varName = `--app-gradient-${key}`;
-    root.style.setProperty(varName, value, 'important');
+    root.style.setProperty(`--app-gradient-${key}`, value, 'important');
   });
 
-  // Appliquer les shadows
   Object.entries(theme.shadows).forEach(([key, value]) => {
-    const varName = `--app-shadow-${key}`;
-    root.style.setProperty(varName, value, 'important');
+    root.style.setProperty(`--app-shadow-${key}`, value, 'important');
   });
 
-  console.log('[Themes] ✅ Theme applied successfully - CSS vars set on :root with !important');
   return theme;
 };

@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { FiAlertTriangle } from "react-icons/fi";
 import { useTheme } from "../../contexts/themeContext";
+import { Button } from "../ui";
 
-const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Supprimer" }) => {
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText }) => {
   const { t } = useTranslation();
+  const deleteText = confirmText || t('common.delete');
   const { getTextClass, isLight } = useTheme();
 
   if (!isOpen) return null;
@@ -53,30 +55,19 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confir
         {/* Actions */}
         <div className={`p-6 pt-4 border-t ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
           <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onClose}
-              className={`flex-1 px-5 py-3 rounded-xl font-medium transition-all ${
-                isLight
-                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                  : 'bg-gray-800 hover:bg-gray-700 text-gray-200'
-              }`}
-            >
+            <Button variant="ghost" className="flex-1" onClick={onClose}>
               {t('common.cancel')}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
               onClick={() => {
                 onConfirm();
                 onClose();
               }}
-              className="flex-1 px-5 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
             >
-              {confirmText}
-            </motion.button>
+              {deleteText}
+            </Button>
           </div>
         </div>
       </motion.div>

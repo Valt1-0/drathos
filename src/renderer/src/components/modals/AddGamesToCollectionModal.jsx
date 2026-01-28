@@ -5,6 +5,7 @@ import { FiX, FiSearch, FiCheck } from "react-icons/fi";
 import { useTheme } from "../../contexts/themeContext";
 import { useCollections } from "../../contexts/collectionsContext";
 import { getAllServerGames } from "../../api/serverGames";
+import { Button } from "../ui";
 
 const AddGamesToCollectionModal = ({ collection, onClose }) => {
   const { t } = useTranslation();
@@ -234,30 +235,21 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
           {/* Footer */}
           <div className={`p-6 border-t ${isLight ? 'border-gray-300' : 'border-gray-700'}`}>
             <div className="flex gap-3">
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onClose}
-                className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
-                  isLight ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-700 hover:bg-gray-600'
-                } ${getTextClass('primary')}`}
-              >
+              <Button variant="ghost" className="flex-1" onClick={onClose}>
                 {t('common.cancel')}
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
                 onClick={handleSubmit}
-                disabled={isSubmitting || selectedGameIds.length === 0}
-                className="flex-1 px-6 py-3 rounded-lg bg-primary text-white font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={selectedGameIds.length === 0}
+                loading={isSubmitting}
               >
                 {isSubmitting
                   ? t('collections.adding')
                   : t('collections.addSelected', { count: selectedGameIds.length })
                 }
-              </motion.button>
+              </Button>
             </div>
           </div>
         </motion.div>

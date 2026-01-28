@@ -1,37 +1,47 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { memo, useCallback } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 
-const SearchBar = ({
+const sizeConfig = {
+  sm: { input: 'pl-8 pr-10 py-1.5 text-sm rounded-lg', icon: 'left-2.5 text-sm', clear: 'right-2 text-sm' },
+  md: { input: 'pl-10 pr-10 py-2.5 text-sm rounded-lg', icon: 'left-3 text-base', clear: 'right-3 text-base' },
+  lg: { input: 'pl-12 pr-12 py-3 rounded-xl', icon: 'left-4 text-xl', clear: 'right-4 text-lg' },
+};
+
+const SearchBar = memo(({
   placeholder = "Rechercher...",
   value = "",
   onChange,
   onClear,
   autoFocus = false,
+  size = 'md',
   className = '',
   ...props
 }) => {
-  const handleClear = () => {
+  const config = sizeConfig[size] || sizeConfig.md;
+
+  const handleClear = useCallback(() => {
     if (onClear) {
       onClear();
     } else if (onChange) {
       onChange({ target: { value: '' } });
     }
-  };
+  }, [onClear, onChange]);
 
   return (
     <div className={`relative ${className}`}>
       <FiSearch
-        className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-xl"
-        style={{ color: 'var(--app-text)' }}
+        className={`absolute top-1/2 -translate-y-1/2 pointer-events-none ${config.icon}`}
+        style={{ color: 'var(--app-textSecondary)' }}
       />
 
       <input
-        type="text"
+        type="search"
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         autoFocus={autoFocus}
-        className="w-full pl-12 pr-12 py-3 rounded-xl border font-medium transition-all duration-300 focus:outline-none focus:border-primary"
+        aria-label={placeholder}
+        className={`w-full ${config.input} border font-medium transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary`}
         style={{
           background: 'var(--app-surface)',
           borderColor: 'var(--app-border)',
@@ -40,22 +50,21 @@ const SearchBar = ({
         {...props}
       />
 
-      <AnimatePresence>
-        {value && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-error hover:text-white transition-colors"
-            onClick={handleClear}
-            type="button"
-          >
-            <FiX className="text-lg" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {value && (
+        <button
+          className={`absolute top-1/2 -translate-y-1/2 p-1 rounded hover:bg-error/20 hover:text-error transition-colors ${config.clear}`}
+          onClick={handleClear}
+          type="button"
+          aria-label="Clear search"
+          style={{ color: 'var(--app-textSecondary)' }}
+        >
+          <FiX />
+        </button>
+      )}
     </div>
   );
-};
+});
+
+SearchBar.displayName = 'SearchBar';
 
 export default SearchBar;

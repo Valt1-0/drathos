@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 const UpdateContext = createContext();
@@ -12,6 +13,7 @@ export const useUpdate = () => {
 };
 
 export const UpdateProvider = ({ children }) => {
+  const { t } = useTranslation();
   const [updateStatus, setUpdateStatus] = useState('idle');
   const [updateInfo, setUpdateInfo] = useState(null);
   const [downloadProgress, setDownloadProgress] = useState(null);
@@ -36,8 +38,8 @@ export const UpdateProvider = ({ children }) => {
         setUpdateStatus('available');
         setUpdateInfo(data);
         setShowUpdateModal(true);
-        toast.info('Mise à jour disponible', {
-          description: `Version ${data.version} disponible`,
+        toast.info(t('update.available'), {
+          description: t('update.version', { version: data.version }),
           duration: 5000,
         });
       });
@@ -64,8 +66,8 @@ export const UpdateProvider = ({ children }) => {
       window.api.updater.onUpdateDownloaded((data) => {
         setUpdateStatus('downloaded');
         setShowUpdateModal(true);
-        toast.success('Mise à jour téléchargée', {
-          description: 'Redémarrez pour installer',
+        toast.success(t('update.ready'), {
+          description: t('settings.updateRestartToInstall'),
           duration: 10000,
         });
       });
@@ -76,8 +78,8 @@ export const UpdateProvider = ({ children }) => {
       window.api.updater.onError((data) => {
         setUpdateStatus('error');
         setError(data.message);
-        toast.error('Erreur de mise à jour', {
-          description: data.message || 'Une erreur est survenue',
+        toast.error(t('update.error'), {
+          description: data.message || t('common.error'),
           duration: 5000,
         });
       });
@@ -95,8 +97,8 @@ export const UpdateProvider = ({ children }) => {
       }
 
       if (!result.available) {
-        toast.info('Aucune mise à jour', {
-          description: `Vous utilisez déjà la dernière version (${result.currentVersion})`,
+        toast.info(t('settings.currentVersion'), {
+          description: result.currentVersion,
           duration: 4000,
         });
       }
@@ -105,8 +107,8 @@ export const UpdateProvider = ({ children }) => {
     } catch (err) {
       console.error('[UpdateContext] Check error:', err);
       setError(err.message);
-      toast.error('Erreur', {
-        description: 'Impossible de vérifier les mises à jour',
+      toast.error(t('common.error'), {
+        description: t('update.error'),
         duration: 4000,
       });
       throw err;
@@ -127,8 +129,8 @@ export const UpdateProvider = ({ children }) => {
     } catch (err) {
       console.error('[UpdateContext] Download error:', err);
       setError(err.message);
-      toast.error('Erreur', {
-        description: 'Impossible de télécharger la mise à jour',
+      toast.error(t('common.error'), {
+        description: t('update.error'),
         duration: 4000,
       });
       throw err;
@@ -141,8 +143,8 @@ export const UpdateProvider = ({ children }) => {
       await window.api.updater.quitAndInstall();
     } catch (err) {
       console.error('[UpdateContext] Install error:', err);
-      toast.error('Erreur', {
-        description: "Impossible d'installer la mise à jour",
+      toast.error(t('common.error'), {
+        description: t('update.error'),
         duration: 4000,
       });
     }

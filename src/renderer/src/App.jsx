@@ -1,10 +1,16 @@
 import { useEffect, lazy, Suspense } from "react";
-import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router";
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router";
 import { Toaster } from "sonner";
 import { motion } from "framer-motion";
 import { FiLoader } from "react-icons/fi";
-import { I18nextProvider } from 'react-i18next';
-import i18n from './i18n/config';
+import { I18nextProvider } from "react-i18next";
+import i18n from "./i18n/config";
 
 import { AuthProvider, useAuth } from "./contexts/authContext";
 import { DownloadProvider } from "./contexts/downloadContext";
@@ -22,11 +28,13 @@ import UpdateModal from "./components/modals/UpdateModal";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 
-// * Lazy-loaded Pages for better performance
-const Home = lazy(() => import("./pages/Home"));
+// * Pages critiques importées directement (pas de lazy loading)
+import Games from "./pages/Games";
+import Collections from "./pages/Collections";
+import Home from "./pages/Home";
+
+// * Lazy-loaded Pages pour les pages moins utilisées
 const Welcome = lazy(() => import("./pages/Welcome"));
-const Games = lazy(() => import("./pages/Games"));
-const Collections = lazy(() => import("./pages/Collections"));
 const Download = lazy(() => import("./pages/Download"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Mods = lazy(() => import("./pages/Mods"));
@@ -145,14 +153,14 @@ export default function App() {
     // Raccourci clavier pour ouvrir le DevTools
     const handleKeyDown = (e) => {
       // F12 ou Ctrl+Shift+I
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+      if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
         e.preventDefault();
         window.api.windowToggleDevTools();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   return (
@@ -160,46 +168,46 @@ export default function App() {
       <ThemeProvider>
         <ErrorBoundary>
           <AuthProvider>
-          <ConnectionProvider>
-            <DownloadProvider>
-              <UploadProvider>
-                <CollectionsProvider>
-                  <UpdateProvider>
-                    <Router>
-                  <div className="flex flex-col h-screen overflow-hidden">
-                    <TitleBar />
-                    <div className="flex-1 overflow-hidden">
-                      <AppRoutes />
-                    </div>
-                  </div>
-                  <UploadNotification />
-                  <UpdateModal />
-                  <Toaster
-                    position="top-right"
-                    expand={true}
-                    richColors
-                    closeButton={false}
-                    toastOptions={{
-                      duration: 4000,
-                      style: {
-                        background: 'var(--color-surface)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        backdropFilter: 'blur(12px)',
-                        boxShadow: 'var(--app-shadow-primary)',
-                      },
-                      className: 'sonner-toast',
-                      descriptionClassName: 'sonner-description',
-                    }}
-                  />
-                    </Router>
-                  </UpdateProvider>
-                </CollectionsProvider>
-              </UploadProvider>
-            </DownloadProvider>
-          </ConnectionProvider>
+            <ConnectionProvider>
+              <DownloadProvider>
+                <UploadProvider>
+                  <CollectionsProvider>
+                    <UpdateProvider>
+                      <Router>
+                        <div className="flex flex-col h-screen overflow-hidden">
+                          <TitleBar />
+                          <div className="flex-1 overflow-hidden">
+                            <AppRoutes />
+                          </div>
+                        </div>
+                        <UploadNotification />
+                        <UpdateModal />
+                        <Toaster
+                          position="top-right"
+                          expand={true}
+                          richColors
+                          closeButton={false}
+                          toastOptions={{
+                            duration: 4000,
+                            style: {
+                              background: "var(--color-surface)",
+                              color: "var(--color-text)",
+                              border: "1px solid var(--color-border)",
+                              borderRadius: "12px",
+                              padding: "16px",
+                              backdropFilter: "blur(12px)",
+                              boxShadow: "var(--app-shadow-primary)",
+                            },
+                            className: "sonner-toast",
+                            descriptionClassName: "sonner-description",
+                          }}
+                        />
+                      </Router>
+                    </UpdateProvider>
+                  </CollectionsProvider>
+                </UploadProvider>
+              </DownloadProvider>
+            </ConnectionProvider>
           </AuthProvider>
         </ErrorBoundary>
       </ThemeProvider>

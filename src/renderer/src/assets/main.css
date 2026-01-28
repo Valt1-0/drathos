@@ -229,3 +229,13 @@ html, body, #root {
   -webkit-backdrop-filter: blur(calc(var(--app-glass-blur) * 1.5));
   background: rgba(var(--app-background), 0.85);
 }
+
+/* SUBTLE PULSE - CSS-only animation for decorative elements */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}

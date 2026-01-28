@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiX, FiUpload, FiFile, FiCheck, FiAlertCircle, FiPackage } from "react-icons/fi";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "../../contexts/themeContext";
 import { uploadMod, getAllGamesForAdmin } from "../../api/mods";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
@@ -28,7 +27,6 @@ function sanitizeInstallPath(input) {
 
 const UploadModModal = ({ onClose, onSuccess }) => {
   const { t } = useTranslation();
-  const { getTextClass, isLight } = useTheme();
 
   const [games, setGames] = useState([]);
   const [loadingGames, setLoadingGames] = useState(false);
@@ -72,7 +70,6 @@ const UploadModModal = ({ onClose, onSuccess }) => {
     setShowGamesList(false);
   };
 
-
   const handleFileSelect = async () => {
     try {
       const result = await window.api.selectArchiveFile();
@@ -82,7 +79,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
       }
 
       // Vérifier la taille du fichier (sans charger le fichier en mémoire)
-      if (result.fileSize > 5 * 1024 * 1024 * 1024) { // 5GB
+      if (result.fileSize > 20 * 1024 * 1024 * 1024) { // 20GB
         toast.error(t('mods.fileTooLarge'));
         return;
       }
@@ -98,10 +95,9 @@ const UploadModModal = ({ onClose, onSuccess }) => {
       setSelectedFile(file);
     } catch (error) {
       console.error("Error selecting file:", error);
-      toast.error("Erreur lors de la sélection du fichier");
+      toast.error(t('mods.fileSelectError'));
     }
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -305,12 +301,12 @@ const UploadModModal = ({ onClose, onSuccess }) => {
                     {loadingGames ? (
                       <div className="text-center py-8">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 mb-3" style={{ borderColor: 'var(--app-primary)' }}></div>
-                        <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>Chargement des jeux...</p>
+                        <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('mods.loadingGames')}</p>
                       </div>
                     ) : games.length === 0 ? (
                       <div className="text-center py-8">
                         <FiPackage className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--app-textSecondary)' }} />
-                        <p style={{ color: 'var(--app-text)' }}>Aucun jeu disponible</p>
+                        <p style={{ color: 'var(--app-text)' }}>{t('mods.noGamesAvailableList')}</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-3">
@@ -507,7 +503,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
         <Card.Footer>
           <div className="flex items-center justify-between w-full">
             <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
-              * Champs obligatoires
+              {t('mods.requiredFields')}
             </p>
             <div className="flex gap-3">
               <Button

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
+import { checkServerStatus } from "../api/server";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
 import { formatStats as formatStatsAPI } from "../api/gameStats";
 import uninstallQueue from "../utils/uninstallQueue";
@@ -10,7 +11,6 @@ import { useDownloadActions } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useAuth } from "../contexts/authContext";
 import { useTheme } from "../contexts/themeContext";
-import { checkServerStatus } from "../api/server";
 import gameManager from "../services/gameManager";
 import { useGameStats } from "../hooks/games/useGameStats";
 import { useGameModals } from "../hooks/games/useGameModals";
@@ -18,20 +18,23 @@ import { useDebounce } from "../hooks/useDebounce";
 import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import GameLibrary from "../components/games/GameLibrary";
 import GameDetails from "../components/games/GameDetails";
+import { gamesCache } from "../utils/gamesCache";
 import { toast } from "sonner";
 
-// Lazy load modals pour optimiser le chargement initial
-const UninstallModal = lazy(() => import("../components/modals/UninstallModal"));
-const InstallPathModal = lazy(() => import("../components/modals/InstallPathModal"));
-const DeleteGameModal = lazy(() => import("../components/modals/DeleteGameModal"));
-const ConfirmationModal = lazy(() => import("../components/modals/ConfirmationModal"));
-const AddGameModal = lazy(() => import("../components/modals/AddGameModal"));
-const WineRequiredModal = lazy(() => import("../components/modals/WineRequiredModal"));
+import UninstallModal from "../components/modals/UninstallModal";
+import InstallPathModal from "../components/modals/InstallPathModal";
+import DeleteGameModal from "../components/modals/DeleteGameModal";
+import ConfirmationModal from "../components/modals/ConfirmationModal";
+import AddGameModal from "../components/modals/AddGameModal";
+import WineRequiredModal from "../components/modals/WineRequiredModal";
 
 const Games = () => {
   const { t } = useTranslation();
   const { isLight, getTextClass } = useTheme();
   const navigate = useNavigate();
+  const { isOnline } = useConnection();
+  const { user } = useAuth();
+
   const [games, setGames] = useState([]);
   const [installedGames, setInstalledGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
@@ -49,8 +52,6 @@ const Games = () => {
   const { gameStats, updateSessionStats } = useGameStats();
   const modals = useGameModals();
   const { addDownload, updateDownloadProgress, removeDownload } = useDownloadActions();
-  const { isOnline } = useConnection();
-  const { user } = useAuth();
 
   const extractGenreName = useCallback((genre) => {
     if (!genre) return t('games.unknown');
@@ -76,40 +77,39 @@ const Games = () => {
     return game.platforms.map(extractPlatformName);
   }, [extractPlatformName]);
 
+  // Load games
   useEffect(() => {
-    const loadGames = async () => {
-      const cachedGamesObject = await window.store.get("installedGamesCache", {});
-      const cachedGamesArray = Object.entries(cachedGamesObject).map(([gameId, data]) => ({
-        _id: `installed_${gameId}`,
-        serverGameId: {
-          _id: gameId,
-          name: data.name,
-          summary: data.summary,
-          storyline: data.storyline,
-          coverUrl: data.coverUrl,
-          genres: data.genres,
-          platforms: data.platforms,
-          rating: data.rating,
-          aggregatedRating: data.aggregatedRating,
-          releaseDate: data.releaseDate,
-          developer: data.developer,
-          publisher: data.publisher,
-        },
+    const load = async () => {
+      // 1. Charger cache local d'abord (jeux installés)
+      const localCache = await window.store.get("installedGamesCache", {});
+      const localInstalled = Object.entries(localCache).map(([id, data]) => ({
+        _id: `installed_${id}`,
+        serverGameId: { _id: id, name: data.name, coverUrl: data.coverUrl, genres: data.genres, summary: data.summary },
         path: data.path,
-        version: data.version,
-        stats: data.stats,
-        installedAt: data.installedAt,
       }));
 
-      if (cachedGamesArray.length > 0) {
-        setInstalledGames(cachedGamesArray);
-        const gamesFromCache = cachedGamesArray.map(g => g.serverGameId);
-        setGames(gamesFromCache);
-        setSelectedGame(gamesFromCache[0]);
+      // 2. Si offline ou pas encore vérifié: afficher seulement les jeux installés
+      if (!isOnline) {
+        gamesCache.clear();
+        setInstalledGames(localInstalled);
+        setGames(localInstalled.map(g => g.serverGameId));
+        if (localInstalled.length && !selectedGame) setSelectedGame(localInstalled[0].serverGameId);
+        setLoading(false);
+        return;
       }
 
-      setLoading(false);
+      // 3. Online + cache mémoire valide: utiliser le cache
+      if (gamesCache.isValid()) {
+        const c = gamesCache.get();
+        setGames(c.games);
+        setInstalledGames(c.installedGames);
+        if (c.games.length && !selectedGame) setSelectedGame(c.games[0]);
+        setLoading(false);
+        return;
+      }
 
+      // 4. Online + pas de cache: fetch serveur
+      setLoading(true);
       try {
         const [allGames, installed, activeGames] = await Promise.all([
           getAllServerGames(),
@@ -117,38 +117,20 @@ const Games = () => {
           gameManager.getActiveGames(),
         ]);
 
-        if (installed) setInstalledGames(installed);
-
-        if (allGames && allGames.length > 0) {
-          setGames(allGames);
-          if (!selectedGame) setSelectedGame(allGames[0]);
-        }
-
-        const playingSet = new Set(activeGames.map((game) => game.gameId));
-        setPlayingGames(playingSet);
+        gamesCache.set({ games: allGames || [], installedGames: installed || [] });
+        setGames(allGames || []);
+        setInstalledGames(installed || []);
+        if (allGames?.length && !selectedGame) setSelectedGame(allGames[0]);
+        setPlayingGames(new Set(activeGames.map(g => g.gameId)));
       } catch (err) {
         console.debug("[Games] Server unavailable:", err.message);
-        // Don't show error toast for server unavailable (offline mode is normal)
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadGames();
-  }, []);
-
-  useEffect(() => {
-    const refreshActiveGames = async () => {
-      try {
-        const activeGames = await gameManager.getActiveGames();
-        const playingSet = new Set(activeGames.map((game) => game.gameId));
-        setPlayingGames(playingSet);
-      } catch (error) {
-        console.error("[Games] Error refreshing active games:", error);
-        toast.error(t('games.refreshActiveGamesError'));
-      }
-    };
-
-    refreshActiveGames();
-  }, []);
+    load();
+  }, [isOnline]);
 
   useEffect(() => {
     const handleQueueChange = (queueItems) => {
@@ -203,8 +185,10 @@ const Games = () => {
       }
 
       try {
+        gamesCache.invalidate();
         const installed = await getInstalledGames();
         setInstalledGames(installed);
+        gamesCache.set({ installedGames: installed });
       } catch (err) {
         console.warn("[Games] Refresh error:", err);
       }
@@ -244,8 +228,12 @@ const Games = () => {
           }
         }
 
+        gamesCache.invalidate();
         getInstalledGames()
-          .then((installed) => setInstalledGames(installed))
+          .then((installed) => {
+            setInstalledGames(installed);
+            gamesCache.set({ installedGames: installed });
+          })
           .catch((err) => console.warn("Could not refresh installed games:", err));
 
         setUninstalling((prev) => {
@@ -459,8 +447,12 @@ const Games = () => {
           setTimeout(async () => {
             removeDownload(downloadId);
             try {
+              // Invalidate cache to force fresh data on next navigation
+              gamesCache.invalidate();
               const installed = await getInstalledGames();
               setInstalledGames(installed);
+              // Update cache with new installed games
+              gamesCache.set({ installedGames: installed });
             } catch (err) {
               console.warn("Could not refresh installed games:", err);
             }
@@ -732,61 +724,59 @@ const Games = () => {
         getPlatformsArray={getPlatformsArray}
       />
 
-      <Suspense fallback={null}>
-        <UninstallModal
-          isOpen={modals.uninstallModal.isOpen}
-          onClose={modals.uninstallModal.close}
-          onConfirm={confirmUninstall}
-          game={modals.uninstallModal.game}
-          gameSize={modals.uninstallModal.game?._id === selectedGame?._id ? gameSize : null}
-        />
+      <UninstallModal
+        isOpen={modals.uninstallModal.isOpen}
+        onClose={modals.uninstallModal.close}
+        onConfirm={confirmUninstall}
+        game={modals.uninstallModal.game}
+        gameSize={modals.uninstallModal.game?._id === selectedGame?._id ? gameSize : null}
+      />
 
-        <InstallPathModal
-          isOpen={modals.installPathModal.isOpen}
-          onClose={modals.installPathModal.close}
-          onConfirm={handleInstallPathConfirm}
-          gameName={modals.installPathModal.game?.name}
-        />
+      <InstallPathModal
+        isOpen={modals.installPathModal.isOpen}
+        onClose={modals.installPathModal.close}
+        onConfirm={handleInstallPathConfirm}
+        gameName={modals.installPathModal.game?.name}
+      />
 
-        <DeleteGameModal
-          isOpen={modals.deleteGameModal.isOpen}
-          onClose={modals.deleteGameModal.close}
-          onConfirm={confirmDeleteGame}
-          game={modals.deleteGameModal.game}
-          loading={modals.deleteGameModal.loading}
-          result={modals.deleteGameModal.result}
-        />
+      <DeleteGameModal
+        isOpen={modals.deleteGameModal.isOpen}
+        onClose={modals.deleteGameModal.close}
+        onConfirm={confirmDeleteGame}
+        game={modals.deleteGameModal.game}
+        loading={modals.deleteGameModal.loading}
+        result={modals.deleteGameModal.result}
+      />
 
-        <ConfirmationModal
-          isOpen={modals.confirmationModal.isOpen}
-          onClose={modals.confirmationModal.close}
-          onConfirm={
-            modals.confirmationModal.data.onConfirm ? () => modals.confirmationModal.data.onConfirm() : modals.confirmationModal.close
-          }
-          title={modals.confirmationModal.data.title}
-          message={modals.confirmationModal.data.message}
-          confirmText={modals.confirmationModal.data.confirmText}
-          cancelText={modals.confirmationModal.data.cancelText}
-          confirmColor={modals.confirmationModal.data.confirmColor}
-          icon={modals.confirmationModal.data.icon}
-          showLockInfo={modals.confirmationModal.data.showLockInfo}
-          loading={modals.confirmationModal.data.loading}
-          error={modals.confirmationModal.data.error}
-          success={modals.confirmationModal.data.success}
-        />
+      <ConfirmationModal
+        isOpen={modals.confirmationModal.isOpen}
+        onClose={modals.confirmationModal.close}
+        onConfirm={
+          modals.confirmationModal.data.onConfirm ? () => modals.confirmationModal.data.onConfirm() : modals.confirmationModal.close
+        }
+        title={modals.confirmationModal.data.title}
+        message={modals.confirmationModal.data.message}
+        confirmText={modals.confirmationModal.data.confirmText}
+        cancelText={modals.confirmationModal.data.cancelText}
+        confirmColor={modals.confirmationModal.data.confirmColor}
+        icon={modals.confirmationModal.data.icon}
+        showLockInfo={modals.confirmationModal.data.showLockInfo}
+        loading={modals.confirmationModal.data.loading}
+        error={modals.confirmationModal.data.error}
+        success={modals.confirmationModal.data.success}
+      />
 
-        <AddGameModal
-          isOpen={modals.addGameModal.isOpen}
-          onClose={modals.addGameModal.close}
-          onSuccess={handleAddGameSuccess}
-        />
+      <AddGameModal
+        isOpen={modals.addGameModal.isOpen}
+        onClose={modals.addGameModal.close}
+        onSuccess={handleAddGameSuccess}
+      />
 
-        <WineRequiredModal
-          isOpen={modals.wineModal.isOpen}
-          onClose={modals.wineModal.close}
-          instructions={modals.wineModal.instructions}
-        />
-      </Suspense>
+      <WineRequiredModal
+        isOpen={modals.wineModal.isOpen}
+        onClose={modals.wineModal.close}
+        instructions={modals.wineModal.instructions}
+      />
     </div>
   );
 };

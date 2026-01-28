@@ -1,6 +1,7 @@
 import { fetchWithConnectionTracking } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 import uploadManager from "../services/uploadManager";
+import { gamesCache } from "../utils/gamesCache";
 
 export const getAllServerGames = async () => {
   try {
@@ -16,16 +17,18 @@ export const getAllServerGames = async () => {
       }
     );
     if (!response.ok) {
-      throw new Error(
-        `Error fetching games: ${response.status}`,
-      );
+      throw new Error(`Error fetching games: ${response.status}`);
     }
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.debug("[API] Server games unavailable (offline mode)");
     return null;
   }
+};
+
+// Invalidate the central games cache
+export const invalidateGamesCache = () => {
+  gamesCache.invalidate();
 };
 
 export const addGameToServer = async (
@@ -60,9 +63,8 @@ export const addGameToServer = async (
       url,
       token,
       onProgress,
-      resumable: options.resumable !== false, // Resumable by default
+      resumable: options.resumable !== false,
       onQueued: (upload) => {
-        // Notify when upload is queued
         onProgress?.({
           percent: 0,
           loaded: 0,
@@ -75,6 +77,9 @@ export const addGameToServer = async (
         });
       }
     });
+
+    // Invalidate cache after successful upload
+    invalidateGamesCache();
 
     return result;
   } catch (error) {
@@ -145,6 +150,9 @@ export const deleteServerGame = async (gameId) => {
       const errorData = await response.json();
       throw new Error(errorData.message || `HTTP Error ${response.status}`);
     }
+
+    // Invalidate cache after deletion
+    invalidateGamesCache();
 
     return await response.json();
   } catch (error) {

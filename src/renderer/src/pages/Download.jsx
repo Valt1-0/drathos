@@ -54,11 +54,11 @@ const Download = () => {
             usedPercent: result.usedPercent,
           });
         } else {
-          toast.error("Failed to load disk space information");
+          toast.error(t('errors.diskSpace'));
         }
       } catch (error) {
         console.error("Error loading disk space:", error);
-        toast.error(`Disk space error: ${error.message || "Unknown error"}`);
+        toast.error(t('errors.diskSpace'));
       } finally {
         setDiskSpaceLoading(false);
       }
@@ -68,7 +68,7 @@ const Download = () => {
     // Rafraîchir l'espace disque toutes les 30 secondes
     const interval = setInterval(loadDiskSpace, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [t]);
 
   // Retry a failed download
   const handleRetryDownload = async (download) => {
@@ -77,7 +77,7 @@ const Download = () => {
       removeDownload(download.id);
 
       // Show feedback
-      toast.info(`Retrying ${download.name}...`);
+      toast.info(t('downloads.retrying', { name: download.name }));
 
       // Trigger installation again via API
       // The download will be re-added to the context by the install handler
@@ -88,7 +88,7 @@ const Download = () => {
       });
     } catch (error) {
       console.error("Retry error:", error);
-      toast.error(`Failed to retry ${download.name}: ${error.message}`);
+      toast.error(t('downloads.retryFailed', { name: download.name, error: error.message }));
     }
   };
 
@@ -134,7 +134,7 @@ const Download = () => {
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-text-secondary font-medium">
-                    Total Speed
+                    {t('downloads.totalSpeed')}
                   </span>
                   <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.2)' }}>
                     <FiZap className="text-success text-xl" />
@@ -176,7 +176,7 @@ const Download = () => {
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-text-secondary font-medium">
-                    Free Space
+                    {t('downloads.freeSpace')}
                   </span>
                   <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.2)' }}>
                     <FiHardDrive className="text-warning text-xl" />
@@ -186,7 +186,7 @@ const Download = () => {
                 {diskSpaceLoading ? (
                   <div className="flex items-center justify-center py-4">
                     <FiLoader className="text-2xl text-warning animate-spin" />
-                    <span className="ml-3 text-text-secondary text-sm">Loading disk space...</span>
+                    <span className="ml-3 text-text-secondary text-sm">{t('downloads.loadingDiskSpace')}</span>
                   </div>
                 ) : diskSpace.freeSpace > 0 ? (
                   <>
@@ -194,11 +194,11 @@ const Download = () => {
                       <span className="text-3xl font-bold text-text">
                         {diskSpace.freeSpace}
                       </span>
-                      <span className="text-sm text-text-secondary">GB free</span>
+                      <span className="text-sm text-text-secondary">{t('downloads.gbFree')}</span>
                     </div>
                     {diskSpace.totalSpace > 0 && (
                       <div className="text-sm text-text-secondary mb-2 opacity-70">
-                        of {diskSpace.totalSpace} GB total
+                        {t('downloads.ofTotal', { total: diskSpace.totalSpace })}
                       </div>
                     )}
                     <div className="h-2 bg-surface rounded-full overflow-hidden">
@@ -218,14 +218,14 @@ const Download = () => {
                     </div>
                     {diskSpace.usedPercent > 0 && (
                       <div className="text-sm text-text-secondary mt-2 text-right">
-                        {diskSpace.usedPercent}% used
+                        {t('downloads.percentUsed', { percent: diskSpace.usedPercent })}
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-text-secondary text-sm leading-relaxed">
-                      No download location selected
+                      {t('downloads.noLocationSelected')}
                     </p>
                     <Link to="/settings">
                       <motion.button
@@ -238,7 +238,7 @@ const Download = () => {
                         }}
                       >
                         <FiSettings className="text-lg" />
-                        <span>Configure</span>
+                        <span>{t('downloads.configure')}</span>
                       </motion.button>
                     </Link>
                   </div>
@@ -261,7 +261,7 @@ const Download = () => {
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-2.5 h-2.5 bg-success rounded-full animate-pulse"></span>
                 <h2 className="text-2xl font-bold text-text">
-                  Active Downloads ({activeDownloads.length})
+                  {t('downloads.activeDownloads', { count: activeDownloads.length })}
                 </h2>
               </div>
 
@@ -294,7 +294,7 @@ const Download = () => {
               <div className="flex items-center gap-3 mb-6">
                 <FiCheckCircle className="text-success text-2xl" />
                 <h2 className="text-2xl font-bold text-text">
-                  Completed ({completedDownloads.length})
+                  {t('downloads.completed', { count: completedDownloads.length })}
                 </h2>
               </div>
 
@@ -337,7 +337,7 @@ const Download = () => {
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-success text-sm font-medium flex items-center gap-1">
                             <FiCheckCircle className="text-xs" />
-                            Installed
+                            {t('downloads.installed')}
                           </span>
                           {download.totalTime && (
                             <>
@@ -370,7 +370,7 @@ const Download = () => {
               <div className="flex items-center gap-3 mb-6">
                 <FiXCircle className="text-error text-2xl" />
                 <h2 className="text-2xl font-bold text-text">
-                  Failed ({failedDownloads.length})
+                  {t('downloads.failed', { count: failedDownloads.length })}
                 </h2>
               </div>
 
@@ -404,7 +404,7 @@ const Download = () => {
                           </h3>
                           <p className="text-error text-sm flex items-center gap-1 mt-1">
                             <FiXCircle className="text-xs" />
-                            {download.error || "Unknown error"}
+                            {download.error || t('downloads.unknownError')}
                           </p>
                         </div>
                       </div>
@@ -420,7 +420,7 @@ const Download = () => {
                         }}
                       >
                         <FiDownload className="text-sm" />
-                        Retry
+                        {t('downloads.retry')}
                       </motion.button>
                     </div>
                   </motion.div>
@@ -445,10 +445,10 @@ const Download = () => {
               </div>
             </div>
             <h3 className="text-2xl font-bold text-text mb-2">
-              No Downloads Yet
+              {t('downloads.noDownloadsYet')}
             </h3>
             <p className="text-text-secondary text-sm">
-              Your downloads will appear here once you start installing games
+              {t('downloads.noDownloadsDesc')}
             </p>
           </motion.div>
         )}
@@ -464,16 +464,16 @@ const Download = () => {
           >
             <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-text-secondary">
               <p>
-                Downloads continue in the background even if you close this page
+                {t('downloads.backgroundInfo')}
               </p>
 
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-2">
-                  <FiZap className="text-primary" /> Optimized Engine
+                  <FiZap className="text-primary" /> {t('downloads.optimizedEngine')}
                 </span>
                 <span className="opacity-50">•</span>
                 <span className="flex items-center gap-2">
-                  <FiActivity className="text-success" /> Real-time Metrics
+                  <FiActivity className="text-success" /> {t('downloads.realtimeMetrics')}
                 </span>
               </div>
             </div>

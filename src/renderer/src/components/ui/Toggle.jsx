@@ -26,19 +26,19 @@ const Toggle = ({
   // Tailles
   const sizes = {
     sm: {
-      container: 'w-9 h-5',
-      thumb: 'w-4 h-4',
-      translate: 'translate-x-4',
+      container: 'w-8 h-4',
+      thumb: 'w-3 h-3',
+      translateX: 14,
     },
     md: {
-      container: 'w-11 h-6',
-      thumb: 'w-5 h-5',
-      translate: 'translate-x-5',
+      container: 'w-10 h-5',
+      thumb: 'w-4 h-4',
+      translateX: 18,
     },
     lg: {
-      container: 'w-14 h-7',
-      thumb: 'w-6 h-6',
-      translate: 'translate-x-7',
+      container: 'w-12 h-6',
+      thumb: 'w-5 h-5',
+      translateX: 22,
     },
   };
 
@@ -59,39 +59,33 @@ const Toggle = ({
         aria-checked={checked}
         className={`
           ${currentSize.container}
-          relative inline-flex shrink-0 rounded-full
-          border-2 border-transparent
+          relative shrink-0 rounded-full
           transition-all duration-300
-          focus:outline-none focus:ring-4
+          focus:outline-none
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
         style={{
           background: checked
             ? disabled
               ? 'var(--app-textSecondary)'
-              : 'var(--app-gradient-primary)'
-            : 'rgba(255, 255, 255, 0.1)',
-          boxShadow: checked && !disabled
-            ? '0 0 12px var(--app-primary)'
-            : 'none',
-          focusRingColor: 'var(--app-primary)',
+              : 'var(--app-primary)'
+            : 'var(--app-surface)',
+          border: `2px solid ${checked ? 'transparent' : 'var(--app-border)'}`,
         }}
         onClick={handleToggle}
         disabled={disabled}
         {...props}
       >
         <motion.span
-          className={`
-            ${currentSize.thumb}
-            inline-block rounded-full
-            shadow-lg
-          `}
+          className={`${currentSize.thumb} rounded-full shadow-md`}
           style={{
             background: '#FFFFFF',
+            position: 'absolute',
+            top: '50%',
+            left: '2px',
+            transform: 'translateY(-50%)',
           }}
-          animate={{
-            x: checked ? (size === 'sm' ? 16 : size === 'md' ? 20 : 28) : 0,
-          }}
+          animate={{ x: checked ? currentSize.translateX : 0 }}
           transition={{
             type: "spring",
             stiffness: 500,
