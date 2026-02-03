@@ -8,9 +8,10 @@ import {
   FaGear,
 } from "react-icons/fa6";
 import { FaHome, FaFolderOpen } from "react-icons/fa";
-import { FiX, FiUser, FiPackage } from "react-icons/fi";
+import { FiX, FiUser, FiPackage, FiUsers } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
+import ProfileAvatar from "./ProfileAvatar";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmationModal from "./modals/ConfirmationModal";
 import syncQueue from "../utils/syncQueue";
@@ -28,6 +29,7 @@ const Drawer = ({ children }) => {
     { label: t('nav.library'), icon: FaGamepad, path: "/games" },
     ...(user?.role === 'admin' ? [{ label: t('nav.mods'), icon: FiPackage, path: "/mods" }] : []),
     { label: t('nav.collections'), icon: FaFolderOpen, path: "/collections" },
+    { label: t('nav.users'), icon: FiUsers, path: "/users" },
     { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
     { label: t('nav.settings'), icon: FaGear, path: "/settings" },
   ], [t, user?.role]);
@@ -280,24 +282,12 @@ const Drawer = ({ children }) => {
                 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               >
-                {user.profilePicture ? (
-                  <img
-                    src={user.profilePicture}
-                    alt="User Avatar"
-                    className={`rounded-lg border-2 object-cover transition-all duration-300 ${
-                      isOpen ? "w-12 h-12" : "w-10 h-10"
-                    }`}
-                    style={{ borderColor: 'var(--app-border)' }}
-                  />
-                ) : (
-                  <div
-                    className={`flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-secondary transition-all duration-300 ${
-                      isOpen ? "w-12 h-12" : "w-10 h-10"
-                    }`}
-                  >
-                    <FiUser className="text-text text-lg" />
-                  </div>
-                )}
+                <ProfileAvatar
+                  profilePicture={user.profilePicture}
+                  username={user.username}
+                  size={isOpen ? "md" : "sm"}
+                  className="rounded-lg transition-all duration-300"
+                />
 
                 <AnimatePresence mode="wait">
                   {isOpen && (

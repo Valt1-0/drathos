@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,9 @@ import {
   FiGlobe,
   FiMonitor,
   FiLayers,
+  FiCamera,
+  FiUpload,
+  FiX,
 } from "react-icons/fi";
 import { SearchBar } from "../components/ui";
 import { SiDiscord } from "react-icons/si";
@@ -30,13 +33,15 @@ import { useTheme } from "../contexts/themeContext";
 import { getThemesList } from "../config/themes";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
+import { uploadProfilePicture, deleteProfilePicture } from "../api/user";
 import BugReportModal from "../components/modals/BugReportModal";
 import { Button, Card, Input, Toggle } from "../components/ui";
+import ProfileAvatar from "../components/ProfileAvatar";
 
 const SettingsPage = () => {
   const { t, i18n } = useTranslation();
   const [downloadPath, setDownloadPath] = useState("");
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { checkForUpdates, updateStatus, updateInfo } = useUpdate();
   const { currentTheme, changeTheme: changeAppTheme, theme, getBackgroundStyle } = useTheme();
   const themesList = getThemesList();
@@ -68,6 +73,11 @@ const SettingsPage = () => {
   const [updateChecking, setUpdateChecking] = useState(false);
   const [currentVersion, setCurrentVersion] = useState('');
 
+  // Profile Picture States
+  const [profilePicture, setProfilePicture] = useState(user?.profilePicture || null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const fileInputRef = useRef(null);
+
   // Categories
   const categories = [
     { id: 'general', name: t('settings.general'), icon: FiUser },
@@ -85,6 +95,67 @@ const SettingsPage = () => {
       logger.error("[Settings] Error checking for updates", error);
     } finally {
       setUpdateChecking(false);
+    }
+  };
+
+  // Handle profile picture upload
+  const handleProfilePictureUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error(t('common.error'), {
+        description: t('settings.invalidImageType'),
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(t('common.error'), {
+        description: t('settings.imageTooLarge'),
+      });
+      return;
+    }
+
+    setUploadingPicture(true);
+    try {
+      const result = await uploadProfilePicture(file);
+      setProfilePicture(result.profilePicture);
+      updateUser({ profilePicture: result.profilePicture });
+      toast.success(t('settings.profilePictureUpdated'));
+    } catch (error) {
+      logger.error("[Settings] Error uploading profile picture", error);
+      toast.error(t('common.error'), {
+        description: error.message || t('settings.profilePictureError'),
+      });
+    } finally {
+      setUploadingPicture(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle profile picture delete
+  const handleDeleteProfilePicture = async () => {
+    setUploadingPicture(true);
+    try {
+      await deleteProfilePicture();
+      setProfilePicture(null);
+      updateUser({ profilePicture: null });
+      toast.success(t('settings.profilePictureDeleted'));
+    } catch (error) {
+      logger.error("[Settings] Error deleting profile picture", error);
+      toast.error(t('common.error'), {
+        description: error.message || t('settings.profilePictureError'),
+      });
+    } finally {
+      setUploadingPicture(false);
     }
   };
 
@@ -357,12 +428,98 @@ const SettingsPage = () => {
                       subtitle={t('settings.manageProfile')}
                     />
                     <Card.Body>
-                      <Input
-                        label={t('settings.username')}
-                        value={user.username}
-                        icon={<FiUser />}
-                        disabled
-                      />
+                      <div className="flex flex-col md:flex-row gap-6">
+                        {/* Profile Picture Section */}
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="relative group">
+                            <ProfileAvatar
+                              profilePicture={profilePicture}
+                              username={user.username}
+                              size="xl"
+                              className="rounded-2xl"
+                            />
+
+                            {/* Overlay on hover */}
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              whileHover={{ opacity: 1 }}
+                              className="absolute inset-0 rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
+                              style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              {uploadingPicture ? (
+                                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <FiCamera className="text-2xl text-white" />
+                              )}
+                            </motion.div>
+                          </div>
+
+                          {/* Hidden file input */}
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            onChange={handleProfilePictureUpload}
+                            className="hidden"
+                          />
+
+                          {/* Action buttons */}
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploadingPicture}
+                              icon={<FiUpload />}
+                              iconPosition="left"
+                            >
+                              {t('settings.uploadPicture')}
+                            </Button>
+                            {profilePicture && (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={handleDeleteProfilePicture}
+                                disabled={uploadingPicture}
+                                icon={<FiTrash2 />}
+                                iconPosition="left"
+                              >
+                                {t('settings.deletePicture')}
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-xs text-center" style={{ color: 'var(--app-textSecondary)' }}>
+                            {t('settings.pictureHint')}
+                          </p>
+                        </div>
+
+                        {/* User Info Section */}
+                        <div className="flex-1 space-y-4">
+                          <Input
+                            label={t('settings.username')}
+                            value={user.username}
+                            icon={<FiUser />}
+                            disabled
+                          />
+                          {user.role && (
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{ background: 'var(--app-background)' }}>
+                              <span className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
+                                {t('settings.role')}:
+                              </span>
+                              <span
+                                className="text-sm font-medium capitalize px-2 py-0.5 rounded"
+                                style={{
+                                  background: user.role === 'admin' ? 'var(--app-primary)' : 'var(--app-secondary)',
+                                  color: '#fff'
+                                }}
+                              >
+                                {user.role}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </Card.Body>
                   </Card>
 

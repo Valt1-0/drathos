@@ -38,6 +38,8 @@ const Welcome = lazy(() => import("./pages/Welcome"));
 const Download = lazy(() => import("./pages/Download"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Mods = lazy(() => import("./pages/Mods"));
+const Users = lazy(() => import("./pages/Users"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
 
 // Loading fallback component
 function PageLoader() {
@@ -132,6 +134,26 @@ function AppRoutes() {
                 <ProtectedRoute>
                   <Drawer>
                     <Mods />
+                  </Drawer>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Drawer>
+                    <Users />
+                  </Drawer>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:userId"
+              element={
+                <ProtectedRoute>
+                  <Drawer>
+                    <UserProfile />
                   </Drawer>
                 </ProtectedRoute>
               }

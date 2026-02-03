@@ -69,3 +69,38 @@ export const normalizeServerAddress = (serverAddress) => {
   if (!serverAddress) return '';
   return serverAddress.trim().replace(/\/+$/, '');
 };
+
+export const buildProfilePictureUrl = async (profilePicture) => {
+  if (!profilePicture) return null;
+
+  // Already a full URL
+  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
+    return profilePicture;
+  }
+
+  // Server-relative path - build full URL
+  if (profilePicture.startsWith('/')) {
+    const serverAddress = await window.store.get("serverAddress");
+    if (serverAddress) {
+      return buildServerUrl(serverAddress, profilePicture);
+    }
+  }
+
+  return profilePicture;
+};
+
+export const buildProfilePictureUrlSync = (profilePicture, serverAddress) => {
+  if (!profilePicture) return null;
+
+  // Already a full URL
+  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
+    return profilePicture;
+  }
+
+  // Server-relative path - build full URL
+  if (profilePicture.startsWith('/') && serverAddress) {
+    return buildServerUrl(serverAddress, profilePicture);
+  }
+
+  return profilePicture;
+};

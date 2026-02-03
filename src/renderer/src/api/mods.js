@@ -89,7 +89,7 @@ export const getModsForGame = async (gameId, { page = 1, limit = 20, search = ''
       if (page > 1 || limit !== 20) Object.assign(params, { page, limit });
       if (search) params.search = search;
 
-      const response = await fetchWithConnectionTracking(await buildUrl(`/api/mods/game/${gameId}`, params), {});
+      const response = await fetchWithConnectionTracking(await buildUrl(`/api/mods/game/${gameId}`, params), { headers: await getAuthHeaders() });
       if (!response.ok) throw new Error(`Error: ${response.status}`);
 
       const data = await response.json();
