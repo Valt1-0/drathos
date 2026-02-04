@@ -30,6 +30,7 @@ import FR from "country-flag-icons/react/3x2/FR";
 import { useAuth } from "../contexts/authContext";
 import { useUpdate } from "../contexts/updateContext";
 import { useTheme } from "../contexts/themeContext";
+import { useConnection } from "../contexts/connectionContext";
 import { getThemesList } from "../config/themes";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
@@ -44,6 +45,7 @@ const SettingsPage = () => {
   const { user, updateUser } = useAuth();
   const { checkForUpdates, updateStatus, updateInfo } = useUpdate();
   const { currentTheme, changeTheme: changeAppTheme, theme, getBackgroundStyle } = useTheme();
+  const { isOnline } = useConnection();
   const themesList = getThemesList();
 
   // Déterminer si le thème actuel est clair ou sombre
@@ -442,10 +444,10 @@ const SettingsPage = () => {
                             {/* Overlay on hover */}
                             <motion.div
                               initial={{ opacity: 0 }}
-                              whileHover={{ opacity: 1 }}
-                              className="absolute inset-0 rounded-2xl flex items-center justify-center gap-2 cursor-pointer"
+                              whileHover={{ opacity: isOnline ? 1 : 0 }}
+                              className={`absolute inset-0 rounded-2xl flex items-center justify-center gap-2 ${isOnline ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                               style={{ background: 'rgba(0, 0, 0, 0.6)' }}
-                              onClick={() => fileInputRef.current?.click()}
+                              onClick={() => isOnline && fileInputRef.current?.click()}
                             >
                               {uploadingPicture ? (
                                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -462,6 +464,7 @@ const SettingsPage = () => {
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             onChange={handleProfilePictureUpload}
                             className="hidden"
+                            disabled={!isOnline}
                           />
 
                           {/* Action buttons */}
@@ -470,7 +473,7 @@ const SettingsPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => fileInputRef.current?.click()}
-                              disabled={uploadingPicture}
+                              disabled={uploadingPicture || !isOnline}
                               icon={<FiUpload />}
                               iconPosition="left"
                             >
@@ -481,7 +484,7 @@ const SettingsPage = () => {
                                 variant="danger"
                                 size="sm"
                                 onClick={handleDeleteProfilePicture}
-                                disabled={uploadingPicture}
+                                disabled={uploadingPicture || !isOnline}
                                 icon={<FiTrash2 />}
                                 iconPosition="left"
                               >
@@ -490,7 +493,7 @@ const SettingsPage = () => {
                             )}
                           </div>
                           <p className="text-xs text-center" style={{ color: 'var(--app-textSecondary)' }}>
-                            {t('settings.pictureHint')}
+                            {isOnline ? t('settings.pictureHint') : t('settings.offlineNoChanges')}
                           </p>
                         </div>
 

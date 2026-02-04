@@ -9,9 +9,6 @@ import { createGunzip } from "zlib";
 import Seven from "node-7z";
 import sevenBin from "7zip-bin";
 
-/**
- * 🗜️ ExtractionEngine - Unified extraction for multiple archive formats
- */
 export class ExtractionEngine {
   constructor() {
     this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".7z", ".rar"];
@@ -20,14 +17,17 @@ export class ExtractionEngine {
     let binPath = sevenBin.path7za;
 
     // En production, remplacer app.asar par app.asar.unpacked
-    if (binPath.includes('app.asar') && !binPath.includes('app.asar.unpacked')) {
-      binPath = binPath.replace('app.asar', 'app.asar.unpacked');
+    if (
+      binPath.includes("app.asar") &&
+      !binPath.includes("app.asar.unpacked")
+    ) {
+      binPath = binPath.replace("app.asar", "app.asar.unpacked");
     }
 
     this.sevenZipPath = binPath;
 
     console.log(
-      `[ExtractionEngine] ✅ Initialized with support for: ${this.supportedFormats.join(", ")}`
+      `[ExtractionEngine] ✅ Initialized with support for: ${this.supportedFormats.join(", ")}`,
     );
     console.log(`[ExtractionEngine] 🔧 7-Zip binary: ${this.sevenZipPath}`);
   }
@@ -43,13 +43,13 @@ export class ExtractionEngine {
     const fileExtension = this.getFileExtension(archivePath);
 
     console.log(
-      `[ExtractionEngine] 📦 Extracting ${fileExtension} archive: ${path.basename(archivePath)}`
+      `[ExtractionEngine] 📦 Extracting ${fileExtension} archive: ${path.basename(archivePath)}`,
     );
 
     // Validate format
     if (!this.isSupported(fileExtension)) {
       throw new Error(
-        `Format non supporté: ${fileExtension}. Formats supportés: ${this.supportedFormats.join(", ")}`
+        `Format non supporté: ${fileExtension}. Formats supportés: ${this.supportedFormats.join(", ")}`,
       );
     }
 
@@ -90,7 +90,7 @@ export class ExtractionEngine {
     let extractedCount = 0;
 
     console.log(
-      `[ExtractionEngine] 📊 ZIP contains ${totalFiles} files/folders`
+      `[ExtractionEngine] 📊 ZIP contains ${totalFiles} files/folders`,
     );
 
     if (onProgress) {
@@ -116,7 +116,9 @@ export class ExtractionEngine {
               if (!resolved) {
                 resolved = true;
                 writeStream.destroy(); // ✅ Cleanup
-                reject(new Error(`Timeout lors de l'extraction de ${entry.path}`));
+                reject(
+                  new Error(`Timeout lors de l'extraction de ${entry.path}`),
+                );
               }
             }, 30000);
 
@@ -167,14 +169,14 @@ export class ExtractionEngine {
       } catch (error) {
         console.warn(
           `[ExtractionEngine] ⚠️ Error extracting ${entry.path}:`,
-          error.message
+          error.message,
         );
         extractedCount++;
       }
     }
 
     console.log(
-      `[ExtractionEngine] ✅ ZIP extraction complete: ${extractedCount}/${totalFiles} files`
+      `[ExtractionEngine] ✅ ZIP extraction complete: ${extractedCount}/${totalFiles} files`,
     );
     return extractPath;
   }
@@ -193,77 +195,70 @@ export class ExtractionEngine {
       // Single pass: extract and count simultaneously
       extract.on("entry", async (header, stream, next) => {
         totalFiles++; // Compte au fur et à mesure
-          const outputPath = path.join(extractPath, header.name);
+        const outputPath = path.join(extractPath, header.name);
 
-          try {
-            if (header.type === "directory") {
-              await fs.promises.mkdir(outputPath, { recursive: true });
-              stream.resume();
-              next();
-            } else if (header.type === "file") {
-              await fs.promises.mkdir(path.dirname(outputPath), {
-                recursive: true,
-              });
-
-              const writeStream = fs.createWriteStream(outputPath);
-              stream.pipe(writeStream);
-
-              writeStream.on("finish", () => {
-                extractedCount++;
-                const progress = Math.round(
-                  (extractedCount / totalFiles) * 100
-                );
-
-                if (
-                  onProgress &&
-                  (extractedCount % 10 === 0 ||
-                    progress % 5 === 0 ||
-                    extractedCount === totalFiles)
-                ) {
-                  onProgress(
-                    progress,
-                    extractedCount,
-                    totalFiles,
-                    header.name
-                  );
-                }
-
-                next();
-              });
-
-              writeStream.on("error", (err) => {
-                console.warn(
-                  `[ExtractionEngine] ⚠️ Error writing ${header.name}:`,
-                  err.message
-                );
-                extractedCount++;
-                next();
-              });
-            } else {
-              stream.resume();
-              next();
-            }
-          } catch (error) {
-            console.warn(
-              `[ExtractionEngine] ⚠️ Error extracting ${header.name}:`,
-              error.message
-            );
+        try {
+          if (header.type === "directory") {
+            await fs.promises.mkdir(outputPath, { recursive: true });
             stream.resume();
-            extractedCount++;
+            next();
+          } else if (header.type === "file") {
+            await fs.promises.mkdir(path.dirname(outputPath), {
+              recursive: true,
+            });
+
+            const writeStream = fs.createWriteStream(outputPath);
+            stream.pipe(writeStream);
+
+            writeStream.on("finish", () => {
+              extractedCount++;
+              const progress = Math.round((extractedCount / totalFiles) * 100);
+
+              if (
+                onProgress &&
+                (extractedCount % 10 === 0 ||
+                  progress % 5 === 0 ||
+                  extractedCount === totalFiles)
+              ) {
+                onProgress(progress, extractedCount, totalFiles, header.name);
+              }
+
+              next();
+            });
+
+            writeStream.on("error", (err) => {
+              console.warn(
+                `[ExtractionEngine] ⚠️ Error writing ${header.name}:`,
+                err.message,
+              );
+              extractedCount++;
+              next();
+            });
+          } else {
+            stream.resume();
             next();
           }
-        });
-
-        extract.on("finish", () => {
-          console.log(
-            `[ExtractionEngine] ✅ TAR extraction complete: ${extractedCount}/${totalFiles} files`
+        } catch (error) {
+          console.warn(
+            `[ExtractionEngine] ⚠️ Error extracting ${header.name}:`,
+            error.message,
           );
-          resolve(extractPath);
-        });
+          stream.resume();
+          extractedCount++;
+          next();
+        }
+      });
 
-        extract.on("error", (err) => {
-          reject(new Error(`TAR extraction failed: ${err.message}`));
-        });
+      extract.on("finish", () => {
+        console.log(
+          `[ExtractionEngine] ✅ TAR extraction complete: ${extractedCount}/${totalFiles} files`,
+        );
+        resolve(extractPath);
+      });
+
+      extract.on("error", (err) => {
+        reject(new Error(`TAR extraction failed: ${err.message}`));
+      });
 
       const readStream = fs.createReadStream(archivePath);
       readStream.pipe(extract);
@@ -300,7 +295,7 @@ export class ExtractionEngine {
 
       countStream.on("finish", () => {
         console.log(
-          `[ExtractionEngine] 📊 TAR.GZ contains ${totalFiles} entries`
+          `[ExtractionEngine] 📊 TAR.GZ contains ${totalFiles} entries`,
         );
 
         if (onProgress) {
@@ -327,7 +322,7 @@ export class ExtractionEngine {
               writeStream.on("finish", () => {
                 extractedCount++;
                 const progress = Math.round(
-                  (extractedCount / totalFiles) * 100
+                  (extractedCount / totalFiles) * 100,
                 );
 
                 if (
@@ -336,12 +331,7 @@ export class ExtractionEngine {
                     progress % 5 === 0 ||
                     extractedCount === totalFiles)
                 ) {
-                  onProgress(
-                    progress,
-                    extractedCount,
-                    totalFiles,
-                    header.name
-                  );
+                  onProgress(progress, extractedCount, totalFiles, header.name);
                 }
 
                 next();
@@ -350,7 +340,7 @@ export class ExtractionEngine {
               writeStream.on("error", (err) => {
                 console.warn(
                   `[ExtractionEngine] ⚠️ Error writing ${header.name}:`,
-                  err.message
+                  err.message,
                 );
                 extractedCount++;
                 next();
@@ -362,7 +352,7 @@ export class ExtractionEngine {
           } catch (error) {
             console.warn(
               `[ExtractionEngine] ⚠️ Error extracting ${header.name}:`,
-              error.message
+              error.message,
             );
             stream.resume();
             extractedCount++;
@@ -372,7 +362,7 @@ export class ExtractionEngine {
 
         extract.on("finish", () => {
           console.log(
-            `[ExtractionEngine] ✅ TAR.GZ extraction complete: ${extractedCount}/${totalFiles} files`
+            `[ExtractionEngine] ✅ TAR.GZ extraction complete: ${extractedCount}/${totalFiles} files`,
           );
           resolve(extractPath);
         });
@@ -415,7 +405,7 @@ export class ExtractionEngine {
       }
 
       console.log(
-        `[ExtractionEngine] 📊 7Z file size: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`
+        `[ExtractionEngine] 📊 7Z file size: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`,
       );
 
       // Use embedded 7z binary from 7zip-bin package
@@ -447,7 +437,7 @@ export class ExtractionEngine {
               totalFiles || extractedCount,
               progress.fileCount
                 ? `File ${progress.fileCount}`
-                : "Extracting..."
+                : "Extracting...",
             );
           }
         }
@@ -467,7 +457,7 @@ export class ExtractionEngine {
       await new Promise((resolve, reject) => {
         sevenZip.on("end", () => {
           console.log(
-            `[ExtractionEngine] ✅ 7Z extraction complete: ${extractedCount} operations`
+            `[ExtractionEngine] ✅ 7Z extraction complete: ${extractedCount} operations`,
           );
 
           // Final progress update
@@ -483,26 +473,26 @@ export class ExtractionEngine {
           const errorMsg = err.message || err.toString();
           console.error(
             `[ExtractionEngine] ❌ 7Z extraction failed:`,
-            errorMsg
+            errorMsg,
           );
 
           if (errorMsg.includes("FILE_ENDED")) {
             reject(
               new Error(
-                `Archive incomplet ou corrompu. Le fichier 7z semble endommagé ou n'a pas été complètement téléchargé.`
-              )
+                `Archive incomplet ou corrompu. Le fichier 7z semble endommagé ou n'a pas été complètement téléchargé.`,
+              ),
             );
           } else if (errorMsg.includes("Cannot open")) {
             reject(
               new Error(
-                `Impossible d'ouvrir l'archive 7z. Vérifiez que le fichier n'est pas corrompu.`
-              )
+                `Impossible d'ouvrir l'archive 7z. Vérifiez que le fichier n'est pas corrompu.`,
+              ),
             );
           } else {
             reject(
               new Error(
-                `Erreur d'extraction 7Z: ${errorMsg}. Essayez de re-télécharger le fichier.`
-              )
+                `Erreur d'extraction 7Z: ${errorMsg}. Essayez de re-télécharger le fichier.`,
+              ),
             );
           }
         });

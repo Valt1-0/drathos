@@ -67,7 +67,9 @@
     "mods": "Mods",
     "clearData": "Clear Data",
     "userOnline": "Online",
-    "userOffline": "Offline"
+    "userOffline": "Offline",
+    "serverOnline": "Server Online",
+    "serverOffline": "Server Offline"
   },
   "games": {
     "title": "Game Library",
@@ -392,7 +394,8 @@
     "profilePictureError": "Error updating profile picture",
     "invalidImageType": "Invalid image format. Use JPG, PNG, GIF or WebP",
     "imageTooLarge": "Image is too large (max 5 MB)",
-    "role": "Role"
+    "role": "Role",
+    "offlineNoChanges": "Server offline - changes disabled"
   },
   "welcome": {
     "title": "Welcome to Drathos",

@@ -11,6 +11,7 @@ import { FaHome, FaFolderOpen } from "react-icons/fa";
 import { FiX, FiUser, FiPackage, FiUsers } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
+import { useConnection } from "../contexts/connectionContext";
 import ProfileAvatar from "./ProfileAvatar";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmationModal from "./modals/ConfirmationModal";
@@ -22,14 +23,15 @@ const Drawer = ({ children }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingSyncs, setPendingSyncs] = useState(0);
   const { user } = useAuth();
+  const { isOnline } = useConnection();
   const location = useLocation();
 
   const menuItems = useMemo(() => [
     { label: t('nav.home'), icon: FaHome, path: "/" },
     { label: t('nav.library'), icon: FaGamepad, path: "/games" },
-    ...(user?.role === 'admin' ? [{ label: t('nav.mods'), icon: FiPackage, path: "/mods" }] : []),
+    ...(user?.role === 'admin' ? [{ label: t('nav.mods'), icon: FiPackage, path: "/mods", requiresServer: true }] : []),
     { label: t('nav.collections'), icon: FaFolderOpen, path: "/collections" },
-    { label: t('nav.users'), icon: FiUsers, path: "/users" },
+    { label: t('nav.users'), icon: FiUsers, path: "/users", requiresServer: true },
     { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
     { label: t('nav.settings'), icon: FaGear, path: "/settings" },
   ], [t, user?.role]);
@@ -119,15 +121,22 @@ const Drawer = ({ children }) => {
         {/* Navigation Menu */}
         <nav
           aria-label="Main navigation"
-          className={`relative z-10 flex-1 py-6 space-y-2 ${isOpen ? "px-3" : "px-2"}`}
+          className={`relative z-10 flex-1 py-4 space-y-2 ${isOpen ? "px-3" : "px-2"}`}
           style={{ overflowY: 'auto', overflowX: 'hidden' }}
         >
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = isActiveRoute(item.path);
+            const isDisabled = item.requiresServer && !isOnline;
 
             return (
-              <Link key={index} to={item.path} aria-current={isActive ? "page" : undefined}>
+              <Link
+                key={index}
+                to={isDisabled ? "#" : item.path}
+                aria-current={isActive ? "page" : undefined}
+                className={isDisabled ? "pointer-events-none" : ""}
+                title={isDisabled ? t('nav.serverOffline') : undefined}
+              >
                 <motion.div
                   className="group relative overflow-hidden rounded-xl border"
                   style={{
@@ -135,17 +144,17 @@ const Drawer = ({ children }) => {
                       ? 'linear-gradient(135deg, var(--app-primary) 0%, var(--app-secondary) 100%)'
                       : 'transparent',
                     borderColor: isActive ? 'var(--app-primary)' : 'transparent',
-                    opacity: isActive ? 0.9 : 1,
+                    opacity: isDisabled ? 0.35 : (isActive ? 0.9 : 1),
                   }}
-                  whileHover={{
+                  whileHover={isDisabled ? {} : {
                     scale: 1.03,
                     backgroundColor: isActive ? undefined : 'var(--app-surface)',
                   }}
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={isDisabled ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
                   {/* Active glow indicator */}
-                  {isActive && (
+                  {isActive && !isDisabled && (
                     <motion.div
                       layoutId="activeTab"
                       className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
@@ -167,7 +176,7 @@ const Drawer = ({ children }) => {
                           background: isActive ? 'rgba(255, 255, 255, 0.15)' : 'var(--app-surface)',
                           color: isActive ? 'var(--app-text)' : 'var(--app-textSecondary)',
                         }}
-                        whileHover={{
+                        whileHover={isDisabled ? {} : {
                           backgroundColor: isActive ? undefined : 'var(--app-primary)',
                           color: 'var(--app-text)',
                         }}
@@ -260,7 +269,7 @@ const Drawer = ({ children }) => {
             </motion.div>
           </button>
 
-          {/* User Profile */}
+          {/* User Profile with Server Status */}
           {user && (
             <motion.div
               className="relative overflow-hidden rounded-xl"
@@ -282,12 +291,23 @@ const Drawer = ({ children }) => {
                 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               >
-                <ProfileAvatar
-                  profilePicture={user.profilePicture}
-                  username={user.username}
-                  size={isOpen ? "md" : "sm"}
-                  className="rounded-lg transition-all duration-300"
-                />
+                {/* Avatar with status indicator */}
+                <div className="relative">
+                  <ProfileAvatar
+                    profilePicture={user.profilePicture}
+                    username={user.username}
+                    size={isOpen ? "md" : "sm"}
+                    className="rounded-lg transition-all duration-300"
+                  />
+                  {/* Server status dot */}
+                  <div
+                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
+                    style={{
+                      background: isOnline ? '#22c55e' : '#ef4444',
+                      borderColor: 'var(--app-surface)',
+                    }}
+                  />
+                </div>
 
                 <AnimatePresence mode="wait">
                   {isOpen && (

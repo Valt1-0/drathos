@@ -67,7 +67,9 @@
     "mods": "Mods",
     "clearData": "Effacer les Données",
     "userOnline": "En Ligne",
-    "userOffline": "Hors Ligne"
+    "userOffline": "Hors Ligne",
+    "serverOnline": "Serveur Connecté",
+    "serverOffline": "Serveur Hors Ligne"
   },
   "games": {
     "title": "Bibliothèque de Jeux",
@@ -394,7 +396,8 @@
     "profilePictureError": "Erreur lors de la modification de la photo",
     "invalidImageType": "Format d'image non supporté. Utilisez JPG, PNG, GIF ou WebP",
     "imageTooLarge": "L'image est trop volumineuse (max 5 Mo)",
-    "role": "Rôle"
+    "role": "Rôle",
+    "offlineNoChanges": "Serveur hors ligne - modifications désactivées"
   },
   "welcome": {
     "title": "Bienvenue sur Drathos",
