@@ -182,7 +182,8 @@ app.whenReady().then(async () => {
   await logger.initialize();
   logger.info("[App] Starting Drathos...", { version: app.getVersion() });
 
-  electronApp.setAppUserModelId("com.electron");
+  app.setName("Drathos");
+  electronApp.setAppUserModelId("com.drathos.app");
 
   // Splash screen
   const splash = new SplashWindow(icon);

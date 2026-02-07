@@ -214,7 +214,6 @@
     "deleteMessage": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ? Cette action est irréversible.",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer la collection \"{{name}}\" ?",
     "confirmDeleteCollection": "Supprimer la collection ?",
-    "confirmDeleteMessage": "Voulez-vous vraiment supprimer la collection \"{{name}}\" ? Cette action est irréversible.",
     "confirmRemoveGame": "Retirer le jeu ?",
     "confirmRemoveGameMessage": "Voulez-vous retirer \"{{game}}\" de la collection \"{{collection}}\" ?",
     "delete": "Supprimer la Collection",
@@ -241,8 +240,6 @@
     "games": "jeux",
     "game": "jeu",
     "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ? Cette action est irréversible.",
-    "deleteConfirm": "Supprimer",
-    "noResultsFor": "Aucune collection trouvée pour \"{{query}}\"",
     "createDesc": "Créez une nouvelle collection pour organiser vos jeux",
     "editDesc": "Modifiez uniquement les champs que vous souhaitez changer",
     "editDescCreate": "Créez une nouvelle collection pour organiser vos jeux",
@@ -397,7 +394,15 @@
     "invalidImageType": "Format d'image non supporté. Utilisez JPG, PNG, GIF ou WebP",
     "imageTooLarge": "L'image est trop volumineuse (max 5 Mo)",
     "role": "Rôle",
-    "offlineNoChanges": "Serveur hors ligne - modifications désactivées"
+    "offlineNoChanges": "Serveur hors ligne - modifications désactivées",
+    "notifications": "Notifications",
+    "notificationsDesc": "Notifications de la bibliothèque",
+    "notificationsInfo": "Recevoir une notification quand un nouveau jeu est ajouté à la bibliothèque par un autre utilisateur."
+  },
+  "notifications": {
+    "newGame": "Nouveau Jeu Ajouté",
+    "gameAdded": "{{game}} a été ajouté par {{user}}",
+    "unknownUser": "Utilisateur inconnu"
   },
   "welcome": {
     "title": "Bienvenue sur Drathos",
@@ -567,7 +572,6 @@
     "loadingMods": "Chargement des mods...",
     "noModsOnServer": "Aucun mod sur le serveur",
     "add": "Ajouter",
-    "noModsForGame": "Aucun mod pour ce jeu",
     "uploadFirst": "Uploadez le premier mod pour ce jeu",
     "uploadMod": "Upload un Mod",
     "selectGameFirst": "Sélectionnez un jeu",

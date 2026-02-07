@@ -161,6 +161,12 @@ const api = {
   // Recharger l'application complètement
   reloadApp: () => ipcRenderer.send("reload-app"),
 
+  // Native notifications
+  notification: {
+    show: ({ title, body }) =>
+      ipcRenderer.invoke("notification:show", { title, body }),
+  },
+
   // Mod management
   mods: {
     downloadMod: ({ modId, gameId }) =>

@@ -23,26 +23,30 @@ const Toggle = ({
   className = '',
   ...props
 }) => {
-  // Tailles
+  // Tailles (container width/height, thumb size, offset when checked)
   const sizes = {
     sm: {
-      container: 'w-8 h-4',
-      thumb: 'w-3 h-3',
-      translateX: 14,
+      width: 36,
+      height: 20,
+      thumbSize: 16,
+      padding: 2,
     },
     md: {
-      container: 'w-10 h-5',
-      thumb: 'w-4 h-4',
-      translateX: 18,
+      width: 44,
+      height: 24,
+      thumbSize: 20,
+      padding: 2,
     },
     lg: {
-      container: 'w-12 h-6',
-      thumb: 'w-5 h-5',
-      translateX: 22,
+      width: 52,
+      height: 28,
+      thumbSize: 24,
+      padding: 2,
     },
   };
 
   const currentSize = sizes[size];
+  const translateX = currentSize.width - currentSize.thumbSize - currentSize.padding * 2;
 
   const handleToggle = () => {
     if (!disabled && onChange) {
@@ -51,41 +55,49 @@ const Toggle = ({
   };
 
   return (
-    <div className={`flex items-start gap-4 ${className}`}>
+    <div className={`flex items-center gap-4 ${className}`}>
       {/* Toggle Switch */}
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         className={`
-          ${currentSize.container}
           relative shrink-0 rounded-full
-          transition-all duration-300
-          focus:outline-none
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          transition-colors duration-200
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'}
         `}
         style={{
+          width: currentSize.width,
+          height: currentSize.height,
           background: checked
             ? disabled
               ? 'var(--app-textSecondary)'
-              : 'var(--app-primary)'
+              : 'var(--app-gradient-primary, var(--app-primary))'
             : 'var(--app-surface)',
-          border: `2px solid ${checked ? 'transparent' : 'var(--app-border)'}`,
+          boxShadow: checked
+            ? 'inset 0 0 0 1px rgba(255,255,255,0.1)'
+            : 'inset 0 0 0 2px var(--app-border)',
         }}
         onClick={handleToggle}
         disabled={disabled}
         {...props}
       >
         <motion.span
-          className={`${currentSize.thumb} rounded-full shadow-md`}
+          className="block rounded-full shadow-lg"
           style={{
-            background: '#FFFFFF',
             position: 'absolute',
-            top: '50%',
-            left: '2px',
-            transform: 'translateY(-50%)',
+            top: (currentSize.height - currentSize.thumbSize) / 2,
+            left: 0,
+            width: currentSize.thumbSize,
+            height: currentSize.thumbSize,
+            background: '#FFFFFF',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
           }}
-          animate={{ x: checked ? currentSize.translateX : 0 }}
+          initial={false}
+          animate={{
+            x: checked ? translateX + currentSize.padding : currentSize.padding,
+          }}
           transition={{
             type: "spring",
             stiffness: 500,

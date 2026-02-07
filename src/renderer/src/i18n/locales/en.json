@@ -395,7 +395,15 @@
     "invalidImageType": "Invalid image format. Use JPG, PNG, GIF or WebP",
     "imageTooLarge": "Image is too large (max 5 MB)",
     "role": "Role",
-    "offlineNoChanges": "Server offline - changes disabled"
+    "offlineNoChanges": "Server offline - changes disabled",
+    "notifications": "Notifications",
+    "notificationsDesc": "Game library notifications",
+    "notificationsInfo": "Receive a notification when a new game is added to the library by another user."
+  },
+  "notifications": {
+    "newGame": "New Game Added",
+    "gameAdded": "{{game}} was added by {{user}}",
+    "unknownUser": "Unknown user"
   },
   "welcome": {
     "title": "Welcome to Drathos",
@@ -626,7 +634,6 @@
     "searchPlaceholder": "Search...",
     "noResults": "No results",
     "noModsAvailable": "No mods available",
-    "noModsForGame": "No mods installed",
     "tryAnotherSearch": "Try another search",
     "loadMore": "Load more ({{current}} / {{total}})",
     "loadingMore": "Loading...",

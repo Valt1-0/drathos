@@ -21,7 +21,7 @@ import {
   FiLayers,
   FiCamera,
   FiUpload,
-  FiX,
+  FiBell,
 } from "react-icons/fi";
 import { SearchBar } from "../components/ui";
 import { SiDiscord } from "react-icons/si";
@@ -31,6 +31,7 @@ import { useAuth } from "../contexts/authContext";
 import { useUpdate } from "../contexts/updateContext";
 import { useTheme } from "../contexts/themeContext";
 import { useConnection } from "../contexts/connectionContext";
+import { useNotifications } from "../contexts/notificationContext";
 import { getThemesList } from "../config/themes";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
@@ -46,6 +47,7 @@ const SettingsPage = () => {
   const { checkForUpdates, updateStatus, updateInfo } = useUpdate();
   const { currentTheme, changeTheme: changeAppTheme, theme, getBackgroundStyle } = useTheme();
   const { isOnline } = useConnection();
+  const { enabled: notificationsEnabled, setNotificationsEnabled } = useNotifications();
   const themesList = getThemesList();
 
   // Déterminer si le thème actuel est clair ou sombre
@@ -778,6 +780,32 @@ const SettingsPage = () => {
                         </motion.div>
                       </Card.Body>
                     )}
+                  </Card>
+
+                  {/* Notifications Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(99, 102, 241, 0.2)' }}>
+                          <FiBell className="text-2xl" style={{ color: 'var(--app-primary)' }} />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.notifications')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.notificationsDesc')}</p>
+                        </div>
+                      </div>
+
+                      <Toggle
+                        checked={notificationsEnabled}
+                        onChange={setNotificationsEnabled}
+                      />
+                    </div>
+
+                    <Card.Body>
+                      <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
+                        {t('settings.notificationsInfo')}
+                      </p>
+                    </Card.Body>
                   </Card>
 
                   {/* Image Cache Card */}

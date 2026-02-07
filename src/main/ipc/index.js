@@ -12,6 +12,7 @@ import { registerStatsHandlers } from "./stats.handlers.js";
 import { registerDiscordHandlers, initDiscordRPC, cleanupDiscordRPC, getDiscordRPC } from "./discord.handlers.js";
 import { registerLoggerHandlers } from "./logger.handlers.js";
 import { registerUpdaterHandlers, setAutoUpdateManager, getAutoUpdateManager } from "./updater.handlers.js";
+import { registerNotificationHandlers } from "./notification.handlers.js";
 
 export const registerAllHandlers = () => {
   registerWindowHandlers();
@@ -24,6 +25,7 @@ export const registerAllHandlers = () => {
   registerDiscordHandlers();
   registerLoggerHandlers();
   registerUpdaterHandlers();
+  registerNotificationHandlers();
 };
 
 export {
