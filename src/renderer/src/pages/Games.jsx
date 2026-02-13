@@ -7,7 +7,7 @@ import { checkServerStatus } from "../api/server";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
 import { formatStats as formatStatsAPI } from "../api/gameStats";
 import uninstallQueue from "../utils/uninstallQueue";
-import { useDownloadActions } from "../contexts/downloadContext";
+import { useDownloadActions, useActiveDownloads } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useAuth } from "../contexts/authContext";
 import { useTheme } from "../contexts/themeContext";
@@ -52,6 +52,7 @@ const Games = () => {
   const { gameStats, updateSessionStats } = useGameStats();
   const modals = useGameModals();
   const { addDownload, updateDownloadProgress, removeDownload } = useDownloadActions();
+  const activeDownloads = useActiveDownloads();
 
   const extractGenreName = useCallback((genre) => {
     if (!genre) return t('games.unknown');
@@ -399,7 +400,15 @@ const Games = () => {
     }
   };
 
+  const isGameDownloading = useCallback((gameId) =>
+    activeDownloads.some(dl => dl.gameId === gameId),
+    [activeDownloads]
+  );
+
   const handleInstallGame = async (game) => {
+    // Block if already downloading
+    if (isGameDownloading(game._id)) return;
+
     const downloadPath = await window.store.get("downloadPath");
 
     if (!downloadPath) {
@@ -423,6 +432,7 @@ const Games = () => {
     const downloadId = `${game._id}-${Date.now()}`;
     addDownload({
       id: downloadId,
+      gameId: game._id,
       name: game.name,
       image: game.coverUrl,
       progress: 0,
@@ -444,19 +454,17 @@ const Games = () => {
         });
 
         if (data.stage === "completed" || data.stage === "failed") {
+          gamesCache.invalidate();
           setTimeout(async () => {
             removeDownload(downloadId);
             try {
-              // Invalidate cache to force fresh data on next navigation
-              gamesCache.invalidate();
               const installed = await getInstalledGames();
               setInstalledGames(installed);
-              // Update cache with new installed games
               gamesCache.set({ installedGames: installed });
             } catch (err) {
               console.warn("Could not refresh installed games:", err);
             }
-          }, 2000);
+          }, 1000);
         }
       }
     });
@@ -585,9 +593,10 @@ const Games = () => {
   // Keyboard shortcuts for Games page
   useKeyboardShortcuts({
     'enter': () => {
-      if (selectedGame && isInstalled(selectedGame._id) && !isGamePlaying(selectedGame._id)) {
+      if (!selectedGame || isGameDownloading(selectedGame._id)) return;
+      if (isInstalled(selectedGame._id) && !isGamePlaying(selectedGame._id)) {
         handleLaunchGame(selectedGame);
-      } else if (selectedGame && !isInstalled(selectedGame._id)) {
+      } else if (!isInstalled(selectedGame._id)) {
         handleInstallGame(selectedGame);
       }
     },
@@ -695,6 +704,7 @@ const Games = () => {
         playingGames={playingGames}
         uninstallingGames={uninstalling}
         pendingUninstalls={pendingUninstalls}
+        activeDownloads={activeDownloads}
         gameStats={gameStats}
         user={user}
         onAddGame={modals.addGameModal.open}
@@ -712,6 +722,7 @@ const Games = () => {
         isUninstalling={isGameUninstalling(selectedGame?._id)}
         isPending={isPendingUninstall(selectedGame?._id)}
         isInstalling={isInstalling}
+        activeDownload={selectedGame ? activeDownloads.find(dl => dl.gameId === selectedGame._id) : null}
         user={user}
         onLaunch={handleLaunchGame}
         onStop={handleStopGame}

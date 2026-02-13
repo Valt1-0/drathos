@@ -1,8 +1,10 @@
 // drathos/src/renderer/src/components/ExecutableConfig.jsx
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
+  const { t } = useTranslation();
   const [files, setFiles] = useState([]);
   const [suggestedExecutables, setSuggestedExecutables] = useState([]);
   const [selectedFile, setSelectedFile] = useState("");
@@ -42,12 +44,12 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
 
   const handleSave = async () => {
     if (!selectedFile) {
-      alert("Veuillez sélectionner un fichier executable");
+      alert(t("executable.selectFile"));
       return;
     }
 
     const config = {
-      fileName: path.basename(selectedFile),
+      fileName: selectedFile.split(/[/\\]/).pop(),
       relativePath: selectedFile,
       arguments: launchArgs,
       workingDirectory: workingDir,
@@ -68,11 +70,11 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
         onSave(config);
         onClose();
       } else {
-        alert("Error saving");
+        alert(t("executable.errorSaving"));
       }
     } catch (error) {
       console.error("Error saving executable config:", error);
-      alert("Error saving");
+      alert(t("executable.errorSaving"));
     }
   };
 
@@ -80,7 +82,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
         <div className="bg-gray-800 p-6 rounded-lg">
-          <div className="text-white">Analyse des fichiers du jeu...</div>
+          <div className="text-white">{t("executable.analyzingFiles")}</div>
         </div>
       </div>
     );
@@ -89,13 +91,13 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-gray-800 text-white p-6 rounded-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4">Configurer l'executable</h2>
+        <h2 className="text-2xl font-bold mb-4">{t("executable.configure")}</h2>
 
         {/* Executables suggérés */}
         {suggestedExecutables.length > 0 && (
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2 text-green-400">
-              🎯 Executables détectés automatiquement
+              {t("executable.autoDetected")}
             </h3>
             <div className="space-y-2">
               {suggestedExecutables.map((file, index) => (
@@ -128,7 +130,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
 
         {/* Tous les fichiers */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">📁 Tous les fichiers</h3>
+          <h3 className="text-lg font-semibold mb-2">{t("executable.allFiles")}</h3>
           <div className="max-h-60 overflow-y-auto bg-gray-900 rounded p-2">
             {files.map((file, index) => (
               <label
@@ -161,27 +163,27 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
         <div className="space-y-4 mb-6">
           <div>
             <label className="block text-sm font-medium mb-1">
-              Arguments de lancement (optionnel)
+              {t("executable.launchArguments")}
             </label>
             <input
               type="text"
               value={launchArgs}
               onChange={(e) => setLaunchArgs(e.target.value)}
               className="w-full p-2 bg-gray-700 rounded text-white"
-              placeholder="ex: --fullscreen --resolution 1920x1080"
+              placeholder={t("executable.launchArgsPlaceholder")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">
-              Répertoire de travail (optionnel)
+              {t("executable.workingDirectory")}
             </label>
             <input
               type="text"
               value={workingDir}
               onChange={(e) => setWorkingDir(e.target.value)}
               className="w-full p-2 bg-gray-700 rounded text-white"
-              placeholder="ex: bin/ (laissez vide pour auto-détection)"
+              placeholder={t("executable.workingDirPlaceholder")}
             />
           </div>
 
@@ -192,7 +194,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
               onChange={(e) => setRequiresAdmin(e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm">Nécessite les droits administrateur</span>
+            <span className="text-sm">{t("executable.requiresAdmin")}</span>
           </label>
         </div>
 
@@ -202,14 +204,14 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
             onClick={onClose}
             className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded transition-colors"
           >
-            Annuler
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSave}
             disabled={!selectedFile}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sauvegarder
+            {t("common.save")}
           </button>
         </div>
       </div>

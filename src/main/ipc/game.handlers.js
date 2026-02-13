@@ -13,6 +13,7 @@ import workerPath from "../installWorker.js?modulePath";
 import uninstallWorkerPath from "../uninstallWorker.js?modulePath";
 
 const gameLauncher = new GameLauncher();
+const activeWorkers = new Map();
 let detector = null;
 
 const getDetector = () => {
@@ -31,6 +32,9 @@ export const registerGameHandlers = () => {
         workerData: { serverGame, storeData: store.store },
       });
 
+      // Store the worker so we can send cancel/pause messages
+      activeWorkers.set(serverGame._id, worker);
+
       worker.on("message", (data) => {
         if (data.type === "store-set") { store.set(data.key, data.value); return; }
 
@@ -44,6 +48,9 @@ export const registerGameHandlers = () => {
           }
           resolve({ success: true, path: data.finalPath });
         }
+        if (data.stage === "cancelled") {
+          resolve({ success: false, error: "CANCELLED" });
+        }
         if (data.stage === "Failed") reject(new Error(data.error));
       });
 
@@ -53,9 +60,41 @@ export const registerGameHandlers = () => {
       });
 
       worker.on("exit", (code) => {
+        activeWorkers.delete(serverGame._id);
         if (code !== 0) reject(new Error(`Worker exited with code ${code}`));
       });
     });
+  });
+
+  // Download controls
+  ipcMain.handle("cancelDownload", async (event, { gameId }) => {
+    const worker = activeWorkers.get(gameId);
+    if (worker) {
+      worker.postMessage({ type: "cancel" });
+      setTimeout(() => {
+        if (activeWorkers.has(gameId)) {
+          worker.terminate();
+          activeWorkers.delete(gameId);
+        }
+      }, 3000);
+    }
+    return { success: true };
+  });
+
+  ipcMain.handle("pauseDownload", async (event, { gameId }) => {
+    const worker = activeWorkers.get(gameId);
+    if (worker) {
+      worker.postMessage({ type: "pause" });
+    }
+    return { success: true };
+  });
+
+  ipcMain.handle("resumeDownload", async (event, { gameId }) => {
+    const worker = activeWorkers.get(gameId);
+    if (worker) {
+      worker.postMessage({ type: "resume" });
+    }
+    return { success: true };
   });
 
   // Detection
@@ -203,14 +242,20 @@ export const registerGameHandlers = () => {
 };
 
 async function calculateDirectorySize(dirPath) {
-  let total = 0;
   try {
     const items = await fs.promises.readdir(dirPath);
-    await Promise.all(items.map(async (item) => {
-      const itemPath = path.join(dirPath, item);
-      const stats = await fs.promises.stat(itemPath);
-      total += stats.isDirectory() ? await calculateDirectorySize(itemPath) : stats.size;
+    const sizes = await Promise.all(items.map(async (item) => {
+      try {
+        const itemPath = path.join(dirPath, item);
+        const stats = await fs.promises.stat(itemPath);
+        return stats.isDirectory() ? await calculateDirectorySize(itemPath) : stats.size;
+      } catch {
+        return 0;
+      }
     }));
-  } catch {}
-  return total;
+    return sizes.reduce((sum, s) => sum + s, 0);
+  } catch (err) {
+    console.warn(`[getGameSize] Cannot read directory ${dirPath}:`, err.message);
+    return 0;
+  }
 }

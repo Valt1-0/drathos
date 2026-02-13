@@ -214,6 +214,7 @@ const GameDetails = ({
   isUninstalling,
   isPending,
   isInstalling,
+  activeDownload,
   user,
   onLaunch,
   onStop,
@@ -448,6 +449,7 @@ const GameDetails = ({
               isUninstalling={isUninstalling}
               isPending={isPending}
               isInstalling={isInstalling}
+              activeDownload={activeDownload}
               user={user}
               onLaunch={onLaunch}
               onStop={onStop}
@@ -526,6 +528,7 @@ const ActionButtons = ({
   isUninstalling,
   isPending,
   isInstalling,
+  activeDownload,
   user,
   onLaunch,
   onStop,
@@ -584,6 +587,69 @@ const ActionButtons = ({
           <p className={`text-xs ${getTextClass('secondary')}`}>
             {t('games.removingFiles')}
           </p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Active download - show progress
+  if (activeDownload) {
+    const stageLabels = {
+      preparing: t('downloads.stagePreparing'),
+      downloading: t('downloads.stageDownloading'),
+      extracting: t('downloads.stageExtracting'),
+      finalizing: t('downloads.stageFinalizing'),
+      paused: t('downloads.stagePaused'),
+    };
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-xl p-4 border bg-primary/10 border-primary/30"
+      >
+        <div className="text-center mb-3">
+          <div className="w-12 h-12 rounded-lg mx-auto mb-3 flex items-center justify-center bg-primary/20">
+            {activeDownload.stage === "paused" ? (
+              <FiDownload className="text-xl text-warning" />
+            ) : (
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+            )}
+          </div>
+          <h3 className={`text-base font-bold mb-1 ${getTextClass('primary')}`}>
+            {stageLabels[activeDownload.stage] || t('downloads.stageDownloading')}
+          </h3>
+          <p className={`text-xs ${getTextClass('secondary')}`}>
+            {activeDownload.stage === "downloading" && activeDownload.speed
+              ? `${activeDownload.speed.toFixed(1)} MB/s`
+              : t('games.redirecting')}
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full h-2 rounded-full overflow-hidden bg-background-secondary">
+          <motion.div
+            className="h-full rounded-full bg-gradient-primary"
+            initial={{ width: 0 }}
+            animate={{ width: `${activeDownload.progress || 0}%` }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          />
+        </div>
+        <div className="flex justify-between mt-2">
+          <span className={`text-xs font-medium ${getTextClass('secondary')}`}>
+            {Math.round(activeDownload.progress || 0)}%
+          </span>
+          {activeDownload.sizeDownloaded != null && activeDownload.totalSize != null && (
+            <span className={`text-xs ${getTextClass('secondary')}`}>
+              {activeDownload.sizeDownloaded >= 1024
+                ? `${(activeDownload.sizeDownloaded / 1024).toFixed(1)} GB`
+                : `${Math.round(activeDownload.sizeDownloaded)} MB`}
+              {" / "}
+              {activeDownload.totalSize >= 1024
+                ? `${(activeDownload.totalSize / 1024).toFixed(1)} GB`
+                : `${Math.round(activeDownload.totalSize)} MB`}
+            </span>
+          )}
         </div>
       </motion.div>
     );
@@ -969,11 +1035,19 @@ const GameInformation = ({
           />
         )}
 
-        {(isInstalled ? gameSize : game.sizeMB) && (
+        {isInstalled && gameSize && gameSize.sizeMB > 0 && (
           <InfoCard
             icon={FiHardDrive}
-            label={isInstalled ? t('games.installedSize') : t('games.downloadSize')}
-            value={isInstalled ? `${gameSize?.sizeGB || '...'} GB` : `${game.sizeMB} MB`}
+            label={t('games.installedSize')}
+            value={gameSize.sizeGB >= 1 ? `${gameSize.sizeGB.toFixed(2)} GB` : `${gameSize.sizeMB} MB`}
+            color="warning"
+          />
+        )}
+        {!isInstalled && game.sizeMB > 0 && (
+          <InfoCard
+            icon={FiHardDrive}
+            label={t('games.downloadSize')}
+            value={game.sizeMB >= 1024 ? `${(game.sizeMB / 1024).toFixed(2)} GB` : `${game.sizeMB} MB`}
             color="warning"
           />
         )}

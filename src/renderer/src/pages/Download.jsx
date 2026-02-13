@@ -70,6 +70,30 @@ const Download = () => {
     return () => clearInterval(interval);
   }, [t]);
 
+  // Cancel an active download
+  const handleCancelDownload = async (download) => {
+    try {
+      await window.api.cancelDownload(download.gameId || download.id);
+      removeDownload(download.id);
+      toast.info(t("downloads.cancelled", { name: download.name }));
+    } catch (error) {
+      console.error("Cancel error:", error);
+    }
+  };
+
+  // Pause or resume an active download
+  const handlePauseDownload = async (download) => {
+    try {
+      if (download.stage === "paused") {
+        await window.api.resumeDownload(download.gameId || download.id);
+      } else {
+        await window.api.pauseDownload(download.gameId || download.id);
+      }
+    } catch (error) {
+      console.error("Pause/resume error:", error);
+    }
+  };
+
   // Retry a failed download
   const handleRetryDownload = async (download) => {
     try {
@@ -273,7 +297,11 @@ const Download = () => {
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <EnhancedDownloadProgress download={download} />
+                    <EnhancedDownloadProgress
+                      download={download}
+                      onCancel={handleCancelDownload}
+                      onPause={handlePauseDownload}
+                    />
                   </motion.div>
                 ))}
               </div>

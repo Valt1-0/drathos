@@ -7,11 +7,16 @@ import {
   FiXCircle,
   FiZap,
   FiClock,
+  FiPauseCircle,
+  FiPlayCircle,
+  FiX,
 } from "react-icons/fi";
 import { useTheme } from "../contexts/themeContext";
+import { useTranslation } from "react-i18next";
 
-const EnhancedDownloadProgress = ({ download }) => {
+const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
   const { isLight, getTextClass } = useTheme();
+  const { t } = useTranslation();
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [displaySpeed, setDisplaySpeed] = useState(0);
   const [displayETA, setDisplayETA] = useState("");
@@ -64,9 +69,12 @@ const EnhancedDownloadProgress = ({ download }) => {
         return "bg-gradient-to-r from-warning to-warning";
       case "finalizing":
         return "bg-gradient-secondary";
+      case "paused":
+        return "bg-gradient-to-r from-warning to-warning";
       case "completed":
         return "bg-gradient-to-r from-success to-success";
       case "failed":
+      case "cancelled":
         return "bg-gradient-to-r from-error to-error";
       default:
         return "bg-gradient-to-r from-text-secondary to-text-secondary";
@@ -84,9 +92,12 @@ const EnhancedDownloadProgress = ({ download }) => {
         return <FiPackage className="text-warning" />;
       case "finalizing":
         return <FiZap className="text-secondary" />;
+      case "paused":
+        return <FiPauseCircle className="text-warning" />;
       case "completed":
         return <FiCheckCircle className="text-success" />;
       case "failed":
+      case "cancelled":
         return <FiXCircle className="text-error" />;
       default:
         return <FiClock className="text-text-secondary" />;
@@ -97,19 +108,23 @@ const EnhancedDownloadProgress = ({ download }) => {
   const getStageMessage = (stage) => {
     switch (stage) {
       case "preparing":
-        return "Preparing download...";
+        return t("downloads.stagePreparing");
       case "downloading":
-        return "Downloading";
+        return t("downloads.stageDownloading");
       case "extracting":
-        return "Extracting files";
+        return t("downloads.stageExtracting");
       case "finalizing":
-        return "Finalizing installation";
+        return t("downloads.stageFinalizing");
+      case "paused":
+        return t("downloads.stagePaused");
       case "completed":
-        return "Completed";
+        return t("downloads.stageCompleted");
       case "failed":
-        return "Failed";
+        return t("downloads.stageFailed");
+      case "cancelled":
+        return t("downloads.stageCancelled");
       default:
-        return "Waiting...";
+        return t("downloads.stageWaiting");
     }
   };
 
@@ -124,9 +139,12 @@ const EnhancedDownloadProgress = ({ download }) => {
         return "border-warning/50";
       case "finalizing":
         return "border-secondary/50";
+      case "paused":
+        return "border-warning/50";
       case "completed":
         return "border-success/50";
       case "failed":
+      case "cancelled":
         return "border-error/50";
       default:
         return "border-border";
@@ -163,9 +181,51 @@ const EnhancedDownloadProgress = ({ download }) => {
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className={`font-bold text-lg truncate mb-1 ${getTextClass('primary')}`}>
-            {download.name}
-          </h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={`font-bold text-lg truncate ${getTextClass('primary')}`}>
+              {download.name}
+            </h3>
+
+            {/* Control buttons */}
+            <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
+              {/* Pause/Resume button - only during downloading */}
+              {download.stage === "downloading" && onPause && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => onPause(download)}
+                  className="p-1.5 rounded-lg bg-warning/20 hover:bg-warning/30 transition-colors"
+                  title={t("downloads.pause")}
+                >
+                  <FiPauseCircle className="text-warning text-lg" />
+                </motion.button>
+              )}
+              {download.stage === "paused" && onPause && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => onPause(download)}
+                  className="p-1.5 rounded-lg bg-success/20 hover:bg-success/30 transition-colors"
+                  title={t("downloads.resume")}
+                >
+                  <FiPlayCircle className="text-success text-lg" />
+                </motion.button>
+              )}
+
+              {/* Cancel button - during downloading, paused, extracting, finalizing */}
+              {["downloading", "paused", "extracting", "finalizing"].includes(download.stage) && onCancel && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => onCancel(download)}
+                  className="p-1.5 rounded-lg bg-error/20 hover:bg-error/30 transition-colors"
+                  title={t("downloads.cancel")}
+                >
+                  <FiX className="text-error text-lg" />
+                </motion.button>
+              )}
+            </div>
+          </div>
 
           <div className="flex items-center gap-2 mb-2">
             <span className={`text-sm font-medium ${getTextClass('secondary')}`}>
@@ -250,7 +310,7 @@ const EnhancedDownloadProgress = ({ download }) => {
 
           {download.stage === "extracting" && download.extractedFiles && (
             <span className="text-warning font-medium">
-              {download.extractedFiles}/{download.totalFiles} files
+              {t("downloads.filesCount", { extracted: download.extractedFiles, total: download.totalFiles })}
             </span>
           )}
 
@@ -260,7 +320,7 @@ const EnhancedDownloadProgress = ({ download }) => {
                 ? download.totalSize >= 1024
                   ? `${(download.totalSize / 1024).toFixed(2)} GB`
                   : `${download.totalSize.toFixed(0)} MB`
-                : "Calculating..."}
+                : t("downloads.calculating")}
             </span>
           </div>
         </div>
@@ -310,7 +370,7 @@ const EnhancedDownloadProgress = ({ download }) => {
         >
           <div className={`flex items-center gap-2 text-sm ${getTextClass('primary')}`}>
             <FiXCircle className="text-error" />
-            <span className="font-semibold">Error:</span>
+            <span className="font-semibold">{t("downloads.errorLabel")}</span>
             <span>{download.error}</span>
           </div>
         </motion.div>
@@ -326,7 +386,7 @@ const EnhancedDownloadProgress = ({ download }) => {
           <div className="flex items-center justify-between text-sm">
             <div className={`flex items-center gap-2 ${getTextClass('primary')}`}>
               <FiCheckCircle className="text-success text-lg" />
-              <span className="font-semibold">Installation completed</span>
+              <span className="font-semibold">{t("downloads.installationCompleted")}</span>
             </div>
             {download.totalTime && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/20">
@@ -366,7 +426,9 @@ const arePropsEqual = (prevProps, nextProps) => {
     prev.totalFiles === next.totalFiles &&
     prev.elapsedTime === next.elapsedTime &&
     prev.totalTime === next.totalTime &&
-    prev.instantSpeed === next.instantSpeed
+    prev.instantSpeed === next.instantSpeed &&
+    prevProps.onCancel === nextProps.onCancel &&
+    prevProps.onPause === nextProps.onPause
   );
 };
 

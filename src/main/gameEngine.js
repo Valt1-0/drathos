@@ -22,17 +22,46 @@ export class GameEngine {
     this.activeDownloads = new Map();
     this.metrics = new Map();
 
+    // Cancel/Pause state
+    this.cancelled = false;
+    this.paused = false;
+    this.pausedResolve = null;
+
     // Agent HTTPS pour les certificats auto-signés (self-hosting support)
     this.httpsAgent = null;
     if (this.config.allowSelfSignedCerts) {
       this.httpsAgent = new https.Agent({
         rejectUnauthorized: false,
       });
-      console.log(`[GameEngine] ✅ Self-hosting mode: Certificats auto-signés acceptés`);
     }
-
-    console.log(`[GameEngine] Système initialisé`);
   }
+
+  cancel() {
+    this.cancelled = true;
+    // If paused, unblock the pause so it can exit
+    if (this.pausedResolve) {
+      this.pausedResolve();
+      this.pausedResolve = null;
+    }
+  }
+
+  pause() {
+    if (this.paused) {
+      // Already paused, treat as resume
+      this.resume();
+      return;
+    }
+    this.paused = true;
+  }
+
+  resume() {
+    this.paused = false;
+    if (this.pausedResolve) {
+      this.pausedResolve();
+      this.pausedResolve = null;
+    }
+  }
+
   async installGame(serverGame, { store, sendProgress }) {
     const gameId = serverGame._id;
 
@@ -59,6 +88,17 @@ export class GameEngine {
         `[GameEngine] Installation échouée: ${serverGame.name}`,
         error
       );
+
+      if (error.message === "CANCELLED") {
+        this.sendProgress({
+          id: gameId,
+          stage: "cancelled",
+          progress: 0,
+          message: "Download cancelled by user",
+        });
+        this.cleanupDownload(gameId);
+        return { success: false, error: "CANCELLED" };
+      }
 
       this.sendProgress({
         id: gameId,
@@ -117,7 +157,6 @@ export class GameEngine {
     )}_${gameId}${originalExtension || ".zip"}`;
     const filePath = path.join(this.downloadPath, fileName);
 
-    console.log(`[GameEngine] Téléchargement: ${fileName}`);
     this.activeDownloads.set(gameId, {
       stage: "downloading",
       filePath,
@@ -133,52 +172,116 @@ export class GameEngine {
 
     const downloadUrl = buildServerUrl(this.serverAddress, `/api/serverGame/downloadGame/${gameId}`);
 
-    console.log(`[GameEngine] URL de téléchargement: ${downloadUrl}`);
-    console.log(`[GameEngine] Server address: ${this.serverAddress}`);
-
     // Déclarer les ressources à nettoyer en cas d'erreur
     let fileStream = null;
     let reader = null;
 
+    // Track bytes for resume support
+    let downloadedBytes = 0;
+    let totalSize = 0;
+
     try {
-      const response = await fetch(downloadUrl, {
-        headers: { Authorization: `Bearer ${this.userToken}` },
-        // Utilise l'agent custom seulement si HTTPS + allowSelfSignedCerts activé
+      // Check if we have a partial file to resume from
+      if (fs.existsSync(filePath)) {
+        downloadedBytes = fs.statSync(filePath).size;
+      }
+
+      let fetchHeaders = { Authorization: `Bearer ${this.userToken}` };
+      if (downloadedBytes > 0) {
+        fetchHeaders["Range"] = `bytes=${downloadedBytes}-`;
+      }
+
+      let response = await fetch(downloadUrl, {
+        headers: fetchHeaders,
         agent: (downloadUrl.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
       });
 
-      console.log(`[GameEngine] R\u00e9ponse re\u00e7ue - Status: ${response.status}`);
+      // 416 = Range Not Satisfiable → delete partial file and retry from scratch
+      if (response.status === 416) {
+        try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
+        downloadedBytes = 0;
+        fetchHeaders = { Authorization: `Bearer ${this.userToken}` };
+        response = await fetch(downloadUrl, {
+          headers: fetchHeaders,
+          agent: (downloadUrl.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
+        });
+      }
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 206) {
         throw new Error(
           `Erreur HTTP ${response.status}: ${response.statusText}`
         );
       }
 
-      const totalSize = parseInt(response.headers.get("content-length") || "0");
-      console.log(`[GameEngine] Taille totale: ${totalSize} octets (${(totalSize / (1024 * 1024)).toFixed(2)} MB)`);
+      if (response.status === 206) {
+        // Partial content - extract total size from Content-Range header
+        const contentRange = response.headers.get("content-range");
+        if (contentRange) {
+          const match = contentRange.match(/\/(\d+)$/);
+          if (match) totalSize = parseInt(match[1], 10);
+        }
+      } else {
+        totalSize = parseInt(response.headers.get("content-length") || "0");
+        // Full response means server didn't support range or fresh download, reset
+        downloadedBytes = 0;
+      }
 
-      let downloadedBytes = 0;
-
-      fileStream = fs.createWriteStream(filePath);
-      console.log(`[GameEngine] Stream cr\u00e9\u00e9: ${filePath}`);
+      // Append mode if resuming, otherwise overwrite
+      fileStream = fs.createWriteStream(filePath, {
+        flags: downloadedBytes > 0 ? "a" : "w",
+      });
 
       reader = response.body.getReader();
-      console.log(`[GameEngine] Reader cr\u00e9\u00e9, d\u00e9but lecture...`);
 
-      let chunkCount = 0;
       while (true) {
+        // Check cancel flag
+        if (this.cancelled) {
+          await reader.cancel().catch(() => {});
+          fileStream.destroy();
+          try {
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          } catch (e) {
+            console.warn(`[GameEngine] Could not delete partial file: ${e.message}`);
+          }
+          throw new Error("CANCELLED");
+        }
+
+        // Check pause flag
+        if (this.paused) {
+          this.sendProgress({
+            id: gameId,
+            stage: "paused",
+            progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
+            sizeDownloaded: downloadedBytes / (1024 * 1024),
+            totalSize: totalSize / (1024 * 1024),
+            message: "Download paused",
+          });
+          // Wait until resume or cancel
+          await new Promise(resolve => { this.pausedResolve = resolve; });
+          // After resume, check if cancelled during pause
+          if (this.cancelled) {
+            await reader.cancel().catch(() => {});
+            fileStream.destroy();
+            try {
+              if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch (e) {
+              console.warn(`[GameEngine] Could not delete partial file: ${e.message}`);
+            }
+            throw new Error("CANCELLED");
+          }
+          this.sendProgress({
+            id: gameId,
+            stage: "downloading",
+            progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
+            sizeDownloaded: downloadedBytes / (1024 * 1024),
+            totalSize: totalSize / (1024 * 1024),
+            message: "Download resumed",
+          });
+        }
+
         const { done, value } = await reader.read();
 
-        if (done) {
-          console.log(`[GameEngine] Lecture termin\u00e9e - ${chunkCount} chunks re\u00e7us`);
-          break;
-        }
-
-        chunkCount++;
-        if (chunkCount === 1) {
-          console.log(`[GameEngine] Premier chunk re\u00e7u (${value.length} octets)`);
-        }
+        if (done) break;
 
         fileStream.write(value);
         downloadedBytes += value.length;
@@ -209,8 +312,6 @@ export class GameEngine {
         fileStream.on("error", reject);
       });
 
-      console.log(`[GameEngine] Téléchargement terminé: ${fileName}`);
-
       const downloadedSize = fs.statSync(filePath).size;
       if (totalSize > 0 && downloadedSize !== totalSize) {
         throw new Error(
@@ -220,28 +321,19 @@ export class GameEngine {
 
       return filePath;
     } catch (error) {
-      console.error(`[GameEngine] Erreur détaillée de fetch:`, error);
-      console.error(`[GameEngine] Type d'erreur:`, error.constructor.name);
-      console.error(`[GameEngine] Cause:`, error.cause);
+      // Propagate CANCELLED without wrapping
+      if (error.message === "CANCELLED") throw error;
 
-      // ✅ FIX: Nettoyer les ressources pour éviter les memory leaks
+      console.error(`[GameEngine] Erreur de téléchargement:`, error.message);
+
+      // Nettoyer les ressources pour éviter les memory leaks
       try {
-        if (reader) {
-          await reader.cancel().catch(() => {}); // Cancel le stream HTTP
-          console.log(`[GameEngine] Reader nettoyé`);
-        }
-      } catch (cleanupError) {
-        console.warn(`[GameEngine] Erreur cleanup reader: ${cleanupError.message}`);
-      }
+        if (reader) await reader.cancel().catch(() => {});
+      } catch (cleanupError) { /* ignore */ }
 
       try {
-        if (fileStream) {
-          fileStream.destroy(); // Ferme le file stream
-          console.log(`[GameEngine] FileStream nettoyé`);
-        }
-      } catch (cleanupError) {
-        console.warn(`[GameEngine] Erreur cleanup fileStream: ${cleanupError.message}`);
-      }
+        if (fileStream) fileStream.destroy();
+      } catch (cleanupError) { /* ignore */ }
 
       try {
         if (fs.existsSync(filePath)) {
@@ -272,8 +364,13 @@ export class GameEngine {
     const sanitizedName = this.sanitizeGameName(serverGame.name);
     const extractPath = path.join(this.downloadPath, sanitizedName);
 
-    console.log(`[GameEngine] Extraction: ${path.basename(filePath)}`);
-    console.log(`[GameEngine] Install path: ${extractPath}`);
+    // Check cancel before starting extraction
+    if (this.cancelled) {
+      this.cleanupFiles(filePath, null);
+      throw new Error("CANCELLED");
+    }
+
+    console.log(`[GameEngine] Extraction vers: ${extractPath}`);
 
     if (!fs.existsSync(extractPath)) {
       fs.mkdirSync(extractPath, { recursive: true });
@@ -288,11 +385,9 @@ export class GameEngine {
 
     const fileExtension = extractionEngine.getFileExtension(filePath);
 
-    console.log(`[GameEngine] Format détecté: ${fileExtension}`);
-
     try {
       if (extractionEngine.isSupported(fileExtension)) {
-        return await extractionEngine.extract(
+        const result = await extractionEngine.extract(
           filePath,
           extractPath,
           (progress, extractedFiles, totalFiles, currentFile) => {
@@ -307,13 +402,25 @@ export class GameEngine {
             });
           }
         );
+
+        // Check cancel after extraction completes
+        if (this.cancelled) {
+          this.cleanupFiles(filePath, extractPath);
+          throw new Error("CANCELLED");
+        }
+
+        return result;
       } else {
         throw new Error(
           `Format non supporté: ${fileExtension}. Formats supportés: ${extractionEngine.getSupportedFormats().join(", ")}`
         );
       }
     } catch (error) {
-      console.error(`[GameEngine] ❌ Extraction failed:`, error.message);
+      if (error.message === "CANCELLED") {
+        this.cleanupFiles(filePath, extractPath);
+        throw error;
+      }
+      console.error(`[GameEngine] Extraction failed:`, error.message);
       throw new Error(`Erreur d'extraction: ${error.message}`);
     }
   }
@@ -322,7 +429,13 @@ export class GameEngine {
   async finalizeInstallation(filePath, extractPath, serverGame) {
     const gameId = serverGame._id;
 
-    console.log(`[GameEngine] Finalisation: ${serverGame.name}`);
+    // Check cancel before finalizing
+    if (this.cancelled) {
+      this.cleanupFiles(filePath, extractPath);
+      throw new Error("CANCELLED");
+    }
+
+    console.log(`[GameEngine] Finalisation: ${serverGame.name}...`);
 
     this.sendProgress({
       id: gameId,
@@ -333,10 +446,20 @@ export class GameEngine {
 
     try {
       await fs.promises.unlink(filePath);
-      console.log(`[GameEngine] Fichier temporaire supprimé`);
     } catch (err) {
       console.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
     }
+
+    // Calculer la taille installée (en MB)
+    let installSizeMB = 0;
+    try {
+      const sizeBytes = await this.calculateDirSize(extractPath);
+      installSizeMB = Math.round(sizeBytes / (1024 * 1024));
+      console.log(`[GameEngine] Taille installée: ${installSizeMB} MB`);
+    } catch (err) {
+      console.warn(`[GameEngine] Impossible de calculer la taille installée: ${err.message}`);
+    }
+
     const decoded = jwtDecode(this.userToken);
     const url = buildServerUrl(this.serverAddress, '/api/installedGames/addInstalledGame');
     const response = await fetch(url, {
@@ -351,6 +474,7 @@ export class GameEngine {
           serverGameId: gameId,
           path: extractPath,
           version: serverGame.version,
+          installSize: installSizeMB,
         }),
       }
     );
@@ -360,10 +484,7 @@ export class GameEngine {
       throw new Error(errorData?.message || `HTTP ${response.status}`);
     }
 
-    console.log(`[GameEngine] Jeu enregistré dans l'API`);
-
-    // ✅ FIX: Préparer les données du cache mais NE PAS écrire ici (race condition)
-    // Le main process fera la mise à jour atomique du cache
+    // Préparer les données du cache (le main process fera la mise à jour atomique)
     const cacheData = {
       name: serverGame.name,
       summary: serverGame.summary,
@@ -371,6 +492,7 @@ export class GameEngine {
       coverUrl: serverGame.coverUrl,
       version: serverGame.version || "1.0.0",
       sizeMB: serverGame.sizeMB,
+      installSize: installSizeMB,
       executable: serverGame.executableName || null,
       platforms: serverGame.platforms || [],
       genres: (serverGame.genres || []).map(g => ({
@@ -397,9 +519,6 @@ export class GameEngine {
       },
     };
 
-    // Ne PAS mettre à jour le cache ici (race condition)
-    console.log(`[GameEngine] Données du cache préparées (seront sauvegardées par le main process)`);
-
     const metrics = this.metrics.get(gameId);
     this.sendProgress({
       id: gameId,
@@ -408,7 +527,7 @@ export class GameEngine {
       totalTime: Date.now() - metrics.startTime,
       avgSpeed: metrics.avgSpeed / (1024 * 1024), // MB/s
       finalPath: extractPath,
-      cacheData: cacheData, // ✅ Envoyer les données au main process
+      cacheData,
       message: "Installation terminée !",
     });
   }
@@ -473,6 +592,29 @@ export class GameEngine {
     }
 
     return false;
+  }
+
+  async calculateDirSize(dirPath) {
+    const items = await fs.promises.readdir(dirPath);
+    const sizes = await Promise.all(items.map(async (item) => {
+      try {
+        const itemPath = path.join(dirPath, item);
+        const stats = await fs.promises.stat(itemPath);
+        return stats.isDirectory() ? await this.calculateDirSize(itemPath) : stats.size;
+      } catch {
+        return 0;
+      }
+    }));
+    return sizes.reduce((sum, s) => sum + s, 0);
+  }
+
+  cleanupFiles(filePath, extractPath) {
+    try {
+      if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch (e) { /* ignore */ }
+    try {
+      if (extractPath && fs.existsSync(extractPath)) fs.rmSync(extractPath, { recursive: true, force: true });
+    } catch (e) { /* ignore */ }
   }
 
   cleanupDownload(gameId) {

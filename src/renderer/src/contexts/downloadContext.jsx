@@ -88,7 +88,7 @@ export const useActiveDownloads = () => {
 
   return useMemo(() => {
     return downloads.filter((dl) =>
-      ["preparing", "downloading", "extracting", "finalizing"].includes(dl.stage)
+      ["preparing", "downloading", "extracting", "finalizing", "paused"].includes(dl.stage)
     );
   }, [downloads]);
 };

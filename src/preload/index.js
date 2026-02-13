@@ -12,6 +12,9 @@ const api = {
     ipcRenderer.invoke("installGame", { serverGame: game }),
   onDownloadProgress: (callback) =>
     ipcRenderer.on("downloadProgress", (_event, data) => callback(data)),
+  cancelDownload: (gameId) => ipcRenderer.invoke("cancelDownload", { gameId }),
+  pauseDownload: (gameId) => ipcRenderer.invoke("pauseDownload", { gameId }),
+  resumeDownload: (gameId) => ipcRenderer.invoke("resumeDownload", { gameId }),
 
   launchGame: (gameData, installedPath) =>
     ipcRenderer.invoke("launchGame", { gameData, installedPath }),
@@ -79,8 +82,6 @@ const api = {
   onSaveGameStats: (callback) => {
     ipcRenderer.removeAllListeners("save-game-stats");
     ipcRenderer.on("save-game-stats", (_event, data) => {
-      console.log("[Preload] 📡 Event save-game-stats reçu:", data);
-      // Ne jamais passer l'objet event au renderer pour éviter l'exposition de ipcRenderer
       callback(data);
     });
   },
@@ -201,13 +202,8 @@ if (process.contextIsolated) {
       },
     });
 
-    console.log("[Preload] ✅ APIs exposées avec succès (sandbox mode)");
-    console.log("[Preload] APIs disponibles:", [
-      "window.api (game management)",
-      "window.store (local storage)",
-    ]);
   } catch (error) {
-    console.error("❌ Erreur lors de l'exposition des APIs:", error);
+    console.error("[Preload] Erreur lors de l'exposition des APIs:", error);
   }
 } else {
   // Fallback si contextIsolation est désactivé
@@ -218,5 +214,5 @@ if (process.contextIsolated) {
     delete: (key) => ipcRenderer.invoke("store-delete", key),
     clear: () => ipcRenderer.invoke("store-clear"),
   };
-  console.log("[Preload] ⚠️ APIs exposées sans contextIsolation");
+  console.warn("[Preload] APIs exposées sans contextIsolation");
 }

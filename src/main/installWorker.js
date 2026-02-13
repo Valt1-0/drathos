@@ -4,11 +4,14 @@ import { GameEngine } from "./gameEngine.js";
 async function runInstallation() {
   const installationEngine = new GameEngine();
 
-  try {
-    console.log(
-      `[InstallWorker] 🚀 Démarrage installation: ${workerData.serverGame.name}`
-    );
+  // Listen for control messages from the main process
+  parentPort.on("message", (msg) => {
+    if (msg.type === "cancel") installationEngine.cancel();
+    if (msg.type === "pause") installationEngine.pause();
+    if (msg.type === "resume") installationEngine.resume();
+  });
 
+  try {
     const result = await installationEngine.installGame(workerData.serverGame, {
       store: {
         get: (key) => workerData.storeData[key],
@@ -26,11 +29,7 @@ async function runInstallation() {
       },
     });
 
-    // Résultat final
     if (result.success) {
-      console.log(
-        `[InstallWorker] ✅ Installation réussie: ${workerData.serverGame.name}`
-      );
       parentPort.postMessage({
         stage: "Completed",
         progress: 100,
@@ -38,7 +37,6 @@ async function runInstallation() {
         message: "Installation terminée avec succès!",
       });
     } else {
-      console.error(`[InstallWorker] ❌ Installation échouée: ${result.error}`);
       parentPort.postMessage({
         stage: "Failed",
         progress: 0,
@@ -46,9 +44,7 @@ async function runInstallation() {
       });
     }
   } catch (error) {
-    console.error("[InstallWorker] 💥 Erreur critique:", error);
-
-    // Envoyer l'erreur au processus principal
+    console.error("[InstallWorker] Erreur critique:", error.message);
     parentPort.postMessage({
       stage: "Failed",
       progress: 0,

@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { motion } from 'framer-motion';
 import { FiAlertTriangle, FiRefreshCw, FiHome } from 'react-icons/fi';
 import { ThemeContext } from '../contexts/themeContext';
+import { useTranslation } from 'react-i18next';
 
 class ErrorBoundaryClass extends Component {
   static contextType = ThemeContext;
@@ -49,6 +50,7 @@ class ErrorBoundaryClass extends Component {
 
   render() {
     const { isLight, getTextClass } = this.context || {};
+    const { t } = this.props;
 
     if (this.state.hasError) {
       return (
@@ -75,10 +77,10 @@ class ErrorBoundaryClass extends Component {
                   </div>
                   <div>
                     <h1 className={`text-3xl font-bold mb-1 ${getTextClass?.('primary') || 'text-white'}`}>
-                      Something went wrong
+                      {t('errors.somethingWrong')}
                     </h1>
                     <p className={`text-sm ${isLight ? 'text-red-600' : 'text-red-300'}`}>
-                      The application encountered an unexpected error
+                      {t('errors.unexpectedError')}
                     </p>
                   </div>
                 </div>
@@ -88,7 +90,7 @@ class ErrorBoundaryClass extends Component {
               <div className="p-8 space-y-6">
                 <div>
                   <h2 className={`text-lg font-semibold mb-3 ${getTextClass?.('primary') || 'text-white'}`}>
-                    Error Details
+                    {t('errors.details')}
                   </h2>
                   <div className={`rounded-xl p-4 border ${
                     isLight
@@ -108,7 +110,7 @@ class ErrorBoundaryClass extends Component {
                         ? 'text-gray-600 hover:text-gray-900'
                         : 'text-slate-400 hover:text-white'
                     }`}>
-                      Component Stack (Dev Only)
+                      {t('errors.componentStack')}
                     </summary>
                     <div className={`mt-3 rounded-xl p-4 border max-h-64 overflow-auto ${
                       isLight
@@ -133,7 +135,7 @@ class ErrorBoundaryClass extends Component {
                     }`}
                   >
                     <FiRefreshCw className="text-lg" />
-                    Try Again
+                    {t('errors.tryAgain')}
                   </button>
                   <button
                     onClick={this.handleGoHome}
@@ -144,14 +146,14 @@ class ErrorBoundaryClass extends Component {
                     }`}
                   >
                     <FiHome className="text-lg" />
-                    Go Home
+                    {t('errors.goHome')}
                   </button>
                 </div>
 
                 <p className={`text-center text-sm ${
                   isLight ? 'text-gray-500' : 'text-slate-500'
                 }`}>
-                  If this problem persists, please report it to the developers
+                  {t('errors.reportMessage')}
                 </p>
               </div>
             </div>
@@ -164,9 +166,10 @@ class ErrorBoundaryClass extends Component {
   }
 }
 
-// Wrapper to provide theme context
+// Wrapper to provide theme context and translation
 const ErrorBoundary = (props) => {
-  return <ErrorBoundaryClass {...props} />;
+  const { t } = useTranslation();
+  return <ErrorBoundaryClass {...props} t={t} />;
 };
 
 export default ErrorBoundary;

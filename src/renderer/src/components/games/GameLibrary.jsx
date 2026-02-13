@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { FiClock, FiTrash2, FiPlus, FiUsers, FiLayers } from "react-icons/fi";
+import { FiClock, FiTrash2, FiPlus, FiUsers, FiLayers, FiDownload } from "react-icons/fi";
 import GameCover from "../GameCover";
 import { SearchBar } from "../ui";
 
@@ -13,6 +13,7 @@ const GameRow = memo(({
   isGamePlaying,
   isGameUninstalling,
   isPendingUninstall,
+  isDownloading,
   gameStats,
   getGenresArray,
   onSelectGame,
@@ -22,6 +23,7 @@ const GameRow = memo(({
 
   const installed = isInstalled(game._id);
   const playing = isGamePlaying(game._id);
+  const downloading = isDownloading(game._id);
   const stats = gameStats[game._id];
   const uninstalling = isGameUninstalling(game._id);
   const pending = isPendingUninstall(game._id);
@@ -47,15 +49,22 @@ const GameRow = memo(({
               size="thumb"
             />
 
+            {/* Badge downloading */}
+            {downloading && (
+              <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                <FiDownload className="w-3 h-3 animate-bounce" style={{ color: 'var(--app-primary)' }} />
+              </div>
+            )}
+
             {/* Badge playing */}
-            {playing && (
+            {playing && !downloading && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--app-success)' }}></div>
               </div>
             )}
 
             {/* Badge installed */}
-            {installed && !playing && (
+            {installed && !playing && !downloading && (
               <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--app-success)' }}></div>
             )}
           </div>
@@ -85,14 +94,21 @@ const GameRow = memo(({
                 </div>
               )}
 
-              {uninstalling && (
+              {downloading && (
+                <div className="flex items-center gap-1 text-primary">
+                  <FiDownload className="w-2.5 h-2.5" />
+                  <span>{t('downloads.stageDownloading')}</span>
+                </div>
+              )}
+
+              {uninstalling && !downloading && (
                 <div className="flex items-center gap-1 text-warning">
                   <FiTrash2 className="w-2.5 h-2.5" />
                   <span>{t('games.removing')}</span>
                 </div>
               )}
 
-              {pending && !uninstalling && (
+              {pending && !uninstalling && !downloading && (
                 <div className="flex items-center gap-1 text-warning">
                   <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -102,7 +118,7 @@ const GameRow = memo(({
                 </div>
               )}
 
-              {!stats && !installed && !uninstalling && !pending && gameGenres.length > 0 && (
+              {!stats && !installed && !uninstalling && !pending && !downloading && gameGenres.length > 0 && (
                 <span className="text-text-secondary truncate">{gameGenres[0]}</span>
               )}
             </div>
@@ -133,6 +149,7 @@ const GameLibrary = ({
   playingGames,
   uninstallingGames,
   pendingUninstalls,
+  activeDownloads = [],
   gameStats,
   user,
   onAddGame,
@@ -225,6 +242,10 @@ const GameLibrary = ({
   const isGamePlaying = useCallback((gameId) => playingGames.has(gameId), [playingGames]);
   const isGameUninstalling = useCallback((gameId) => uninstallingGames.has(gameId), [uninstallingGames]);
   const isPendingUninstall = useCallback((gameId) => pendingUninstalls.has(gameId), [pendingUninstalls]);
+  const isDownloading = useCallback((gameId) =>
+    activeDownloads.some(dl => dl.gameId === gameId),
+    [activeDownloads]
+  );
 
   // Wrapper pour GameRow pour react-window (extrait les données de l'index)
   const VirtualGameRow = useCallback(({ index, style }) => {
@@ -241,13 +262,14 @@ const GameLibrary = ({
         isGamePlaying={isGamePlaying}
         isGameUninstalling={isGameUninstalling}
         isPendingUninstall={isPendingUninstall}
+        isDownloading={isDownloading}
         gameStats={gameStats}
         getGenresArray={getGenresArray}
         onSelectGame={onSelectGame}
         t={t}
       />
     );
-  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, gameStats, getGenresArray, onSelectGame, t]);
+  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, isDownloading, gameStats, getGenresArray, onSelectGame, t]);
 
   return (
     <div className="w-56 xl:w-64 bg-background flex flex-col" style={{ borderRight: '1px solid var(--app-border)' }}>
@@ -348,6 +370,7 @@ const GameLibrary = ({
                   isGamePlaying={isGamePlaying}
                   isGameUninstalling={isGameUninstalling}
                   isPendingUninstall={isPendingUninstall}
+                  isDownloading={isDownloading}
                   gameStats={gameStats}
                   getGenresArray={getGenresArray}
                   onSelectGame={onSelectGame}
