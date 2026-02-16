@@ -1,4 +1,4 @@
-import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 
 export async function getInstalledGames() {
@@ -35,7 +35,7 @@ export async function getInstalledGames() {
   }
 
   try {
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, '/api/installedGames/getInstalledGames'),
       {
         headers: {
@@ -108,7 +108,7 @@ export async function launchGame(gameId) {
   const token = await window.store.get("userToken");
 
   try {
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/installedGames/launch/${gameId}`),
       {
         method: "POST",
@@ -134,7 +134,7 @@ export async function stopGame(gameId) {
   const token = await window.store.get("userToken");
 
   try{
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/installedGames/stop/${gameId}`),
       {
         method: "POST",

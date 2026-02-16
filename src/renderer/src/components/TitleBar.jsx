@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
 import { motion } from "framer-motion";
-import ConnectionIndicator from "./ConnectionIndicator";
 
 const TitleBar = () => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -46,13 +45,7 @@ const TitleBar = () => {
       <div className="absolute inset-0 backdrop-blur-xl bg-black/10" />
 
       {/* Draggable Area */}
-      <div className="relative flex items-center gap-3 px-4 flex-1 h-full z-10">
-      </div>
-
-      {/* Connection Indicator */}
-      <div className="relative z-10 mr-2" style={{ WebkitAppRegion: 'no-drag' }}>
-        <ConnectionIndicator />
-      </div>
+      <div className="relative flex-1 h-full z-10" />
 
       {/* Control Buttons */}
       <div className="relative flex h-full z-10" style={{ WebkitAppRegion: 'no-drag' }}>

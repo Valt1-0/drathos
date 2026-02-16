@@ -185,6 +185,8 @@ const Dropdown = ({ isOpen, onToggle, label, icon: Icon, children }) => (
   <div className="relative">
     <button
       onClick={onToggle}
+      aria-expanded={isOpen}
+      aria-haspopup="true"
       className="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all"
       style={{
         background: isOpen ? 'var(--app-primary)' : 'var(--app-surface)',

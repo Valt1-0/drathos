@@ -1,18 +1,16 @@
-import { spawn } from "child_process";
+import { spawn, exec } from "child_process";
+import { promisify } from "util";
 import fs from "fs";
 import path from "path";
-import { shell } from "electron";
+import { shell, BrowserWindow } from "electron";
 import { wineDetector } from "./utils/wineDetector.js";
+
+const execAsync = promisify(exec);
 
 export class GameLauncher {
   constructor() {
     this.activeProcesses = new Map();
     this.sessionTrackers = new Map();
-    this.discordRPC = null;
-  }
-
-  setDiscordRPC(rpcInstance) {
-    this.discordRPC = rpcInstance;
   }
 
   /**
@@ -45,9 +43,6 @@ export class GameLauncher {
       this.activeProcesses.set(gameId, processInfo);
 
       this._setupProcessEvents(gameProcess, processInfo, onStatusChange);
-      this.updateDiscordActivity(processInfo).catch((err) => {
-        console.error(`[GameLauncher] Erreur Discord update:`, err);
-      });
 
       return {
         success: true,
@@ -162,7 +157,6 @@ export class GameLauncher {
       processInfo.status = "running";
 
       this.startSessionTracking(processInfo.gameId, onStatusChange);
-      this.updateDiscordActivity(processInfo);
 
       onStatusChange({
         gameId: processInfo.gameId,
@@ -185,6 +179,9 @@ export class GameLauncher {
     });
 
     gameProcess.on("exit", async (code, signal) => {
+      // Guard against double-processing (exit + close can both fire)
+      if (!this.activeProcesses.has(processInfo.gameId)) return;
+
       console.log(`[GameLauncher] Jeu ${processInfo.gameId} fermé (code: ${code}, signal: ${signal})`);
 
       const sessionDuration = processInfo.startTime
@@ -203,38 +200,32 @@ export class GameLauncher {
         this.sendStatsToBackend(processInfo.gameId);
       }
 
-      if (this.discordRPC) {
-        this.discordRPC.setIdleActivity().catch(() => {});
-      }
-
       this.cleanupProcess(processInfo.gameId);
     });
 
     gameProcess.on("close", async (code, signal) => {
-      if (this.activeProcesses.has(processInfo.gameId)) {
-        console.log(`[GameLauncher] Nettoyage backup pour ${processInfo.gameId}`);
+      // Backup handler: only runs if exit didn't already clean up
+      if (!this.activeProcesses.has(processInfo.gameId)) return;
 
-        const sessionDuration = processInfo.startTime
-          ? Math.floor((Date.now() - processInfo.startTime) / 1000)
-          : 0;
+      console.log(`[GameLauncher] Nettoyage backup pour ${processInfo.gameId}`);
 
-        onStatusChange({
-          gameId: processInfo.gameId,
-          status: "stopped",
-          exitCode: code,
-          signal,
-          sessionDuration,
-        });
+      const sessionDuration = processInfo.startTime
+        ? Math.floor((Date.now() - processInfo.startTime) / 1000)
+        : 0;
 
-        if (sessionDuration > 0) {
-          this.sendStatsToBackend(processInfo.gameId);
-        }
+      onStatusChange({
+        gameId: processInfo.gameId,
+        status: "stopped",
+        exitCode: code,
+        signal,
+        sessionDuration,
+      });
 
-        if (this.discordRPC) {
-          this.discordRPC.setIdleActivity().catch(() => {});
-        }
-        this.cleanupProcess(processInfo.gameId);
+      if (sessionDuration > 0) {
+        this.sendStatsToBackend(processInfo.gameId);
       }
+
+      this.cleanupProcess(processInfo.gameId);
     });
 
     this._setupProcessLogging(gameProcess, processInfo.gameId);
@@ -291,9 +282,6 @@ export class GameLauncher {
           try {
             gameProcess.kill();
           } catch (err) {
-            const { exec } = await import("child_process");
-            const { promisify } = await import("util");
-            const execAsync = promisify(exec);
             await execAsync(`taskkill /PID ${gameProcess.pid} /F /T`);
           }
         } else {
@@ -302,9 +290,6 @@ export class GameLauncher {
           setTimeout(async () => {
             if (this.activeProcesses.has(gameId) && !gameProcess.killed) {
               try {
-                const { exec } = await import("child_process");
-                const { promisify } = await import("util");
-                const execAsync = promisify(exec);
                 await execAsync(`taskkill /PID ${gameProcess.pid} /F /T`);
               } catch (err) {
                 console.error(`[GameLauncher] Erreur taskkill:`, err.message);
@@ -382,7 +367,6 @@ export class GameLauncher {
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
         : 0;
 
-      const { BrowserWindow } = await import("electron");
       const windows = BrowserWindow.getAllWindows();
 
       if (windows.length > 0) {
@@ -400,31 +384,6 @@ export class GameLauncher {
   }
 
   /**
-   * Met à jour l'activité Discord
-   */
-  async updateDiscordActivity(processInfo) {
-    if (!this.discordRPC) {
-      return;
-    }
-
-    try {
-      const cachedGames = processInfo.store?.get("installedGamesCache", {});
-      const gameData = cachedGames?.[processInfo.gameId];
-
-      const gameName = gameData?.name || processInfo.executableName.replace(/\.(exe|sh|app)$/i, "");
-
-      await this.discordRPC.setGameActivity({
-        gameId: processInfo.gameId,
-        gameName,
-        startTime: processInfo.startTime,
-        usesWine: processInfo.usesWine,
-      });
-    } catch (error) {
-      console.error(`[GameLauncher] Erreur Discord:`, error.message);
-    }
-  }
-
-  /**
    * Nettoie les ressources d'un jeu
    */
   async cleanupProcess(gameId) {
@@ -432,10 +391,6 @@ export class GameLauncher {
 
     if (processInfo?.usesWine && process.platform !== 'win32') {
       try {
-        const { exec } = await import("child_process");
-        const { promisify } = await import("util");
-        const execAsync = promisify(exec);
-
         const winePrefix = path.join(processInfo.gamePath, '.wine');
 
         await execAsync('wineserver -k', {

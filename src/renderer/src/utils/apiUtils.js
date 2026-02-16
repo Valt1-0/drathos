@@ -1,6 +1,6 @@
 const DEFAULT_TIMEOUT = 5000;
 
-export async function fetchWithConnectionTracking(url, options = {}) {
+export async function fetchWithTimeout(url, options = {}) {
   const timeout = options.timeout || DEFAULT_TIMEOUT;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);

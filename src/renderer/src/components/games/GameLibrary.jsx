@@ -7,6 +7,7 @@ import { SearchBar } from "../ui";
 // Composant GameRow extrait et mémorisé pour optimiser les performances
 const GameRow = memo(({
   game,
+  versionCount,
   style,
   isSelected,
   isInstalled,
@@ -32,7 +33,12 @@ const GameRow = memo(({
   return (
     <div style={style} className="px-3 py-0.5">
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={game.name}
+        aria-selected={isSelected}
         onClick={() => onSelectGame(game)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectGame(game); } }}
         className={`group relative cursor-pointer transition-all duration-200 rounded-md p-2 ${
           isSelected
             ? "bg-primary/10 ring-1 ring-primary/50"
@@ -75,11 +81,11 @@ const GameRow = memo(({
               isSelected ? "text-text" : "text-text"
             }`}>
               {game.name}
-              {(game.versionCount && game.versionCount > 1) && (
+              {(versionCount && versionCount > 1) && (
                 <span className="inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 rounded bg-accent/20 border border-accent/30 align-middle">
                   <FiLayers className="w-2.5 h-2.5 text-accent" />
                   <span className="text-[10px] font-bold text-accent leading-none">
-                    {game.versionCount}
+                    {versionCount}
                   </span>
                 </span>
               )}
@@ -255,7 +261,8 @@ const GameLibrary = ({
 
     return (
       <GameRow
-        game={{ ...game, versionCount: count }}
+        game={game}
+        versionCount={count}
         style={style}
         isSelected={selectedGameId === game._id}
         isInstalled={isInstalled}
@@ -286,6 +293,7 @@ const GameLibrary = ({
         <select
           value={selectedGenre}
           onChange={(e) => onGenreChange(e.target.value)}
+          aria-label={t('games.allGenres')}
           className="w-full bg-background-secondary text-text text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all"
           style={{ border: '1px solid var(--app-border)' }}
         >
@@ -299,6 +307,9 @@ const GameLibrary = ({
         {/* Multiplayer Filter Toggle */}
         <button
           onClick={() => setShowOnlyMultiplayer(!showOnlyMultiplayer)}
+          role="switch"
+          aria-checked={showOnlyMultiplayer}
+          aria-label={t('games.multiplayer')}
           className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-300 ${
             showOnlyMultiplayer
               ? 'bg-secondary/20 border-secondary/40'
@@ -363,7 +374,8 @@ const GameLibrary = ({
               return (
                 <GameRow
                   key={game._id}
-                  game={{ ...game, versionCount: count }}
+                  game={game}
+                  versionCount={count}
                   style={{}}
                   isSelected={selectedGameId === game._id}
                   isInstalled={isInstalled}

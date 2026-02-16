@@ -24,7 +24,6 @@ import {
   FiBell,
 } from "react-icons/fi";
 import { SearchBar } from "../components/ui";
-import { SiDiscord } from "react-icons/si";
 import GB from "country-flag-icons/react/3x2/GB";
 import FR from "country-flag-icons/react/3x2/FR";
 import { useAuth } from "../contexts/authContext";
@@ -57,14 +56,6 @@ const SettingsPage = () => {
   // UI States
   const [activeCategory, setActiveCategory] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Discord RPC States
-  const [discordEnabled, setDiscordEnabled] = useState(false);
-  const [discordStatus, setDiscordStatus] = useState({
-    isConnected: false,
-    user: null,
-  });
-  const [discordLoading, setDiscordLoading] = useState(false);
 
   // Image Cache States
   const [cacheSize, setCacheSize] = useState(0);
@@ -184,68 +175,6 @@ const SettingsPage = () => {
     }
   };
 
-  // Discord RPC - Toggle
-  const handleDiscordToggle = async () => {
-    setDiscordLoading(true);
-
-    try {
-      if (discordEnabled) {
-        // Disable Discord RPC
-        await window.api.discordRPC.setEnabled({ enabled: false });
-        setDiscordEnabled(false);
-        await window.store.set("discordRPCEnabled", false);
-
-        toast.success(t('success.discordDisabled'), {
-          description: t('settings.discordDisabledDesc'),
-        });
-      } else {
-        // Enable Discord RPC
-        const result = await window.api.discordRPC.initialize({
-          enabled: true,
-        });
-
-        if (result.success) {
-          setDiscordEnabled(true);
-          await window.store.set("discordRPCEnabled", true);
-
-          // Get status
-          const status = await window.api.discordRPC.getStatus();
-          setDiscordStatus(status);
-
-          toast.success(t('success.discordEnabled'), {
-            description: result.connected
-              ? t('settings.discordEnabledDesc', { username: status.user ? ` (${status.user.username})` : '' })
-              : t('settings.discordEnabledNoConnection'),
-          });
-        } else {
-          toast.error(t('settings.discordError'), {
-            description: result.error || t('settings.discordErrorConnect'),
-          });
-        }
-      }
-    } catch (error) {
-      logger.error("[Settings] Discord RPC error", error);
-      toast.error(t('settings.discordError'), {
-        description: error.message,
-      });
-    } finally {
-      setDiscordLoading(false);
-    }
-  };
-
-  // Save settings
-  const handleSaveSettings = async () => {
-    try {
-      toast.success(t('success.settingsSaved'), {
-        description: t('settings.settingsSavedDesc'),
-      });
-    } catch (error) {
-      toast.error(t('settings.saveError'), {
-        description: t('settings.saveErrorDesc'),
-      });
-    }
-  };
-
   // Clear Image Cache
   const handleClearImageCache = async () => {
     setCacheLoading(true);
@@ -291,19 +220,8 @@ const SettingsPage = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       const storedPath = await window.store.get("downloadPath");
-      const storedEnabled = await window.store.get("discordRPCEnabled");
 
       if (storedPath) setDownloadPath(storedPath);
-      if (storedEnabled) {
-        setDiscordEnabled(storedEnabled);
-        // Get Discord status
-        try {
-          const status = await window.api.discordRPC.getStatus();
-          setDiscordStatus(status);
-        } catch (error) {
-          logger.error("[Settings] Error fetching Discord status", error);
-        }
-      }
 
       // Get image cache size
       try {
@@ -710,78 +628,6 @@ const SettingsPage = () => {
               {/* Advanced Settings */}
               {activeCategory === 'advanced' && (
                 <div className="space-y-6">
-                  {/* Discord RPC Card */}
-                  <Card variant="glass" hover>
-                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(20, 184, 166, 0.2)' }}>
-                          <SiDiscord className="text-2xl" style={{ color: 'var(--app-accent)' }} />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.discordRPC')}</h3>
-                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.discordDisplayActivity')}</p>
-                        </div>
-                      </div>
-
-                      <Toggle
-                        checked={discordEnabled}
-                        onChange={handleDiscordToggle}
-                        disabled={discordLoading}
-                      />
-                    </div>
-
-                    {discordEnabled && (
-                      <Card.Body>
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="space-y-4"
-                        >
-                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
-                            {t('settings.discordEnableDesc')}
-                          </p>
-
-                          {discordStatus.isConnected && (
-                            <div className="p-4 rounded-xl" style={{
-                              background: 'rgba(20, 184, 166, 0.1)',
-                              borderWidth: '1px',
-                              borderStyle: 'solid',
-                              borderColor: 'rgba(20, 184, 166, 0.3)'
-                            }}>
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'var(--app-success)' }} />
-                                <span className="text-sm font-medium" style={{ color: 'var(--app-accent)' }}>
-                                  {t('settings.discordConnected')}
-                                  {discordStatus.user && ` · ${discordStatus.user.username}`}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {!discordStatus.isConnected && (
-                            <div className="p-4 rounded-xl" style={{
-                              background: 'rgba(245, 158, 11, 0.1)',
-                              borderWidth: '1px',
-                              borderStyle: 'solid',
-                              borderColor: 'rgba(245, 158, 11, 0.3)'
-                            }}>
-                              <div className="flex items-start gap-3">
-                                <FiCircle className="mt-0.5" style={{ color: 'var(--app-warning)' }} />
-                                <div>
-                                  <p className="text-sm font-medium" style={{ color: 'var(--app-warning)' }}>{t('settings.discordNotDetected')}</p>
-                                  <p className="text-xs mt-1" style={{ color: 'var(--app-textSecondary)' }}>
-                                    {t('settings.discordLaunchDesktop')}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </motion.div>
-                      </Card.Body>
-                    )}
-                  </Card>
-
                   {/* Notifications Card */}
                   <Card variant="glass" hover>
                     <div className="flex items-center justify-between mb-6 px-6 pt-6">
@@ -941,24 +787,6 @@ const SettingsPage = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Save Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-8 flex justify-end"
-          >
-            <Button
-              variant="primary"
-              size="lg"
-              gradient
-              onClick={handleSaveSettings}
-              icon={<FiCheck />}
-              iconPosition="left"
-            >
-              {t('settings.saveSettings')}
-            </Button>
-          </motion.div>
         </div>
       </div>
 

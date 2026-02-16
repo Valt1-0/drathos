@@ -1,4 +1,4 @@
-import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 
 // ==================== CRUD COLLECTIONS ====================
@@ -8,7 +8,7 @@ export const getUserCollections = async () => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, '/api/collections/user'),
       {
         headers: {
@@ -34,7 +34,7 @@ export const getCollectionById = async (collectionId) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/collections/${collectionId}`),
       {
         headers: {
@@ -60,7 +60,7 @@ export const createCollection = async (collectionData) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, '/api/collections/create'),
       {
         method: 'POST',
@@ -90,7 +90,7 @@ export const updateCollection = async (collectionId, updateData) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/collections/${collectionId}/update`),
       {
         method: 'PATCH',
@@ -120,7 +120,7 @@ export const deleteCollection = async (collectionId) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/collections/${collectionId}/delete`),
       {
         method: 'DELETE',
@@ -150,7 +150,7 @@ export const addGamesToCollection = async (collectionId, gameIds) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/collections/${collectionId}/games/add`),
       {
         method: 'POST',
@@ -180,7 +180,7 @@ export const removeGamesFromCollection = async (collectionId, gameIds) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/collections/${collectionId}/games/remove`),
       {
         method: 'DELETE',

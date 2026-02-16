@@ -35,16 +35,6 @@ class ModuleLoader {
     return loadPromise;
   }
 
-  async loadDiscordRPC(enabled) {
-    if (!enabled) return null;
-
-    const module = await this.loadModule('discordRPC', () =>
-      import('./discordRPC.js')
-    );
-
-    return module.discordRPC;
-  }
-
   unloadModule(moduleName) {
     if (this.loadedModules.has(moduleName)) {
       this.loadedModules.delete(moduleName);

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { FaGamepad } from "react-icons/fa6";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
 import { checkServerStatus } from "../api/server";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
@@ -442,6 +443,7 @@ const Games = () => {
       stage: "downloading",
     });
 
+    // Remove previous listeners to avoid stacking
     window.api.onDownloadProgress((data) => {
       if (data.id === game._id) {
         updateDownloadProgress(downloadId, {
@@ -685,6 +687,124 @@ const Games = () => {
             {t('games.retry')}
           </button>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (games.length === 0 && !isOnline) {
+    return (
+      <div className={`h-full flex items-center justify-center ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-md px-6"
+        >
+          <div
+            className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center ${isLight ? 'bg-red-50' : 'bg-red-500/10'}`}
+            style={{ border: '2px dashed var(--app-border)' }}
+          >
+            <FaGamepad className={`text-4xl ${isLight ? 'text-red-400' : 'text-red-500/60'}`} />
+          </div>
+          <h2 className={`text-2xl font-bold mb-3 ${getTextClass('primary')}`}>
+            {t('nav.serverOffline')}
+          </h2>
+          <p className={`text-sm mb-8 ${getTextClass('secondary')}`}>
+            {t('games.emptyLibraryDesc')}
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => window.location.reload()}
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              isLight
+                ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                : 'bg-white/5 hover:bg-white/10 text-gray-300'
+            }`}
+          >
+            {t('games.retry')}
+          </motion.button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (games.length === 0 && isOnline) {
+    return (
+      <div className={`h-full flex items-center justify-center ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="text-center max-w-md px-6"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+            className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center ${isLight ? 'bg-blue-50' : 'bg-blue-500/10'}`}
+            style={{ border: '2px dashed var(--app-border)' }}
+          >
+            <FaGamepad className={`text-4xl ${isLight ? 'text-blue-400' : 'text-blue-500/60'}`} />
+          </motion.div>
+
+          <h2 className={`text-2xl font-bold mb-3 ${getTextClass('primary')}`}>
+            {t('games.emptyLibrary')}
+          </h2>
+          <p className={`text-sm mb-2 ${getTextClass('secondary')}`}>
+            {t('games.emptyLibraryDesc')}
+          </p>
+          {user?.role === 'admin' && (
+            <p className={`text-sm mb-8 ${isLight ? 'text-blue-600' : 'text-blue-400'}`}>
+              {t('games.emptyLibraryAdmin')}
+            </p>
+          )}
+
+          <div className="flex flex-col items-center gap-3">
+            {user?.role === 'admin' && (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={modals.addGameModal.open}
+                className="px-8 py-3 rounded-xl font-semibold text-white transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, var(--app-primary), var(--app-secondary))',
+                }}
+              >
+                {t('games.addGame')}
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                try {
+                  const updatedGames = await getAllServerGames();
+                  setGames(updatedGames || []);
+                  if (updatedGames?.length) {
+                    setSelectedGame(updatedGames[0]);
+                    toast.success(t('games.gamesListRefreshed'));
+                  }
+                } catch (err) {
+                  toast.error(t('errors.refreshGames'));
+                }
+              }}
+              className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                isLight
+                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  : 'bg-white/5 hover:bg-white/10 text-gray-300'
+              }`}
+            >
+              {t('games.refreshList')}
+            </motion.button>
+          </div>
+        </motion.div>
+
+        <AddGameModal
+          isOpen={modals.addGameModal.isOpen}
+          onClose={modals.addGameModal.close}
+          onSuccess={handleAddGameSuccess}
+        />
       </div>
     );
   }

@@ -10,8 +10,10 @@ const api = {
   selectFolder: () => ipcRenderer.invoke("dialog:openFolder"),
   installGame: (game) =>
     ipcRenderer.invoke("installGame", { serverGame: game }),
-  onDownloadProgress: (callback) =>
-    ipcRenderer.on("downloadProgress", (_event, data) => callback(data)),
+  onDownloadProgress: (callback) => {
+    ipcRenderer.removeAllListeners("downloadProgress");
+    ipcRenderer.on("downloadProgress", (_event, data) => callback(data));
+  },
   cancelDownload: (gameId) => ipcRenderer.invoke("cancelDownload", { gameId }),
   pauseDownload: (gameId) => ipcRenderer.invoke("pauseDownload", { gameId }),
   resumeDownload: (gameId) => ipcRenderer.invoke("resumeDownload", { gameId }),
@@ -19,8 +21,10 @@ const api = {
   launchGame: (gameData, installedPath) =>
     ipcRenderer.invoke("launchGame", { gameData, installedPath }),
   getActiveGames: () => ipcRenderer.invoke("getActiveGames"),
-  onGameStatusChanged: (callback) =>
-    ipcRenderer.on("gameStatusChanged", (_event, data) => callback(data)),
+  onGameStatusChanged: (callback) => {
+    ipcRenderer.removeAllListeners("gameStatusChanged");
+    ipcRenderer.on("gameStatusChanged", (_event, data) => callback(data));
+  },
   listGameFiles: (gameId) => ipcRenderer.invoke("listGameFiles", gameId),
   configureExecutable: (gameId, config) =>
     ipcRenderer.invoke("configureExecutable", { gameId, config }),
@@ -69,8 +73,10 @@ const api = {
     ipcRenderer.invoke("canUninstallGame", { gameId, gamePath }),
 
   // Écouter la progression de désinstallation
-  onUninstallProgress: (callback) =>
-    ipcRenderer.on("uninstallProgress", (_event, data) => callback(data)),
+  onUninstallProgress: (callback) => {
+    ipcRenderer.removeAllListeners("uninstallProgress");
+    ipcRenderer.on("uninstallProgress", (_event, data) => callback(data));
+  },
 
   // Obtenir la taille d'un jeu
   getGameSize: ({ gamePath }) =>
@@ -89,16 +95,6 @@ const api = {
   saveLocalStats: (data) => ipcRenderer.invoke("save-local-stats", data),
   getLocalStats: (data) => ipcRenderer.invoke("get-local-stats", data),
 
-  // Discord Rich Presence
-  discordRPC: {
-    initialize: ({ enabled }) =>
-      ipcRenderer.invoke("discord-rpc:initialize", { enabled }),
-    setEnabled: ({ enabled }) =>
-      ipcRenderer.invoke("discord-rpc:setEnabled", { enabled }),
-    getStatus: () => ipcRenderer.invoke("discord-rpc:getStatus"),
-    disconnect: () => ipcRenderer.invoke("discord-rpc:disconnect"),
-  },
-
   // Logger & Error Reporting
   logger: {
     log: ({ level, message, data }) =>
@@ -111,6 +107,14 @@ const api = {
       ipcRenderer.invoke("logger:exportBugReport", { description, userEmail }),
     openLogsFolder: () =>
       ipcRenderer.invoke("logger:openLogsFolder"),
+  },
+
+  // Crash Reporting (Discord webhook)
+  crashReport: {
+    send: ({ error, componentStack, context }) =>
+      ipcRenderer.invoke("crashReport:send", { error, componentStack, context }),
+    sendManual: ({ description, context }) =>
+      ipcRenderer.invoke("crashReport:send", { description, context }),
   },
 
   // Auto Updater

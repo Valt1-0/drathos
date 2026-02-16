@@ -3,19 +3,20 @@
  * Minimal entry point that initializes the app and delegates to modules
  */
 
+import { app, shell, BrowserWindow, Tray, Menu, session, globalShortcut } from "electron";
+import { join } from "path";
+import fs from "fs";
+
 // Disable security warnings in development (needed for Vite HMR)
 if (process.env.NODE_ENV !== "production") {
   process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 }
-
-import { app, shell, BrowserWindow, Tray, Menu, session, globalShortcut } from "electron";
-import { join } from "path";
-import fs from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import iconPath from "../../resources/logo2.png?asset";
 
 import store from "./store.js";
 import logger from "./utils/logger.js";
+import crashReporter from "./utils/crashReporter.js";
 import { memoryManager } from "./utils/memoryManager.js";
 import { moduleLoader } from "./utils/moduleLoader.js";
 import { AutoUpdateManager } from "./autoUpdater.js";
@@ -24,8 +25,6 @@ import { isSafeForExternalOpen } from "./app/security.js";
 import {
   registerAllHandlers,
   getGameLauncher,
-  initDiscordRPC,
-  cleanupDiscordRPC,
   setAutoUpdateManager,
   getAutoUpdateManager,
 } from "./ipc/index.js";
@@ -54,7 +53,6 @@ const createWindow = () => {
     frame: false,
     autoHideMenuBar: true,
     icon,
-    ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: true,
@@ -178,6 +176,20 @@ const setupTray = (mainWindow) => {
 // === APP INITIALIZATION ===
 Menu.setApplicationMenu(null);
 
+// === CRASH REPORTING ===
+// Initialize early so handlers have appVersion available
+crashReporter.initialize();
+
+process.on('uncaughtException', (error) => {
+  logger.error('[App] Uncaught exception', error);
+  crashReporter.reportUncaughtException(error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('[App] Unhandled rejection', reason instanceof Error ? reason : new Error(String(reason)));
+  crashReporter.reportUnhandledRejection(reason);
+});
+
 app.whenReady().then(async () => {
   await logger.initialize();
   logger.info("[App] Starting Drathos...", { version: app.getVersion() });
@@ -225,13 +237,6 @@ app.whenReady().then(async () => {
 
   autoUpdateManager.startPeriodicCheck(120);
 
-  // Discord RPC
-  if (store.get("discordRPCEnabled", false)) {
-    initDiscordRPC(true).then((rpc) => {
-      if (rpc) logger.info("[Discord RPC] Initialized");
-    });
-  }
-
   // Tray
   setupTray(mainWindow);
 
@@ -250,8 +255,8 @@ app.on("before-quit", async () => {
   logger.info("[App] Shutting down...");
 
   getGameLauncher().cleanup();
-  await cleanupDiscordRPC();
   getAutoUpdateManager()?.cleanup();
+  crashReporter.cleanup();
   await memoryManager.cleanup();
   moduleLoader.unloadAll();
   globalShortcut.unregisterAll();

@@ -1,4 +1,4 @@
-import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl, detectServerProtocol } from "../utils/urlHelper";
 
 export const checkServerStatus = async (serverAddress, autoDetect = true) => {
@@ -15,7 +15,7 @@ export const checkServerStatus = async (serverAddress, autoDetect = true) => {
       protocol = serverAddress.startsWith('https://') ? 'https' : 'http';
     }
 
-    const response = await fetchWithConnectionTracking(url);
+    const response = await fetchWithTimeout(url);
 
     if (response.ok) {
       return { online: true, protocol };

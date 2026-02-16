@@ -666,6 +666,7 @@ const ActionButtons = ({
         <button
           onClick={() => onInstall(game)}
           disabled={isInstalling}
+          aria-label={isInstalling ? t('games.starting') : t('games.installGame')}
           className={`group relative overflow-hidden rounded-xl p-4 border transition-all duration-300 ${
             user?.role === "admin" ? "sm:col-span-1" : "sm:col-span-2"
           } ${
@@ -695,6 +696,7 @@ const ActionButtons = ({
         {user?.role === "admin" && (
           <button
             onClick={() => onDeleteFromServer(game)}
+            aria-label={t('games.deleteFromServerBtn')}
             className="group relative overflow-hidden rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02] bg-surface border-border hover:border-error/50 hover:shadow-error"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -727,6 +729,7 @@ const ActionButtons = ({
           <>
             <button
               onClick={() => onStop(game)}
+              aria-label={t('games.stop')}
               className="group relative overflow-hidden rounded-lg p-3 border transition-all duration-300 hover:scale-105 bg-surface border-border hover:border-warning/50 hover:shadow-warning"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-warning/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -742,6 +745,7 @@ const ActionButtons = ({
 
             <button
               onClick={() => onForceStop(game)}
+              aria-label={t('games.forceStop')}
               className="group relative overflow-hidden rounded-lg p-3 border transition-all duration-300 hover:scale-105 bg-surface border-border hover:border-error/50 hover:shadow-error"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -758,6 +762,7 @@ const ActionButtons = ({
         ) : (
           <button
             onClick={() => onLaunch(game)}
+            aria-label={t('games.playNow')}
             className="group relative overflow-hidden rounded-lg p-3 border transition-all duration-300 hover:scale-105 col-span-2 bg-success/10 border-success/30 hover:border-success/50 hover:shadow-success"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-success/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -774,6 +779,7 @@ const ActionButtons = ({
 
         <button
           onClick={() => onOpenFolder(game)}
+          aria-label={t('games.folder')}
           className="group relative overflow-hidden rounded-lg p-3 border transition-all duration-300 hover:scale-105 bg-surface border-border hover:border-primary/50 hover:shadow-primary"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -789,6 +795,7 @@ const ActionButtons = ({
 
         <button
           onClick={() => onUninstall(game)}
+          aria-label={t('games.uninstall')}
           className="group relative overflow-hidden rounded-lg p-3 border transition-all duration-300 hover:scale-105 bg-surface border-border hover:border-error/50 hover:shadow-error"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

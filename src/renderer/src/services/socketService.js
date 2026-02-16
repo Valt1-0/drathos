@@ -7,7 +7,13 @@ export const connectSocket = (serverUrl) => {
     if (socket.connected) return socket;
     socket.disconnect();
   }
-  socket = io(serverUrl, { transports: ["websocket"], reconnectionAttempts: 5 });
+  socket = io(serverUrl, {
+    transports: ["websocket"],
+    reconnectionAttempts: 5,
+    reconnectionDelay: 5000,
+    reconnectionDelayMax: 30000,
+    timeout: 5000,
+  });
   return socket;
 };
 

@@ -21,16 +21,31 @@ class ErrorBoundaryClass extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('[ErrorBoundary] Component error:', error, errorInfo);
+    // Mark error so global handler in main.jsx skips it (avoid double reporting)
+    try { error._handledByBoundary = true; } catch {}
     this.setState({
       error,
       errorInfo,
     });
 
     // Log to service if available
-    if (window.logger) {
-      window.logger.error('[ErrorBoundary] Component crash', {
-        error: error.toString(),
+    if (window.api?.logger) {
+      window.api.logger.log({
+        level: 'error',
+        message: '[ErrorBoundary] Component crash',
+        data: {
+          error: { message: error.toString(), stack: error.stack },
+          context: { componentStack: errorInfo.componentStack },
+        },
+      });
+    }
+
+    // Send crash report to Discord webhook
+    if (window.api?.crashReport) {
+      window.api.crashReport.send({
+        error: { message: error.toString(), stack: error.stack },
         componentStack: errorInfo.componentStack,
+        context: { url: window.location.href },
       });
     }
   }

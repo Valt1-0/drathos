@@ -17,6 +17,7 @@ import { useConnection } from "../contexts/connectionContext";
 import { getAllGamesForAdmin, getModsForGame, deleteMod } from "../api/mods";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import ConfirmationModal from "../components/modals/ConfirmationModal";
 
 // Lazy load modal pour optimiser
 const UploadModModal = lazy(
@@ -80,6 +81,7 @@ const Mods = () => {
   const [selectedGame, setSelectedGame] = useState(null);
   const [mods, setMods] = useState([]);
   const [loadingMods, setLoadingMods] = useState(false);
+  const [modToDelete, setModToDelete] = useState(null);
 
   useEffect(() => {
     // Skip si pas confirmé online
@@ -132,16 +134,17 @@ const Mods = () => {
     }
   };
 
-  const handleDeleteMod = async (modId) => {
-    if (!confirm(t("mods.confirmDelete"))) return;
-
+  const handleDeleteMod = async () => {
+    if (!modToDelete) return;
     try {
-      await deleteMod(modId);
-      setMods((prev) => prev.filter((m) => m._id !== modId));
+      await deleteMod(modToDelete._id);
+      setMods((prev) => prev.filter((m) => m._id !== modToDelete._id));
       toast.success(t("mods.deletedFromServer"));
     } catch (error) {
       console.error("Error deleting mod:", error);
       toast.error(error.message || t("mods.errorDelete"));
+    } finally {
+      setModToDelete(null);
     }
   };
 
@@ -337,6 +340,8 @@ const Mods = () => {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setSelectedGame(game)}
+                          aria-label={game.name}
+                          aria-pressed={selectedGame?._id === game._id}
                           className="p-4 rounded-xl border text-left transition-all relative overflow-hidden"
                           style={{
                             borderColor:
@@ -532,7 +537,7 @@ const Mods = () => {
                                   variant="ghost"
                                   size="sm"
                                   icon={<FiTrash2 />}
-                                  onClick={() => handleDeleteMod(mod._id)}
+                                  onClick={() => setModToDelete(mod)}
                                   className="flex-shrink-0"
                                   style={{ color: "var(--app-error)" }}
                                 >
@@ -563,6 +568,19 @@ const Mods = () => {
           </Suspense>
         )}
       </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!modToDelete}
+        onClose={() => setModToDelete(null)}
+        onConfirm={handleDeleteMod}
+        title={t("mods.deleteFromServer")}
+        message={t("mods.confirmDelete")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
+        confirmColor="red"
+        icon={FiTrash2}
+      />
     </div>
   );
 };

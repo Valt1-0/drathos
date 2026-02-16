@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiX, FiSend, FiFolder, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import logger from '../../services/logger';
 
 const BugReportModal = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const [description, setDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [systemInfo, setSystemInfo] = useState(null);
@@ -12,7 +14,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // Charger les infos système au montage
       loadSystemInfo();
       setDescription('');
       setUserEmail('');
@@ -33,7 +34,7 @@ const BugReportModal = ({ isOpen, onClose }) => {
     if (!description.trim()) {
       setResult({
         success: false,
-        message: 'Please describe the bug you encountered'
+        message: t('modals.bugReport.errorEmpty')
       });
       return;
     }
@@ -44,10 +45,16 @@ const BugReportModal = ({ isOpen, onClose }) => {
     try {
       const response = await logger.exportBugReport(description, userEmail);
 
+      // Send to Discord webhook (non-blocking: don't let webhook failure affect local report)
+      window.api.crashReport.sendManual({
+        description,
+        context: { email: userEmail || undefined },
+      }).catch(() => {});
+
       if (response.success) {
         setResult({
           success: true,
-          message: 'Bug report created successfully!',
+          message: t('modals.bugReport.successMessage'),
           reportPath: response.reportPath
         });
 
@@ -56,20 +63,19 @@ const BugReportModal = ({ isOpen, onClose }) => {
           descriptionLength: description.length
         });
 
-        // Fermer automatiquement après 3 secondes
         setTimeout(() => {
           onClose();
         }, 3000);
       } else {
         setResult({
           success: false,
-          message: response.error || 'Failed to create bug report'
+          message: response.error || t('modals.bugReport.errorFailed')
         });
       }
     } catch (error) {
       setResult({
         success: false,
-        message: 'An error occurred while creating the report'
+        message: t('modals.bugReport.errorGeneric')
       });
       logger.error('[BugReport] Failed to submit', error);
     } finally {
@@ -93,8 +99,8 @@ const BugReportModal = ({ isOpen, onClose }) => {
               <FiAlertTriangle className="w-5 h-5 text-error" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-text">Report a Bug</h2>
-              <p className="text-sm text-text-secondary">Help us improve Drathos</p>
+              <h2 className="text-xl font-bold text-text">{t('modals.bugReport.title')}</h2>
+              <p className="text-sm text-text-secondary">{t('modals.bugReport.subtitle')}</p>
             </div>
           </div>
           <button
@@ -112,37 +118,37 @@ const BugReportModal = ({ isOpen, onClose }) => {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Bug Description <span className="text-error">*</span>
+                {t('modals.bugReport.descriptionLabel')} <span className="text-error">{t('modals.bugReport.required')}</span>
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Please describe what happened, what you expected, and steps to reproduce..."
+                placeholder={t('modals.bugReport.descriptionPlaceholder')}
                 className="w-full bg-surface text-text px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-error border border-border transition-all resize-none"
                 rows={6}
                 disabled={loading}
                 required
               />
               <p className="text-xs text-text-secondary opacity-60 mt-1">
-                Be as detailed as possible to help us fix the issue faster
+                {t('modals.bugReport.descriptionHint')}
               </p>
             </div>
 
             {/* Email (optional) */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Email (Optional)
+                {t('modals.bugReport.emailLabel')}
               </label>
               <input
                 type="email"
                 value={userEmail}
                 onChange={(e) => setUserEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder={t('modals.bugReport.emailPlaceholder')}
                 className="w-full bg-surface text-text px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-error border border-border transition-all"
                 disabled={loading}
               />
               <p className="text-xs text-text-secondary opacity-60 mt-1">
-                We'll only contact you for updates about this bug
+                {t('modals.bugReport.emailHint')}
               </p>
             </div>
 
@@ -156,11 +162,11 @@ const BugReportModal = ({ isOpen, onClose }) => {
                 <div className="flex items-center gap-2">
                   <FiInfo className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-text-secondary">
-                    System Information
+                    {t('modals.bugReport.systemInfo')}
                   </span>
                 </div>
                 <span className="text-xs text-text-secondary opacity-60">
-                  {showSystemInfo ? 'Hide' : 'Show'}
+                  {showSystemInfo ? t('modals.bugReport.hide') : t('modals.bugReport.show')}
                 </span>
               </button>
 
@@ -168,24 +174,24 @@ const BugReportModal = ({ isOpen, onClose }) => {
                 <div className="mt-3 space-y-2 text-xs">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="text-text-secondary opacity-60">App Version:</span>
+                      <span className="text-text-secondary opacity-60">{t('modals.bugReport.appVersion')}:</span>
                       <span className="text-text-secondary ml-2">{systemInfo.app?.version}</span>
                     </div>
                     <div>
-                      <span className="text-text-secondary opacity-60">Platform:</span>
+                      <span className="text-text-secondary opacity-60">{t('modals.bugReport.platform')}:</span>
                       <span className="text-text-secondary ml-2">{systemInfo.system?.platform}</span>
                     </div>
                     <div>
-                      <span className="text-text-secondary opacity-60">OS Version:</span>
+                      <span className="text-text-secondary opacity-60">{t('modals.bugReport.osVersion')}:</span>
                       <span className="text-text-secondary ml-2">{systemInfo.system?.osVersion}</span>
                     </div>
                     <div>
-                      <span className="text-text-secondary opacity-60">Memory:</span>
+                      <span className="text-text-secondary opacity-60">{t('modals.bugReport.memory')}:</span>
                       <span className="text-text-secondary ml-2">{systemInfo.system?.freeMemory} / {systemInfo.system?.totalMemory}</span>
                     </div>
                   </div>
                   <p className="text-text-secondary opacity-60 mt-2">
-                    This information will be automatically included in the report
+                    {t('modals.bugReport.systemInfoIncluded')}
                   </p>
                 </div>
               )}
@@ -208,7 +214,7 @@ const BugReportModal = ({ isOpen, onClose }) => {
                     <p className="font-medium">{result.message}</p>
                     {result.reportPath && (
                       <p className="text-xs mt-1 opacity-75">
-                        Report saved to: {result.reportPath}
+                        {t('modals.bugReport.reportSavedTo')} {result.reportPath}
                       </p>
                     )}
                   </div>
@@ -227,7 +233,7 @@ const BugReportModal = ({ isOpen, onClose }) => {
             disabled={loading}
           >
             <FiFolder className="w-4 h-4" />
-            Open Logs Folder
+            {t('modals.bugReport.openLogsFolder')}
           </button>
 
           <div className="flex items-center gap-3">
@@ -237,7 +243,7 @@ const BugReportModal = ({ isOpen, onClose }) => {
               className="px-4 py-2 bg-surface hover:bg-surface/80 text-text rounded-lg transition-colors"
               disabled={loading}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -248,12 +254,12 @@ const BugReportModal = ({ isOpen, onClose }) => {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Sending...
+                  {t('modals.bugReport.sending')}
                 </>
               ) : (
                 <>
                   <FiSend className="w-4 h-4" />
-                  Send Report
+                  {t('modals.bugReport.send')}
                 </>
               )}
             </button>

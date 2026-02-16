@@ -22,7 +22,6 @@ const getDetector = () => {
 };
 
 export const getGameLauncher = () => gameLauncher;
-export const setDiscordRPC = (rpc) => gameLauncher.setDiscordRPC(rpc);
 
 export const registerGameHandlers = () => {
   // Installation

@@ -1,4 +1,4 @@
-import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 
 // Cache system with 5min TTL and request deduplication
@@ -89,7 +89,7 @@ export const getModsForGame = async (gameId, { page = 1, limit = 20, search = ''
       if (page > 1 || limit !== 20) Object.assign(params, { page, limit });
       if (search) params.search = search;
 
-      const response = await fetchWithConnectionTracking(await buildUrl(`/api/mods/game/${gameId}`, params), { headers: await getAuthHeaders() });
+      const response = await fetchWithTimeout(await buildUrl(`/api/mods/game/${gameId}`, params), { headers: await getAuthHeaders() });
       if (!response.ok) throw new Error(`Error: ${response.status}`);
 
       const data = await response.json();
@@ -112,7 +112,7 @@ export const getInstalledMods = async ({ page = 1, limit = 100 } = {}) => {
       const params = {};
       if (page > 1 || limit !== 100) Object.assign(params, { page, limit });
 
-      const response = await fetchWithConnectionTracking(await buildUrl('/api/mods/installed', params), { headers: await getAuthHeaders() });
+      const response = await fetchWithTimeout(await buildUrl('/api/mods/installed', params), { headers: await getAuthHeaders() });
       if (!response.ok) throw new Error(`Error: ${response.status}`);
 
       const data = await response.json();
@@ -145,7 +145,7 @@ export const installMod = async (modId, gameId, onProgress = null) => {
     const downloadResult = await window.api.mods.downloadMod({ modId, gameId });
     if (!downloadResult.success) throw new Error(downloadResult.error || 'Download failed');
 
-    const response = await fetchWithConnectionTracking(await buildUrl('/api/mods/install'), {
+    const response = await fetchWithTimeout(await buildUrl('/api/mods/install'), {
       method: 'POST',
       headers: { ...await getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ modId, gameId })
@@ -160,7 +160,7 @@ export const installMod = async (modId, gameId, onProgress = null) => {
 };
 
 export const uninstallMod = async (modId) => {
-  const response = await fetchWithConnectionTracking(await buildUrl(`/api/mods/uninstall/${modId}`), { method: 'DELETE', headers: await getAuthHeaders() });
+  const response = await fetchWithTimeout(await buildUrl(`/api/mods/uninstall/${modId}`), { method: 'DELETE', headers: await getAuthHeaders() });
   if (!response.ok) throw new Error((await response.json()).message || 'Uninstall failed');
   await window.api.mods.deleteModFile({ modId });
   invalidateModsCache('mods_installed');
@@ -207,7 +207,7 @@ export const uploadMod = async (modData, file, onProgress, signal) => {
 
 export const getAllGamesForAdmin = async () => {
   try {
-    const response = await fetchWithConnectionTracking(await buildUrl('/api/serverGame/getAllGames'), { headers: await getAuthHeaders() });
+    const response = await fetchWithTimeout(await buildUrl('/api/serverGame/getAllGames'), { headers: await getAuthHeaders() });
     if (!response.ok) throw new Error(`Error: ${response.status}`);
     return response.json();
   } catch {
@@ -216,7 +216,7 @@ export const getAllGamesForAdmin = async () => {
 };
 
 export const deleteMod = async (modId) => {
-  const response = await fetchWithConnectionTracking(await buildUrl(`/api/mods/delete/${modId}`), { method: 'DELETE', headers: await getAuthHeaders() });
+  const response = await fetchWithTimeout(await buildUrl(`/api/mods/delete/${modId}`), { method: 'DELETE', headers: await getAuthHeaders() });
   if (!response.ok) throw new Error((await response.json()).message || 'Delete failed');
   invalidateModsCache('mods_game_');
   return response.json();

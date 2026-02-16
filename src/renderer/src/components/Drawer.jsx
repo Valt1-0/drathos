@@ -8,7 +8,7 @@ import {
   FaGear,
 } from "react-icons/fa6";
 import { FaHome, FaFolderOpen } from "react-icons/fa";
-import { FiX, FiUser, FiPackage, FiUsers } from "react-icons/fi";
+import { FiX, FiPackage, FiUsers } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { useConnection } from "../contexts/connectionContext";
@@ -29,11 +29,13 @@ const Drawer = ({ children }) => {
   const menuItems = useMemo(() => [
     { label: t('nav.home'), icon: FaHome, path: "/" },
     { label: t('nav.library'), icon: FaGamepad, path: "/games" },
-    ...(user?.role === 'admin' ? [{ label: t('nav.mods'), icon: FiPackage, path: "/mods", requiresServer: true }] : []),
     { label: t('nav.collections'), icon: FaFolderOpen, path: "/collections" },
-    { label: t('nav.users'), icon: FiUsers, path: "/users", requiresServer: true },
     { label: t('nav.downloads'), icon: FaDownload, path: "/download" },
     { label: t('nav.settings'), icon: FaGear, path: "/settings" },
+    ...(user?.role === 'admin' ? [
+      { label: t('nav.mods'), icon: FiPackage, path: "/mods", requiresServer: true },
+      { label: t('nav.users'), icon: FiUsers, path: "/users", requiresServer: true },
+    ] : []),
   ], [t, user?.role]);
 
   // Listen to sync queue changes
@@ -238,6 +240,7 @@ const Drawer = ({ children }) => {
           {/* Delete Data Button */}
           <button
             onClick={openDeleteModal}
+            aria-label={t('nav.clearData')}
             className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-border hover:border-error"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -321,9 +324,11 @@ const Drawer = ({ children }) => {
                       <p className="text-xs font-semibold text-text truncate">
                         {user.username}
                       </p>
-                      <p className="text-[10px] text-text-secondary">
-                        {user.role || t('nav.userOnline')}
-                      </p>
+                      {user.role && (
+                        <p className="text-[10px] text-text-secondary">
+                          {user.role}
+                        </p>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

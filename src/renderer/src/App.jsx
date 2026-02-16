@@ -200,9 +200,9 @@ export default function App() {
                         <Router>
                           <div className="flex flex-col h-screen overflow-hidden">
                             <TitleBar />
-                            <div className="flex-1 overflow-hidden">
+                            <main className="flex-1 overflow-hidden">
                               <AppRoutes />
-                            </div>
+                            </main>
                           </div>
                           <UploadNotification />
                           <UpdateModal />

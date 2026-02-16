@@ -9,7 +9,6 @@ import { registerGameHandlers, getGameLauncher } from "./game.handlers.js";
 import { registerModHandlers } from "./mod.handlers.js";
 import { registerArchiveHandlers } from "./archive.handlers.js";
 import { registerStatsHandlers } from "./stats.handlers.js";
-import { registerDiscordHandlers, initDiscordRPC, cleanupDiscordRPC, getDiscordRPC } from "./discord.handlers.js";
 import { registerLoggerHandlers } from "./logger.handlers.js";
 import { registerUpdaterHandlers, setAutoUpdateManager, getAutoUpdateManager } from "./updater.handlers.js";
 import { registerNotificationHandlers } from "./notification.handlers.js";
@@ -22,7 +21,6 @@ export const registerAllHandlers = () => {
   registerModHandlers();
   registerArchiveHandlers();
   registerStatsHandlers();
-  registerDiscordHandlers();
   registerLoggerHandlers();
   registerUpdaterHandlers();
   registerNotificationHandlers();
@@ -30,9 +28,6 @@ export const registerAllHandlers = () => {
 
 export {
   getGameLauncher,
-  initDiscordRPC,
-  cleanupDiscordRPC,
-  getDiscordRPC,
   setAutoUpdateManager,
   getAutoUpdateManager,
 };

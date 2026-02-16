@@ -1,4 +1,4 @@
-import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 import uploadManager from "../services/uploadManager";
 import { gamesCache } from "../utils/gamesCache";
@@ -7,7 +7,7 @@ export const getAllServerGames = async () => {
   try {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, '/api/serverGame/getAllGames'),
       {
         headers: {
@@ -135,7 +135,7 @@ export const deleteServerGame = async (gameId) => {
     const serverAddress = await window.store.get("serverAddress");
     const token = await window.store.get("userToken");
 
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, `/api/serverGame/deleteGame/${gameId}`),
       {
         method: "DELETE",

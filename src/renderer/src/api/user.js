@@ -1,4 +1,4 @@
-import { fetchWithConnectionTracking } from "../utils/apiUtils";
+import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl, buildProfilePictureUrlSync } from "../utils/urlHelper";
 
 // Helper functions
@@ -14,7 +14,7 @@ const authFetch = async (endpoint, options = {}) => {
   const { serverAddress, token } = await getConfig();
   const url = buildServerUrl(serverAddress, endpoint);
 
-  return fetchWithConnectionTracking(url, {
+  return fetchWithTimeout(url, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -27,7 +27,7 @@ const authFetch = async (endpoint, options = {}) => {
 export const registerUser = async (username, password) => {
   try {
     const { serverAddress } = await getConfig();
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, "/api/users/register"),
       {
         method: "POST",
@@ -50,7 +50,7 @@ export const registerUser = async (username, password) => {
 export const loginUser = async (username, password) => {
   try {
     const { serverAddress } = await getConfig();
-    const response = await fetchWithConnectionTracking(
+    const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, "/api/users/login"),
       {
         method: "POST",
@@ -117,7 +117,7 @@ export const uploadProfilePicture = async (file) => {
   const formData = new FormData();
   formData.append("profilePicture", file);
 
-  const response = await fetchWithConnectionTracking(
+  const response = await fetchWithTimeout(
     buildServerUrl(serverAddress, "/api/users/profile/picture"),
     {
       method: "POST",
