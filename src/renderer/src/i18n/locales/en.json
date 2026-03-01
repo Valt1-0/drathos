@@ -15,7 +15,11 @@
     "next": "Next",
     "search": "Search",
     "refresh": "Refresh",
-    "settings": "Settings"
+    "settings": "Settings",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "clearSearch": "Clear search"
   },
   "home": {
     "loadingHub": "Loading your gaming hub...",
@@ -120,8 +124,11 @@
     "removing": "Removing",
     "pending": "Pending",
     "noGamesMessage": "Try adjusting your search or filters",
+    "noGamesFilterMessage": "Try adjusting your search or filters",
     "emptyLibrary": "Your library is empty",
     "emptyLibraryDesc": "No games are available on the server yet.",
+    "offlineNoCache": "Server unreachable",
+    "offlineNoCacheDesc": "Connect to your server to load the library.",
     "emptyLibraryAdmin": "Add your first game to get started!",
     "gamesCount": "{{count}} games",
     "installedCount": "{{count}} installed",
@@ -139,6 +146,8 @@
     "installGame": "Install game",
     "redirecting": "Redirecting to downloads page",
     "downloadAndInstall": "Download and install ({{size}} MB)",
+    "inQueue": "In Queue",
+    "queuedWaiting": "Waiting for current download to finish",
     "deleteFromServerBtn": "Delete from server",
     "adminOnly": "Admin only",
     "actions": "Actions",
@@ -345,7 +354,14 @@
     "stageCancelled": "Cancelled",
     "trayTitle": "{{count}} active download",
     "trayTitle_plural": "{{count}} active downloads",
-    "trayMore": "+{{count}} more"
+    "trayMore": "+{{count}} more",
+    "trayMore_plural": "+{{count}} more",
+    "addedToQueue": "Added to queue",
+    "queuedDesc": "\"{{name}}\" will start after the current download finishes",
+    "queue": "Queue",
+    "stageQueued": "Queued",
+    "queueCount": "{{count}} in queue",
+    "removeFromQueue": "Remove from queue"
   },
   "settings": {
     "title": "Settings",
@@ -427,7 +443,10 @@
     "offlineNoChanges": "Server offline - changes disabled",
     "notifications": "Notifications",
     "notificationsDesc": "Game library notifications",
-    "notificationsInfo": "Receive a notification when a new game is added to the library by another user."
+    "notificationsInfo": "Receive a notification when a new game is added to the library by another user.",
+    "selfSignedCerts": "Allow self-signed certificates",
+    "selfSignedCertsDesc": "HTTPS connections to your server",
+    "selfSignedCertsInfo": "Enable this if your self-hosted server uses a self-signed or private certificate (e.g. not issued by Let's Encrypt). Disable it if your server has a valid public certificate to enforce SSL verification."
   },
   "notifications": {
     "newGame": "New Game Added",

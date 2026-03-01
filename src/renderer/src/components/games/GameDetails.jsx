@@ -232,7 +232,7 @@ const GameDetails = ({
   isPlaying,
   isUninstalling,
   isPending,
-  isInstalling,
+  isQueued,
   activeDownload,
   user,
   onLaunch,
@@ -252,7 +252,7 @@ const GameDetails = ({
   const gameVersions = game && game.igdbId
     ? allGames
         .filter(g => g.igdbId === game.igdbId)
-        .sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }))
+        .sort((a, b) => (b.version || '').localeCompare(a.version || '', undefined, { numeric: true, sensitivity: 'base' }))
     : [];
 
   const hasMultipleVersions = gameVersions.length > 1;
@@ -467,7 +467,7 @@ const GameDetails = ({
               isPlaying={isPlaying}
               isUninstalling={isUninstalling}
               isPending={isPending}
-              isInstalling={isInstalling}
+              isQueued={isQueued}
               activeDownload={activeDownload}
               user={user}
               onLaunch={onLaunch}
@@ -539,7 +539,7 @@ const ActionButtons = ({
   isPlaying,
   isUninstalling,
   isPending,
-  isInstalling,
+  isQueued,
   activeDownload,
   user,
   onLaunch,
@@ -677,30 +677,30 @@ const ActionButtons = ({
       >
         <button
           onClick={() => onInstall(game)}
-          disabled={isInstalling}
-          aria-label={isInstalling ? t('games.starting') : t('games.installGame')}
+          disabled={isQueued}
+          aria-label={isQueued ? t('games.inQueue') : t('games.installGame')}
           className={`group relative overflow-hidden rounded-xl p-4 border transition-all duration-300 ${
             user?.role === "admin" ? "sm:col-span-1" : "sm:col-span-2"
           } ${
-            isInstalling
+            isQueued
               ? 'bg-primary/10 border-primary/50 scale-95'
               : 'bg-surface border-border hover:border-primary/50 hover:shadow-primary hover:scale-[1.02]'
           }`}
         >
-          <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent transition-opacity ${isInstalling ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+          <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent transition-opacity ${isQueued ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
           <div className="relative z-10 text-center">
             <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center bg-primary/20">
-              {isInstalling ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-t-transparent border-primary" />
+              {isQueued ? (
+                <FiClock className="text-xl text-accent" />
               ) : (
                 <FiDownload className="text-xl group-hover:animate-bounce text-primary" />
               )}
             </div>
             <h3 className={`text-base font-bold mb-1 ${getTextClass('primary')}`}>
-              {isInstalling ? t('games.starting') : t('games.installGame')}
+              {isQueued ? t('games.inQueue') : t('games.installGame')}
             </h3>
             <p className={`text-xs ${getTextClass('secondary')}`}>
-              {isInstalling ? t('games.redirecting') : t('games.downloadAndInstall', { size: game.sizeMB })}
+              {isQueued ? t('games.queuedWaiting') : t('games.downloadAndInstall', { size: game.sizeMB })}
             </p>
           </div>
         </button>

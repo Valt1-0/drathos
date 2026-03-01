@@ -8,6 +8,7 @@ import crypto from "crypto";
 import store from "../store.js";
 import { extractionEngine } from "../extractionEngine.js";
 import { validateFilename, validateAndResolvePath } from "../app/validation.js";
+import { apiRequest } from "../utils/httpClient.js";
 
 const MAX_MOD_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 const MIN_ARCHIVE_SIZE = 1024; // 1KB
@@ -19,6 +20,7 @@ export const registerModHandlers = () => {
     try {
       const serverAddress = store.get("serverAddress");
       const token = store.get("userToken");
+      const allowSelfSigned = store.get("allowSelfSignedCerts");
       if (!serverAddress || !token) throw new Error("Server not configured");
 
       const installedGames = store.get("installedGamesCache") || {};
@@ -26,27 +28,29 @@ export const registerModHandlers = () => {
       if (!gameData?.path) throw new Error("Game not installed");
 
       // Fetch mod metadata
-      const modRes = await fetch(`${serverAddress}/api/mods/${modId}`, {
+      const modRes = await apiRequest(`${serverAddress}/api/mods/${modId}`, {
         headers: { Authorization: `Bearer ${token}` },
+        allowSelfSigned,
       });
-      if (!modRes.ok) throw new Error(`Failed to fetch mod info: ${modRes.statusText}`);
-      const modInfo = await modRes.json();
+      if (!modRes.ok) throw new Error(`Failed to fetch mod info: HTTP ${modRes.status}`);
+      const modInfo = modRes.json();
       if (!modInfo.installPath) throw new Error("Mod has no installation path");
 
       const extractPath = validateAndResolvePath(gameData.path, modInfo.installPath);
       await fs.promises.mkdir(extractPath, { recursive: true });
 
       // Download mod
-      const response = await fetch(`${serverAddress}/api/mods/download/${modId}`, {
+      const response = await apiRequest(`${serverAddress}/api/mods/download/${modId}`, {
         headers: { Authorization: `Bearer ${token}` },
+        allowSelfSigned,
       });
-      if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
+      if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
 
-      const contentType = response.headers.get("content-type");
-      const contentDisposition = response.headers.get("content-disposition");
+      const contentType = response.headers["content-type"];
+      const contentDisposition = response.headers["content-disposition"];
 
       if (contentType?.includes("application/json")) {
-        const errorData = await response.json();
+        const errorData = response.json();
         throw new Error(errorData.message || "Server returned an error");
       }
       if (!contentDisposition?.includes("attachment")) {
@@ -68,7 +72,7 @@ export const registerModHandlers = () => {
       await fs.promises.mkdir(tempDir, { recursive: true });
       tempArchivePath = path.join(tempDir, `${modId}_${Date.now()}_${filename}`);
 
-      const buffer = Buffer.from(await response.arrayBuffer());
+      const buffer = response.arrayBuffer();
       if (buffer.length > MAX_MOD_SIZE) throw new Error("File exceeds 5GB limit");
       if (buffer.length < MIN_ARCHIVE_SIZE) throw new Error("File too small, may be corrupted");
 

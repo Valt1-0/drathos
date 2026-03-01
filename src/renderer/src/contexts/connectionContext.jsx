@@ -3,9 +3,9 @@ import syncQueue from "../utils/syncQueue";
 
 const ConnectionContext = createContext();
 
-const CHECK_INTERVAL_ONLINE = 30000; // 30s quand online
-const CHECK_INTERVAL_OFFLINE_MIN = 10000; // 10s initial quand offline
-const CHECK_INTERVAL_OFFLINE_MAX = 60000; // 60s max quand offline
+const CHECK_INTERVAL_ONLINE = 10000; // 10s quand online
+const CHECK_INTERVAL_OFFLINE_MIN = 2000; // 2s initial quand offline
+const CHECK_INTERVAL_OFFLINE_MAX = 15000; // 15s max quand offline
 
 export function ConnectionProvider({ children }) {
   const [isOnline, setIsOnline] = useState(null); // null = pas encore vérifié
@@ -21,7 +21,7 @@ export function ConnectionProvider({ children }) {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
       const response = await fetch(`${serverAddress}/api/server/status`, {
         method: "GET",

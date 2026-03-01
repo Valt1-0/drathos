@@ -14,10 +14,14 @@ export const AuthProvider = ({ children }) => {
       try {
         // Wait for the promise to resolve
         const token = await window.store.get("userToken");
-        if (token && Object.keys(token).length !== 0) {
+        if (typeof token === 'string' && token.length > 0) {
           try {
             const decoded = jwtDecode(token);
-            setUser(decoded.user);
+            if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+              window.store.delete("userToken");
+            } else {
+              setUser(decoded.user);
+            }
           } catch (error) {
             window.store.delete("userToken");
           }

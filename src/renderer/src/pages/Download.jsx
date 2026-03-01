@@ -8,6 +8,7 @@ import {
   useDownloadsByStage,
   useDownloadCount,
   useDownloadActions,
+  useDownloadQueue,
 } from "../contexts/downloadContext";
 import EnhancedDownloadProgress from "../components/EnhancedDownloadProgress";
 import GameCover from "../components/GameCover";
@@ -20,6 +21,8 @@ import {
   FiZap,
   FiSettings,
   FiLoader,
+  FiList,
+  FiX,
 } from "react-icons/fi";
 import { toast } from "sonner";
 
@@ -33,6 +36,7 @@ const Download = () => {
   const failedDownloads = useDownloadsByStage("failed");
   const totalDownloads = useDownloadCount();
   const { removeDownload, updateDownloadProgress } = useDownloadActions();
+  const { queue, removeFromQueue, enqueueGame } = useDownloadQueue();
 
   const [diskSpace, setDiskSpace] = useState({
     freeSpace: 0,
@@ -94,26 +98,16 @@ const Download = () => {
     }
   };
 
-  // Retry a failed download
-  const handleRetryDownload = async (download) => {
-    try {
-      // Remove the failed download from the list
-      removeDownload(download.id);
-
-      // Show feedback
-      toast.info(t('downloads.retrying', { name: download.name }));
-
-      // Trigger installation again via API
-      // The download will be re-added to the context by the install handler
-      await window.api.installGame({
-        _id: download.gameId || download.id,
-        name: download.name,
-        coverUrl: download.image,
-      });
-    } catch (error) {
-      console.error("Retry error:", error);
-      toast.error(t('downloads.retryFailed', { name: download.name, error: error.message }));
-    }
+  // Retry a failed download — goes through the queue like any other install
+  const handleRetryDownload = (download) => {
+    removeDownload(download.id);
+    toast.info(t('downloads.retrying', { name: download.name }));
+    enqueueGame({
+      _id: download.gameId || download.id,
+      name: download.name,
+      coverUrl: download.image,
+      sizeMB: download.totalSize,
+    });
   };
 
   return (
@@ -271,6 +265,83 @@ const Download = () => {
             </motion.div>
           </div>
         </motion.div>
+
+        {/* File d'attente */}
+        <AnimatePresence mode="wait">
+          {queue.length > 0 && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <FiList className="text-accent text-2xl" />
+                <h2 className="text-2xl font-bold text-text">
+                  {t('downloads.queue')}
+                  <span className="ml-2 text-base font-normal text-text-secondary">
+                    {t('downloads.queueCount', { count: queue.length })}
+                  </span>
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {queue.map((game, index) => (
+                  <motion.div
+                    key={game._id}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: 20, opacity: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-4 backdrop-blur-xl border rounded-2xl p-4"
+                    style={{
+                      background: 'var(--app-backgroundSecondary)',
+                      borderColor: 'var(--app-border)',
+                    }}
+                  >
+                    <div className="relative w-14 h-14 bg-surface rounded-xl overflow-hidden flex-shrink-0">
+                      <GameCover
+                        src={game.coverUrl}
+                        alt={game.name}
+                        className="w-full h-full object-cover"
+                        size="thumb"
+                      />
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">#{index + 1}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-text font-semibold truncate">{game.name}</h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <FiList className="text-accent text-xs" />
+                        <span className="text-accent text-sm">{t('downloads.stageQueued')}</span>
+                        {game.sizeMB && (
+                          <>
+                            <span className="text-text-secondary opacity-40">•</span>
+                            <span className="text-text-secondary text-xs">{game.sizeMB} MB</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <motion.button
+                      onClick={() => removeFromQueue(game._id)}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-2 rounded-lg transition-colors hover:bg-error/20"
+                      aria-label={t('downloads.removeFromQueue')}
+                      title={t('downloads.removeFromQueue')}
+                    >
+                      <FiX className="text-text-secondary hover:text-error text-lg" />
+                    </motion.button>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Téléchargements actifs */}
         <AnimatePresence mode="wait">
@@ -459,7 +530,7 @@ const Download = () => {
         </AnimatePresence>
 
         {/* État vide */}
-        {totalDownloads === 0 && (
+        {totalDownloads === 0 && queue.length === 0 && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -482,7 +553,7 @@ const Download = () => {
         )}
 
         {/* Footer info */}
-        {totalDownloads > 0 && (
+        {(totalDownloads > 0 || queue.length > 0) && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

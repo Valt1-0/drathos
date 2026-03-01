@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { FaGamepad } from "react-icons/fa6";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
 import { checkServerStatus } from "../api/server";
 import { getInstalledGames, launchGame as launchGameAPI } from "../api/installedGames";
 import { formatStats as formatStatsAPI } from "../api/gameStats";
 import uninstallQueue from "../utils/uninstallQueue";
-import { useDownloadActions, useActiveDownloads } from "../contexts/downloadContext";
+import { useActiveDownloads, useDownloadQueue } from "../contexts/downloadContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useAuth } from "../contexts/authContext";
 import { useTheme } from "../contexts/themeContext";
@@ -70,12 +69,11 @@ const Games = () => {
   const [playingGames, setPlayingGames] = useState(new Set());
   const [uninstalling, setUninstalling] = useState(new Set());
   const [pendingUninstalls, setPendingUninstalls] = useState(new Set());
-  const [isInstalling, setIsInstalling] = useState(false);
 
   const { gameStats, updateSessionStats } = useGameStats();
   const modals = useGameModals();
-  const { addDownload, updateDownloadProgress, removeDownload } = useDownloadActions();
   const activeDownloads = useActiveDownloads();
+  const { enqueueGame, queue } = useDownloadQueue();
 
   const extractGenreName = useCallback((genre) => {
     if (!genre) return t('games.unknown');
@@ -284,19 +282,19 @@ const Games = () => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    setGameSize(null);
+
     const loadGameSize = async () => {
-      if (selectedGame && isInstalled(selectedGame._id)) {
-        const installedData = getInstalledGameData(selectedGame._id);
-        if (installedData) {
-          const sizeResult = await gameManager.getGameSize(installedData.path);
-          setGameSize(sizeResult.success ? sizeResult : null);
-        }
-      } else {
-        setGameSize(null);
-      }
+      if (!selectedGame || !isInstalled(selectedGame._id)) return;
+      const installedData = getInstalledGameData(selectedGame._id);
+      if (!installedData) return;
+      const sizeResult = await gameManager.getGameSize(installedData.path);
+      if (!cancelled) setGameSize(sizeResult.success ? sizeResult : null);
     };
 
     loadGameSize();
+    return () => { cancelled = true; };
   }, [selectedGame]);
 
   const isInstalled = useCallback((gameId) =>
@@ -428,9 +426,24 @@ const Games = () => {
     [activeDownloads]
   );
 
+  const isGameQueued = useCallback((gameId) =>
+    queue.some(g => g._id === gameId),
+    [queue]
+  );
+
+  const handleEnqueueResult = useCallback((game, result) => {
+    if (result === "started") {
+      navigate("/download");
+    } else {
+      toast.success(t('downloads.addedToQueue'), {
+        description: t('downloads.queuedDesc', { name: game.name }),
+        duration: 3000,
+      });
+    }
+  }, [navigate, t]);
+
   const handleInstallGame = async (game) => {
-    // Block if already downloading
-    if (isGameDownloading(game._id)) return;
+    if (isGameDownloading(game._id) || isGameQueued(game._id)) return;
 
     const downloadPath = await window.store.get("downloadPath");
 
@@ -439,73 +452,15 @@ const Games = () => {
       return;
     }
 
-    await startGameInstallation(game);
+    handleEnqueueResult(game, enqueueGame(game));
   };
 
   const handleInstallPathConfirm = async () => {
     if (modals.installPathModal.game) {
-      await startGameInstallation(modals.installPathModal.game);
+      const game = modals.installPathModal.game;
       modals.installPathModal.close();
+      handleEnqueueResult(game, enqueueGame(game));
     }
-  };
-
-  const startGameInstallation = async (game) => {
-    setIsInstalling(true);
-
-    const downloadId = `${game._id}-${Date.now()}`;
-    addDownload({
-      id: downloadId,
-      gameId: game._id,
-      name: game.name,
-      image: game.coverUrl,
-      progress: 0,
-      speed: 0,
-      sizeDownloaded: 0,
-      totalSize: game.sizeMB,
-      stage: "downloading",
-    });
-
-    // Remove previous listeners to avoid stacking
-    window.api.onDownloadProgress((data) => {
-      if (data.id === game._id) {
-        updateDownloadProgress(downloadId, {
-          stage: data.stage,
-          progress: data.progress,
-          speed: data.speed,
-          sizeDownloaded: data.sizeDownloaded,
-          totalSize: data.totalSize,
-          eta: data.eta,
-        });
-
-        if (data.stage === "completed" || data.stage === "failed") {
-          gamesCache.invalidate();
-          setTimeout(async () => {
-            removeDownload(downloadId);
-            try {
-              const installed = await getInstalledGames();
-              setInstalledGames(installed);
-              gamesCache.set({ installedGames: installed });
-            } catch (err) {
-              console.warn("Could not refresh installed games:", err);
-            }
-          }, 1000);
-        }
-      }
-    });
-
-    setTimeout(() => {
-      setIsInstalling(false);
-      navigate("/download");
-    }, 800);
-
-    window.api.installGame(game).catch((error) => {
-      console.error("Installation error:", error);
-      toast.error(t('games.installErrorTitle'), {
-        description: t('games.installErrorDesc', { name: game.name, error: error.message }),
-        duration: 5000,
-      });
-      removeDownload(downloadId);
-    });
   };
 
   const handleUninstallGame = (game) => {
@@ -617,7 +572,7 @@ const Games = () => {
   // Keyboard shortcuts for Games page
   useKeyboardShortcuts({
     'enter': () => {
-      if (!selectedGame || isGameDownloading(selectedGame._id)) return;
+      if (!selectedGame || isGameDownloading(selectedGame._id) || isGameQueued(selectedGame._id)) return;
       if (isInstalled(selectedGame._id) && !isGamePlaying(selectedGame._id)) {
         handleLaunchGame(selectedGame);
       } else if (!isInstalled(selectedGame._id)) {
@@ -713,124 +668,6 @@ const Games = () => {
     );
   }
 
-  if (games.length === 0 && !isOnline) {
-    return (
-      <div className={`h-full flex items-center justify-center ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center max-w-md px-6"
-        >
-          <div
-            className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center ${isLight ? 'bg-red-50' : 'bg-red-500/10'}`}
-            style={{ border: '2px dashed var(--app-border)' }}
-          >
-            <FaGamepad className={`text-4xl ${isLight ? 'text-red-400' : 'text-red-500/60'}`} />
-          </div>
-          <h2 className={`text-2xl font-bold mb-3 ${getTextClass('primary')}`}>
-            {t('nav.serverOffline')}
-          </h2>
-          <p className={`text-sm mb-8 ${getTextClass('secondary')}`}>
-            {t('games.emptyLibraryDesc')}
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => window.location.reload()}
-            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
-              isLight
-                ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                : 'bg-white/5 hover:bg-white/10 text-gray-300'
-            }`}
-          >
-            {t('games.retry')}
-          </motion.button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (games.length === 0 && isOnline) {
-    return (
-      <div className={`h-full flex items-center justify-center ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-          className="text-center max-w-md px-6"
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
-            className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center ${isLight ? 'bg-blue-50' : 'bg-blue-500/10'}`}
-            style={{ border: '2px dashed var(--app-border)' }}
-          >
-            <FaGamepad className={`text-4xl ${isLight ? 'text-blue-400' : 'text-blue-500/60'}`} />
-          </motion.div>
-
-          <h2 className={`text-2xl font-bold mb-3 ${getTextClass('primary')}`}>
-            {t('games.emptyLibrary')}
-          </h2>
-          <p className={`text-sm mb-2 ${getTextClass('secondary')}`}>
-            {t('games.emptyLibraryDesc')}
-          </p>
-          {user?.role === 'admin' && (
-            <p className={`text-sm mb-8 ${isLight ? 'text-blue-600' : 'text-blue-400'}`}>
-              {t('games.emptyLibraryAdmin')}
-            </p>
-          )}
-
-          <div className="flex flex-col items-center gap-3">
-            {user?.role === 'admin' && (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={modals.addGameModal.open}
-                className="px-8 py-3 rounded-xl font-semibold text-white transition-all duration-200"
-                style={{
-                  background: 'linear-gradient(135deg, var(--app-primary), var(--app-secondary))',
-                }}
-              >
-                {t('games.addGame')}
-              </motion.button>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={async () => {
-                try {
-                  const updatedGames = await getAllServerGames();
-                  setGames(updatedGames || []);
-                  if (updatedGames?.length) {
-                    setSelectedGame(updatedGames[0]);
-                    toast.success(t('games.gamesListRefreshed'));
-                  }
-                } catch (err) {
-                  toast.error(t('errors.refreshGames'));
-                }
-              }}
-              className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                isLight
-                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  : 'bg-white/5 hover:bg-white/10 text-gray-300'
-              }`}
-            >
-              {t('games.refreshList')}
-            </motion.button>
-          </div>
-        </motion.div>
-
-        <AddGameModal
-          isOpen={modals.addGameModal.isOpen}
-          onClose={modals.addGameModal.close}
-          onSuccess={handleAddGameSuccess}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className={`h-full flex ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
       <GameLibrary
@@ -847,6 +684,7 @@ const Games = () => {
         uninstallingGames={uninstalling}
         pendingUninstalls={pendingUninstalls}
         activeDownloads={activeDownloads}
+        queue={queue}
         gameStats={gameStats}
         user={user}
         onAddGame={modals.addGameModal.open}
@@ -863,7 +701,7 @@ const Games = () => {
         isPlaying={isGamePlaying(selectedGame?._id)}
         isUninstalling={isGameUninstalling(selectedGame?._id)}
         isPending={isPendingUninstall(selectedGame?._id)}
-        isInstalling={isInstalling}
+        isQueued={selectedGame ? isGameQueued(selectedGame._id) : false}
         activeDownload={selectedGame ? activeDownloads.find(dl => dl.gameId === selectedGame._id) : null}
         user={user}
         onLaunch={handleLaunchGame}

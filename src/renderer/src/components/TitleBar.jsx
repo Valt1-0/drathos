@@ -1,108 +1,98 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
-import { motion } from "framer-motion";
+
+const BTN_BASE = {
+  width: 48,
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'default',
+  transition: 'background 150ms ease',
+  border: 'none',
+  outline: 'none',
+  background: 'transparent',
+};
 
 const TitleBar = () => {
+  const { t } = useTranslation();
   const [isMaximized, setIsMaximized] = useState(false);
+  const [hovered, setHovered] = useState(null); // 'min' | 'max' | 'close'
 
   useEffect(() => {
-    // Check initial state
     window.api.windowIsMaximized().then(setIsMaximized);
   }, []);
 
-  const handleMinimize = () => {
-    window.api.windowMinimize();
-  };
-
-  const handleMaximize = () => {
+  const handleMaximize = useCallback(() => {
     window.api.windowMaximize();
-    setIsMaximized(!isMaximized);
+    setIsMaximized(p => !p);
+  }, []);
+
+  const getButtonStyle = (key) => {
+    if (key === 'close' && hovered === 'close') {
+      return { ...BTN_BASE, background: '#e81123' };
+    }
+    if (hovered === key) {
+      return { ...BTN_BASE, background: 'var(--app-surface)' };
+    }
+    return BTN_BASE;
   };
 
-  const handleClose = () => {
-    window.api.windowClose();
+  const getIconColor = (key) => {
+    if (key === 'close' && hovered === 'close') return '#ffffff';
+    return hovered === key ? 'var(--app-text)' : 'var(--app-textSecondary)';
   };
 
   return (
     <div
-      className="relative flex items-center justify-between h-9 select-none overflow-hidden"
+      className="relative flex items-center justify-between h-9 select-none"
       style={{
         WebkitAppRegion: 'drag',
         backgroundColor: 'var(--app-backgroundSecondary)',
         borderBottom: '1px solid var(--app-border)',
       }}
     >
-      {/* Gradient overlay pour effet glassmorphism */}
-      <div
-        className="absolute inset-0 opacity-50"
-        style={{
-          background: 'var(--app-gradient-primary)',
-          mixBlendMode: 'soft-light',
-        }}
-      />
+      {/* Zone draggable */}
+      <div className="flex-1 h-full" />
 
-      {/* Blur backdrop */}
-      <div className="absolute inset-0 backdrop-blur-xl bg-black/10" />
-
-      {/* Draggable Area */}
-      <div className="relative flex-1 h-full z-10" />
-
-      {/* Control Buttons */}
-      <div className="relative flex h-full z-10" style={{ WebkitAppRegion: 'no-drag' }}>
+      {/* Boutons de contrôle */}
+      <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' }}>
         {/* Minimize */}
-        <motion.button
-          whileHover={{ opacity: 0.8 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleMinimize}
-          className="group w-12 h-full flex items-center justify-center transition-all duration-200 hover:bg-surface"
-          aria-label="Minimize"
+        <button
+          onClick={() => window.api.windowMinimize()}
+          onMouseEnter={() => setHovered('min')}
+          onMouseLeave={() => setHovered(null)}
+          style={getButtonStyle('min')}
+          aria-label={t('common.minimize')}
         >
-          <FiMinus
-            className="transition-all duration-200"
-            style={{ color: 'var(--app-textSecondary)' }}
-            size={16}
-          />
-        </motion.button>
+          <FiMinus size={16} style={{ color: getIconColor('min') }} />
+        </button>
 
-        {/* Maximize/Restore */}
-        <motion.button
-          whileHover={{ opacity: 0.8 }}
-          whileTap={{ scale: 0.95 }}
+        {/* Maximize / Restore */}
+        <button
           onClick={handleMaximize}
-          className="group w-12 h-full flex items-center justify-center transition-all duration-200 hover:bg-surface"
-          aria-label={isMaximized ? "Restore" : "Maximize"}
+          onMouseEnter={() => setHovered('max')}
+          onMouseLeave={() => setHovered(null)}
+          style={getButtonStyle('max')}
+          aria-label={isMaximized ? t('common.restore') : t('common.maximize')}
         >
-          {isMaximized ? (
-            <FiMinimize
-              className="transition-all duration-200"
-              style={{ color: 'var(--app-textSecondary)' }}
-              size={14}
-            />
-          ) : (
-            <FiMaximize
-              className="transition-all duration-200"
-              style={{ color: 'var(--app-textSecondary)' }}
-              size={14}
-            />
-          )}
-        </motion.button>
+          {isMaximized
+            ? <FiMinimize size={13} style={{ color: getIconColor('max') }} />
+            : <FiMaximize size={13} style={{ color: getIconColor('max') }} />
+          }
+        </button>
 
         {/* Close */}
-        <motion.button
-          whileHover={{
-            backgroundColor: 'var(--app-error)',
-          }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleClose}
-          className="group w-12 h-full flex items-center justify-center transition-all duration-200"
-          aria-label="Close"
+        <button
+          onClick={() => window.api.windowClose()}
+          onMouseEnter={() => setHovered('close')}
+          onMouseLeave={() => setHovered(null)}
+          style={getButtonStyle('close')}
+          aria-label={t('common.close')}
         >
-          <FiX
-            className="transition-all duration-200"
-            style={{ color: 'var(--app-textSecondary)' }}
-            size={18}
-          />
-        </motion.button>
+          <FiX size={17} style={{ color: getIconColor('close'), transition: 'color 150ms ease' }} />
+        </button>
       </div>
     </div>
   );

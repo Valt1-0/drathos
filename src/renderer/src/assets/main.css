@@ -241,7 +241,6 @@ html, body, #root {
   background: var(--app-glass-bg);
   backdrop-filter: blur(calc(var(--app-glass-blur) * 1.5));
   -webkit-backdrop-filter: blur(calc(var(--app-glass-blur) * 1.5));
-  background: rgba(var(--app-background), 0.85);
 }
 
 /* SUBTLE PULSE - CSS-only animation for decorative elements */

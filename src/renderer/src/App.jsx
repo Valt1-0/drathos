@@ -9,7 +9,7 @@ import {
 import { Toaster } from "sonner";
 import { motion } from "framer-motion";
 import { FiLoader } from "react-icons/fi";
-import { I18nextProvider } from "react-i18next";
+import { I18nextProvider, useTranslation } from "react-i18next";
 import i18n from "./i18n/config";
 
 import { AuthProvider, useAuth } from "./contexts/authContext";
@@ -45,6 +45,7 @@ const UserProfile = lazy(() => import("./pages/UserProfile"));
 
 // Loading fallback component
 function PageLoader() {
+  const { t } = useTranslation();
   return (
     <div className="h-full w-full flex items-center justify-center bg-background">
       <motion.div
@@ -60,7 +61,7 @@ function PageLoader() {
         >
           <FiLoader className="text-5xl text-primary" />
         </motion.div>
-        <p className="text-text-secondary text-sm">Loading...</p>
+        <p className="text-text-secondary text-sm">{t('common.loading')}</p>
       </motion.div>
     </div>
   );

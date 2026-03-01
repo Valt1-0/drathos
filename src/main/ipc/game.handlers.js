@@ -23,12 +23,27 @@ const getDetector = () => {
 
 export const getGameLauncher = () => gameLauncher;
 
+export const terminateAllWorkers = () => {
+  for (const [, worker] of activeWorkers) {
+    try { worker.terminate(); } catch {}
+  }
+  activeWorkers.clear();
+};
+
 export const registerGameHandlers = () => {
   // Installation
   ipcMain.handle("installGame", async (event, { serverGame }) => {
     return new Promise((resolve, reject) => {
       const worker = new Worker(workerPath, {
-        workerData: { serverGame, storeData: store.store },
+        workerData: {
+          serverGame,
+          storeData: {
+            serverAddress: store.get("serverAddress"),
+            userToken: store.get("userToken"),
+            downloadPath: store.get("downloadPath"),
+            allowSelfSignedCerts: store.get("allowSelfSignedCerts"),
+          },
+        },
       });
 
       // Store the worker so we can send cancel/pause messages
@@ -50,7 +65,7 @@ export const registerGameHandlers = () => {
         if (data.stage === "cancelled") {
           resolve({ success: false, error: "CANCELLED" });
         }
-        if (data.stage === "Failed") reject(new Error(data.error));
+        if (data.stage === "Failed" || data.stage === "failed") reject(new Error(data.error));
       });
 
       worker.on("error", (err) => {
@@ -179,7 +194,15 @@ export const registerGameHandlers = () => {
 
     return new Promise((resolve, reject) => {
       const worker = new Worker(uninstallWorkerPath, {
-        workerData: { gameId, gamePath, storeData: store.store },
+        workerData: {
+          gameId,
+          gamePath,
+          storeData: {
+            serverAddress: store.get("serverAddress"),
+            userToken: store.get("userToken"),
+            allowSelfSignedCerts: store.get("allowSelfSignedCerts"),
+          },
+        },
       });
 
       worker.on("message", (data) => {

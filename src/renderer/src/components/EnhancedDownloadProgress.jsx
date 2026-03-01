@@ -24,12 +24,13 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
 
   // Animation fluide du progress bar (60fps)
   useEffect(() => {
+    const target = Number.isFinite(download.progress) ? download.progress : 0;
     const animate = () => {
       setAnimatedProgress((prev) => {
-        const diff = download.progress - prev;
+        const diff = target - prev;
         // Easing pour animation fluide
         const newValue = prev + diff * 0.1;
-        return Math.abs(diff) < 0.1 ? download.progress : newValue;
+        return Math.abs(diff) < 0.1 ? target : newValue;
       });
 
       animationRef.current = requestAnimationFrame(animate);
@@ -46,7 +47,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
 
   // Mise à jour des métriques avec smooth transitions
   useEffect(() => {
-    setDisplaySpeed(download.speed || 0);
+    setDisplaySpeed(download.speed ?? 0);
 
     // Calcul ETA formaté
     if (download.eta && download.eta > 0) {

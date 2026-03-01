@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback, useState, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { FiClock, FiTrash2, FiPlus, FiLayers, FiDownload } from "react-icons/fi";
+import { FiClock, FiTrash2, FiPlus, FiLayers, FiDownload, FiWifiOff, FiPackage, FiFilter, FiList } from "react-icons/fi";
 import GameCover from "../GameCover";
 import { SearchBar } from "../ui";
 import GameFilters from "./GameFilters";
+import { useConnection } from "../../contexts/connectionContext";
 
 // Composant GameRow extrait et mémorisé pour optimiser les performances
 const GameRow = memo(({
@@ -16,6 +17,7 @@ const GameRow = memo(({
   isGameUninstalling,
   isPendingUninstall,
   isDownloading,
+  isQueued,
   gameStats,
   getGenresArray,
   onSelectGame,
@@ -26,6 +28,7 @@ const GameRow = memo(({
   const installed = isInstalled(game._id);
   const playing = isGamePlaying(game._id);
   const downloading = isDownloading(game._id);
+  const queued = isQueued(game._id);
   const stats = gameStats[game._id];
   const uninstalling = isGameUninstalling(game._id);
   const pending = isPendingUninstall(game._id);
@@ -60,6 +63,13 @@ const GameRow = memo(({
             {downloading && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                 <FiDownload className="w-3 h-3 animate-bounce" style={{ color: 'var(--app-primary)' }} />
+              </div>
+            )}
+
+            {/* Badge queued */}
+            {queued && !downloading && (
+              <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                <FiList className="w-3 h-3" style={{ color: 'var(--app-accent)' }} />
               </div>
             )}
 
@@ -108,14 +118,21 @@ const GameRow = memo(({
                 </div>
               )}
 
-              {uninstalling && !downloading && (
+              {queued && !downloading && (
+                <div className="flex items-center gap-1" style={{ color: 'var(--app-accent)' }}>
+                  <FiList className="w-2.5 h-2.5" />
+                  <span>{t('downloads.stageQueued')}</span>
+                </div>
+              )}
+
+              {uninstalling && !downloading && !queued && (
                 <div className="flex items-center gap-1 text-warning">
                   <FiTrash2 className="w-2.5 h-2.5" />
                   <span>{t('games.removing')}</span>
                 </div>
               )}
 
-              {pending && !uninstalling && !downloading && (
+              {pending && !uninstalling && !downloading && !queued && (
                 <div className="flex items-center gap-1 text-warning">
                   <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -125,7 +142,7 @@ const GameRow = memo(({
                 </div>
               )}
 
-              {!stats && !installed && !uninstalling && !pending && !downloading && gameGenres.length > 0 && (
+              {!stats && !installed && !uninstalling && !pending && !downloading && !queued && gameGenres.length > 0 && (
                 <span className="text-text-secondary truncate">{gameGenres[0]}</span>
               )}
             </div>
@@ -143,6 +160,48 @@ const GameRow = memo(({
 
 GameRow.displayName = 'GameRow';
 
+const LibraryEmptyState = ({ isOnline, hasGames, hasActiveFilters, t }) => {
+  if (hasActiveFilters) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-4 py-8 text-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface">
+          <FiFilter className="text-base text-text-secondary" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text">{t('games.noGamesFound')}</p>
+          <p className="text-xs text-text-secondary mt-1">{t('games.noGamesFilterMessage')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isOnline && !hasGames) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-4 py-8 text-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface">
+          <FiWifiOff className="text-base text-text-secondary" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text">{t('games.offlineNoCache')}</p>
+          <p className="text-xs text-text-secondary mt-1">{t('games.offlineNoCacheDesc')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center px-4 py-8 text-center gap-3">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface">
+        <FiPackage className="text-base text-text-secondary" />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-text">{t('games.emptyLibrary')}</p>
+        <p className="text-xs text-text-secondary mt-1">{t('games.emptyLibraryDesc')}</p>
+      </div>
+    </div>
+  );
+};
+
 const GameLibrary = ({
   games,
   selectedGameId,
@@ -157,12 +216,14 @@ const GameLibrary = ({
   uninstallingGames,
   pendingUninstalls,
   activeDownloads = [],
+  queue = [],
   gameStats,
   user,
   onAddGame,
   getGenresArray,
 }) => {
   const { t } = useTranslation();
+  const { isOnline } = useConnection();
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
   const [FixedSizeList, setFixedSizeList] = useState(null);
   const [rawStats, setRawStats] = useState({});
@@ -199,7 +260,7 @@ const GameLibrary = ({
       setRawStats(stats);
     };
     loadRawStats();
-  }, [gameStats]); // re-load when gameStats changes
+  }, [installedGames]); // re-load when installed games list changes
 
   // Group and count versions
   const { uniqueGames, versionCounts, gamesByIgdbId } = useMemo(() => {
@@ -320,6 +381,10 @@ const GameLibrary = ({
     activeDownloads.some(dl => dl.gameId === gameId),
     [activeDownloads]
   );
+  const isQueued = useCallback((gameId) =>
+    queue.some(g => g._id === gameId),
+    [queue]
+  );
 
   // Wrapper pour GameRow pour react-window (extrait les données de l'index)
   const VirtualGameRow = useCallback(({ index, style }) => {
@@ -338,13 +403,14 @@ const GameLibrary = ({
         isGameUninstalling={isGameUninstalling}
         isPendingUninstall={isPendingUninstall}
         isDownloading={isDownloading}
+        isQueued={isQueued}
         gameStats={gameStats}
         getGenresArray={getGenresArray}
         onSelectGame={onSelectGame}
         t={t}
       />
     );
-  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, isDownloading, gameStats, getGenresArray, onSelectGame, t]);
+  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, isDownloading, isQueued, gameStats, getGenresArray, onSelectGame, t]);
 
   return (
     <div className="w-56 xl:w-64 bg-background flex flex-col" style={{ borderRight: '1px solid var(--app-border)' }}>
@@ -368,12 +434,15 @@ const GameLibrary = ({
 
       <div className="flex-1 overflow-hidden">
         {filteredGames.length === 0 ? (
-          <div className="h-full flex items-center justify-center px-4 text-center">
-            <div className="text-text-secondary">
-              <p className="text-sm mb-1">{t('games.noGamesFound')}</p>
-              <p className="text-xs">{t('games.noGamesMessage')}</p>
-            </div>
-          </div>
+          <LibraryEmptyState
+            isOnline={isOnline}
+            hasGames={games.length > 0}
+            hasActiveFilters={
+              activeFilterCount > 0 ||
+              debouncedSearchTerm.length > 0
+            }
+            t={t}
+          />
         ) : FixedSizeList ? (
           <FixedSizeList
             height={windowHeight - (user?.role === "admin" ? 460 : 400)}
@@ -408,6 +477,7 @@ const GameLibrary = ({
                   isGameUninstalling={isGameUninstalling}
                   isPendingUninstall={isPendingUninstall}
                   isDownloading={isDownloading}
+                  isQueued={isQueued}
                   gameStats={gameStats}
                   getGenresArray={getGenresArray}
                   onSelectGame={onSelectGame}

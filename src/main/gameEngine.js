@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import http from "http";
 import https from "https";
 import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
@@ -27,13 +28,6 @@ export class GameEngine {
     this.paused = false;
     this.pausedResolve = null;
 
-    // Agent HTTPS pour les certificats auto-signés (self-hosting support)
-    this.httpsAgent = null;
-    if (this.config.allowSelfSignedCerts) {
-      this.httpsAgent = new https.Agent({
-        rejectUnauthorized: false,
-      });
-    }
   }
 
   cancel() {
@@ -118,6 +112,7 @@ export class GameEngine {
     this.downloadPath = this.initializeDownloadPath(store);
     this.serverAddress = store.get("serverAddress");
     this.userToken = store.get("userToken");
+    this.config.allowSelfSignedCerts = store.get("allowSelfSignedCerts") ?? true;
     this.initializeMetrics(gameId);
   }
   initializeDownloadPath(store) {
@@ -172,13 +167,10 @@ export class GameEngine {
 
     const downloadUrl = buildServerUrl(this.serverAddress, `/api/serverGame/downloadGame/${gameId}`);
 
-    // Déclarer les ressources à nettoyer en cas d'erreur
     let fileStream = null;
-    let reader = null;
-
-    // Track bytes for resume support
     let downloadedBytes = 0;
     let totalSize = 0;
+    let totalSizeIsExact = false; // true only when totalSize comes from HTTP headers
 
     try {
       // Check if we have a partial file to resume from
@@ -186,124 +178,145 @@ export class GameEngine {
         downloadedBytes = fs.statSync(filePath).size;
       }
 
-      let fetchHeaders = { Authorization: `Bearer ${this.userToken}` };
+      let reqHeaders = { Authorization: `Bearer ${this.userToken}` };
       if (downloadedBytes > 0) {
-        fetchHeaders["Range"] = `bytes=${downloadedBytes}-`;
+        reqHeaders["Range"] = `bytes=${downloadedBytes}-`;
       }
 
-      let response = await fetch(downloadUrl, {
-        headers: fetchHeaders,
-        agent: (downloadUrl.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
+      // Use http/https.request directly for better performance and proper HTTPS support
+      const parsedUrl = new URL(downloadUrl);
+      const isHttps = parsedUrl.protocol === "https:";
+      const transport = isHttps ? https : http;
+
+      const makeRequest = (headers) => new Promise((resolve, reject) => {
+        const options = {
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port || (isHttps ? 443 : 80),
+          path: parsedUrl.pathname + (parsedUrl.search || ""),
+          method: "GET",
+          headers,
+        };
+        if (isHttps && this.config.allowSelfSignedCerts) {
+          options.rejectUnauthorized = false;
+        }
+        const req = transport.request(options, resolve);
+        req.on("error", reject);
+        req.end();
       });
+
+      let response = await makeRequest(reqHeaders);
 
       // 416 = Range Not Satisfiable → delete partial file and retry from scratch
-      if (response.status === 416) {
+      if (response.statusCode === 416) {
+        response.destroy();
         try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
         downloadedBytes = 0;
-        fetchHeaders = { Authorization: `Bearer ${this.userToken}` };
-        response = await fetch(downloadUrl, {
-          headers: fetchHeaders,
-          agent: (downloadUrl.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
-        });
+        reqHeaders = { Authorization: `Bearer ${this.userToken}` };
+        response = await makeRequest(reqHeaders);
       }
 
-      if (!response.ok && response.status !== 206) {
-        throw new Error(
-          `Erreur HTTP ${response.status}: ${response.statusText}`
-        );
+      if (response.statusCode !== 200 && response.statusCode !== 206) {
+        response.destroy();
+        throw new Error(`Erreur HTTP ${response.statusCode}: ${response.statusMessage}`);
       }
 
-      if (response.status === 206) {
-        // Partial content - extract total size from Content-Range header
-        const contentRange = response.headers.get("content-range");
+      if (response.statusCode === 206) {
+        const contentRange = response.headers["content-range"];
         if (contentRange) {
           const match = contentRange.match(/\/(\d+)$/);
-          if (match) totalSize = parseInt(match[1], 10);
+          if (match) { totalSize = parseInt(match[1], 10); totalSizeIsExact = true; }
         }
       } else {
-        totalSize = parseInt(response.headers.get("content-length") || "0");
-        // Full response means server didn't support range or fresh download, reset
+        const cl = parseInt(response.headers["content-length"] || "0", 10);
+        if (cl > 0) { totalSize = cl; totalSizeIsExact = true; }
         downloadedBytes = 0;
       }
 
-      // Append mode if resuming, otherwise overwrite
+      if (totalSize === 0 && serverGame.sizeMB > 0) {
+        // Approximate fallback — not used for integrity check
+        totalSize = Math.round(serverGame.sizeMB * 1024 * 1024);
+      }
+
       fileStream = fs.createWriteStream(filePath, {
         flags: downloadedBytes > 0 ? "a" : "w",
+        highWaterMark: 4 * 1024 * 1024, // 4MB write buffer
       });
 
-      reader = response.body.getReader();
+      // Download with native stream events for maximum throughput
+      await new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (err) => {
+          if (settled) return;
+          settled = true;
+          response.destroy();
+          if (err) reject(err); else resolve();
+        };
 
-      while (true) {
-        // Check cancel flag
-        if (this.cancelled) {
-          await reader.cancel().catch(() => {});
-          fileStream.destroy();
-          try {
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          } catch (e) {
-            console.warn(`[GameEngine] Could not delete partial file: ${e.message}`);
+        response.on("data", (chunk) => {
+          if (this.cancelled) { finish(new Error("CANCELLED")); return; }
+
+          // Write chunk with backpressure support
+          const ok = fileStream.write(chunk);
+          downloadedBytes += chunk.length;
+
+          this.updateMetrics(gameId, downloadedBytes, totalSize);
+
+          if (this.shouldSendProgressUpdate(gameId)) {
+            const metrics = this.metrics.get(gameId);
+            this.sendProgress({
+              id: gameId,
+              stage: "downloading",
+              progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
+              sizeDownloaded: downloadedBytes / (1024 * 1024),
+              totalSize: totalSize / (1024 * 1024),
+              speed: metrics.avgSpeed / (1024 * 1024),
+              instantSpeed: metrics.instantSpeed / (1024 * 1024),
+              eta: metrics.eta,
+              elapsedTime: Date.now() - metrics.startTime,
+            });
           }
-          throw new Error("CANCELLED");
-        }
 
-        // Check pause flag
-        if (this.paused) {
-          this.sendProgress({
-            id: gameId,
-            stage: "paused",
-            progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
-            sizeDownloaded: downloadedBytes / (1024 * 1024),
-            totalSize: totalSize / (1024 * 1024),
-            message: "Download paused",
-          });
-          // Wait until resume or cancel
-          await new Promise(resolve => { this.pausedResolve = resolve; });
-          // After resume, check if cancelled during pause
-          if (this.cancelled) {
-            await reader.cancel().catch(() => {});
-            fileStream.destroy();
-            try {
-              if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            } catch (e) {
-              console.warn(`[GameEngine] Could not delete partial file: ${e.message}`);
-            }
-            throw new Error("CANCELLED");
+          // Backpressure: pause network until disk catches up
+          if (!ok) {
+            response.pause();
+            fileStream.once("drain", () => {
+              if (!this.cancelled && !this.paused) response.resume();
+            });
           }
-          this.sendProgress({
-            id: gameId,
-            stage: "downloading",
-            progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
-            sizeDownloaded: downloadedBytes / (1024 * 1024),
-            totalSize: totalSize / (1024 * 1024),
-            message: "Download resumed",
-          });
-        }
 
-        const { done, value } = await reader.read();
+          // Pause download if requested (after writing current chunk)
+          if (this.paused) {
+            response.pause();
+            this.sendProgress({
+              id: gameId,
+              stage: "paused",
+              progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
+              sizeDownloaded: downloadedBytes / (1024 * 1024),
+              totalSize: totalSize / (1024 * 1024),
+            });
+            // pausedResolve is called by GameEngine.resume() / cancel()
+            this.pausedResolve = () => {
+              if (this.cancelled) {
+                finish(new Error("CANCELLED"));
+              } else {
+                response.resume();
+                this.sendProgress({
+                  id: gameId,
+                  stage: "downloading",
+                  progress: totalSize > 0 ? Math.round((downloadedBytes / totalSize) * 100) : 0,
+                  sizeDownloaded: downloadedBytes / (1024 * 1024),
+                  totalSize: totalSize / (1024 * 1024),
+                  message: "Download resumed",
+                });
+              }
+            };
+          }
+        });
 
-        if (done) break;
-
-        fileStream.write(value);
-        downloadedBytes += value.length;
-
-        // Mise à jour des métriques et progression
-        this.updateMetrics(gameId, downloadedBytes, totalSize);
-
-        if (this.shouldSendProgressUpdate(gameId)) {
-          const metrics = this.metrics.get(gameId);
-          this.sendProgress({
-            id: gameId,
-            stage: "downloading",
-            progress: Math.round((downloadedBytes / totalSize) * 100),
-            sizeDownloaded: downloadedBytes / (1024 * 1024), // MB
-            totalSize: totalSize / (1024 * 1024), // MB
-            speed: metrics.avgSpeed / (1024 * 1024), // MB/s
-            instantSpeed: metrics.instantSpeed / (1024 * 1024), // MB/s
-            eta: metrics.eta,
-            elapsedTime: Date.now() - metrics.startTime,
-          });
-        }
-      }
+        response.on("end", () => finish(null));
+        response.on("error", (err) => finish(this.cancelled ? new Error("CANCELLED") : err));
+        fileStream.on("error", finish);
+      });
 
       fileStream.end();
 
@@ -312,37 +325,27 @@ export class GameEngine {
         fileStream.on("error", reject);
       });
 
-      const downloadedSize = fs.statSync(filePath).size;
-      if (totalSize > 0 && downloadedSize !== totalSize) {
-        throw new Error(
-          `Fichier incomplet: ${downloadedSize} octets reçus sur ${totalSize} attendus`
-        );
+      // Integrity check — only when totalSize is exact (from HTTP headers, not sizeMB fallback)
+      if (totalSizeIsExact && totalSize > 0) {
+        const downloadedSize = fs.statSync(filePath).size;
+        if (downloadedSize !== totalSize) {
+          throw new Error(
+            `Fichier incomplet: ${downloadedSize} octets reçus sur ${totalSize} attendus`
+          );
+        }
       }
 
       return filePath;
     } catch (error) {
-      // Propagate CANCELLED without wrapping
       if (error.message === "CANCELLED") throw error;
 
       console.error(`[GameEngine] Erreur de téléchargement:`, error.message);
 
-      // Nettoyer les ressources pour éviter les memory leaks
-      try {
-        if (reader) await reader.cancel().catch(() => {});
-      } catch (cleanupError) { /* ignore */ }
+      try { if (fileStream) fileStream.destroy(); } catch {}
 
-      try {
-        if (fileStream) fileStream.destroy();
-      } catch (cleanupError) { /* ignore */ }
-
-      try {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch (cleanupError) {
-        console.warn(
-          `[GameEngine] Impossible de supprimer le fichier partiel: ${cleanupError.message}`
-        );
+      // Keep partial file for resume unless download never started
+      if (downloadedBytes === 0) {
+        try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
       }
 
       throw new Error(`Erreur de téléchargement: ${error.message}`);
@@ -462,26 +465,45 @@ export class GameEngine {
 
     const decoded = jwtDecode(this.userToken);
     const url = buildServerUrl(this.serverAddress, '/api/installedGames/addInstalledGame');
-    const response = await fetch(url, {
+    const body = JSON.stringify({
+      userId: decoded.user.id,
+      serverGameId: gameId,
+      path: extractPath,
+      version: serverGame.version,
+      installSize: installSizeMB,
+    });
+
+    const { status, data: responseBody } = await new Promise((resolve, reject) => {
+      const parsedUrl = new URL(url);
+      const isHttps = parsedUrl.protocol === "https:";
+      const transport = isHttps ? https : http;
+      const options = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || (isHttps ? 443 : 80),
+        path: parsedUrl.pathname + (parsedUrl.search || ""),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.userToken}`,
+          "Authorization": `Bearer ${this.userToken}`,
+          "Content-Length": Buffer.byteLength(body),
         },
-        agent: (url.startsWith('https:') && this.httpsAgent) ? this.httpsAgent : undefined,
-        body: JSON.stringify({
-          userId: decoded.user.id,
-          serverGameId: gameId,
-          path: extractPath,
-          version: serverGame.version,
-          installSize: installSizeMB,
-        }),
-      }
-    );
+      };
+      if (isHttps && this.config.allowSelfSignedCerts) options.rejectUnauthorized = false;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData?.message || `HTTP ${response.status}`);
+      const req = transport.request(options, (res) => {
+        let data = "";
+        res.on("data", (chunk) => { data += chunk; });
+        res.on("end", () => resolve({ status: res.statusCode, data }));
+      });
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+
+    if (status < 200 || status >= 300) {
+      let errorMsg = `HTTP ${status}`;
+      try { errorMsg = JSON.parse(responseBody)?.message || errorMsg; } catch {}
+      throw new Error(errorMsg);
     }
 
     // Préparer les données du cache (le main process fera la mise à jour atomique)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { motion } from 'framer-motion';
 import '@renderer/assets/main.css';
+import logo from '@resources/icon.png';
 
 // Particules pré-générées
 const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
@@ -146,35 +147,11 @@ function SplashScreen() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mb-8 w-20 h-20"
           >
-            <svg
-              viewBox="0 0 100 100"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-full h-full drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]"
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                stroke="url(#gradient)"
-                strokeWidth="3"
-                fill="none"
-              />
-              <path
-                d="M35 50L45 60L65 40"
-                stroke="url(#gradient)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img
+              src={logo}
+              alt="Drathos"
+              className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]"
+            />
           </motion.div>
 
           {/* Titre */}

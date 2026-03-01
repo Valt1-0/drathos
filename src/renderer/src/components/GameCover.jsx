@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react';
-import imageCacheService from '../services/imageCacheService';
+import { useState, useEffect } from "react";
+import imageCacheService from "../services/imageCacheService";
 
-/**
- * Optimise une URL de cover IGDB pour réduire la taille de l'image
- * @param {string} url - URL originale de l'image IGDB
- * @param {string} size - Taille souhaitée (thumb, cover_small, cover_big, screenshot_med, screenshot_big)
- * @returns {string} URL optimisée
- */
-const optimizeIGDBImageUrl = (url, size = 'cover_small') => {
-  if (!url) return '';
+const optimizeIGDBImageUrl = (url, size = "cover_small") => {
+  if (!url) return "";
 
   // Si l'URL est déjà optimisée, la retourner telle quelle
-  if (url.includes('t_cover_small') || url.includes('t_cover_big') || url.includes('t_thumb')) {
+  if (
+    url.includes("t_cover_small") ||
+    url.includes("t_cover_big") ||
+    url.includes("t_thumb")
+  ) {
     return url;
   }
 
@@ -23,36 +21,34 @@ const optimizeIGDBImageUrl = (url, size = 'cover_small') => {
   // - t_screenshot_med: 569x320
   // - t_screenshot_big: 1280x720
   const sizeMap = {
-    thumb: 't_thumb',
-    cover_small: 't_cover_small',
-    cover_big: 't_cover_big',
-    screenshot_med: 't_screenshot_med',
-    screenshot_big: 't_screenshot_big'
+    thumb: "t_thumb",
+    cover_small: "t_cover_small",
+    cover_big: "t_cover_big",
+    screenshot_med: "t_screenshot_med",
+    screenshot_big: "t_screenshot_big",
   };
 
-  const igdbSize = sizeMap[size] || 't_cover_small';
+  const igdbSize = sizeMap[size] || "t_cover_small";
 
-  // Remplacer toute occurrence de t_[size] par la nouvelle taille
-  return url.replace(/t_thumb|t_cover_small|t_cover_big|t_screenshot_med|t_screenshot_big|t_screenshot_huge|t_1080p/g, igdbSize);
+  return url.replace(
+    /t_thumb|t_cover_small|t_cover_big|t_screenshot_med|t_screenshot_big|t_screenshot_huge|t_1080p/g,
+    igdbSize,
+  );
 };
 
-/**
- * Composant GameCover - Affiche une cover de jeu optimisée avec lazy loading et placeholder
- * @param {Object} props
- * @param {string} props.src - URL de l'image
- * @param {string} props.alt - Texte alternatif
- * @param {string} props.className - Classes CSS
- * @param {string} props.size - Taille de l'image (thumb, cover_small, cover_big)
- * @param {Function} props.onError - Callback en cas d'erreur de chargement
- * @param {boolean} props.blur - Appliquer un effet de flou
- */
-const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, blur = false }) => {
+const GameCover = ({
+  src,
+  alt,
+  className = "",
+  size = "cover_small",
+  onError,
+  blur = false,
+}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
-    // Réinitialiser l'état lors du changement de source
     setHasError(false);
 
     if (!src) {
@@ -61,48 +57,40 @@ const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, bl
       return;
     }
 
-    // Optimiser l'URL IGDB
     const optimizedUrl = optimizeIGDBImageUrl(src, size);
 
-    // Vérifier d'abord le cache mémoire de façon synchrone
     const memoryCache = imageCacheService.memoryCache;
     if (memoryCache && memoryCache.has(optimizedUrl)) {
       const cached = memoryCache.get(optimizedUrl);
       if (cached && cached.blobUrl) {
-        // Image en cache mémoire - chargement instantané sans loader
         setImageSrc(cached.blobUrl);
         setIsLoading(false);
         return;
       }
     }
 
-    // Si pas en cache mémoire, afficher le loader et charger
     setIsLoading(true);
 
-    // Charger l'image depuis IndexedDB ou réseau
     const loadImage = async () => {
       try {
-        const cachedImageUrl = await imageCacheService.fetchAndCache(optimizedUrl);
+        const cachedImageUrl =
+          await imageCacheService.fetchAndCache(optimizedUrl);
         setImageSrc(cachedImageUrl);
         setIsLoading(false);
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'image:', error);
-        // En cas d'erreur, essayer de charger directement sans cache
+        console.error("Erreur lors du chargement de l'image:", error);
         setImageSrc(optimizedUrl);
         setIsLoading(false);
       }
     };
 
     loadImage();
-  }, [src, size, onError]);
+  }, [src, size]);
 
-  // Classes pour le placeholder
   const placeholderClasses = `${className} bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center`;
 
-  // Classes pour l'image avec effet de flou si nécessaire
-  const imageClasses = `${className} ${blur ? 'blur-sm' : ''} transition-opacity duration-300 ${imageSrc ? 'opacity-100' : 'opacity-0'}`;
+  const imageClasses = `${className} ${blur ? "blur-sm" : ""} transition-opacity duration-300 ${imageSrc ? "opacity-100" : "opacity-0"}`;
 
-  // Si erreur de chargement, afficher un placeholder avec icône
   if (hasError) {
     return (
       <div className={placeholderClasses}>
@@ -125,24 +113,26 @@ const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, bl
 
   return (
     <>
-      {/* Shimmer skeleton pendant le chargement */}
       {!imageSrc && !hasError && (
         <div className={`${className} relative overflow-hidden`}>
-          <div className="absolute inset-0" style={{ background: 'var(--app-surface)' }} />
+          <div
+            className="absolute inset-0"
+            style={{ background: "var(--app-surface)" }}
+          />
           {isLoading && (
             <div
               className="absolute inset-0"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, var(--app-backgroundSecondary) 50%, transparent 100%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 1.5s infinite',
+                background:
+                  "linear-gradient(90deg, transparent 0%, var(--app-backgroundSecondary) 50%, transparent 100%)",
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.5s infinite",
               }}
             />
           )}
         </div>
       )}
 
-      {/* Image avec lazy loading */}
       {imageSrc && (
         <img
           src={imageSrc}

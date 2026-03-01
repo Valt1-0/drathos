@@ -57,10 +57,10 @@ linux:
     - deb
     - pacman
   category: Game
-  icon: build/icon.png
+  icon: build/icon_linux_512.png
   maintainer: "Valt <contact@drathos.gg>"
-  synopsis: "Client de bibliothèque de jeux DRM-free"
-  description: "Drathos est un client moderne pour gérer votre bibliothèque de jeux DRM-free. Téléchargez, installez et lancez vos jeux facilement."
+  synopsis: "DRM-free game library client"
+  description: "Drathos is a modern client to manage your DRM-free game library. Download, install and launch your games easily."
   artifactName: ${productName}-${version}-${arch}.${ext}
   executableName: drathos
   vendor: Valt

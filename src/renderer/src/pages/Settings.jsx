@@ -56,6 +56,7 @@ const SettingsPage = () => {
   // UI States
   const [activeCategory, setActiveCategory] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
+  const [allowSelfSignedCerts, setAllowSelfSignedCerts] = useState(true);
 
   // Image Cache States
   const [cacheSize, setCacheSize] = useState(0);
@@ -220,8 +221,10 @@ const SettingsPage = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       const storedPath = await window.store.get("downloadPath");
-
       if (storedPath) setDownloadPath(storedPath);
+
+      const selfSigned = await window.store.get("allowSelfSignedCerts");
+      setAllowSelfSignedCerts(selfSigned ?? true);
 
       // Get image cache size
       try {
@@ -470,7 +473,7 @@ const SettingsPage = () => {
                             <GB className="w-full h-full" />
                           </div>
                           <div className="flex-1 text-left">
-                            <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>English</div>
+                            <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>{t('settings.languageEnglish')}</div>
                           </div>
                           {i18n.language === 'en' && (
                             <FiCheck className="text-lg" style={{ color: 'var(--app-success)' }} />
@@ -492,7 +495,7 @@ const SettingsPage = () => {
                             <FR className="w-full h-full" />
                           </div>
                           <div className="flex-1 text-left">
-                            <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>Français</div>
+                            <div className="font-semibold text-sm" style={{ color: 'var(--app-text)' }}>{t('settings.languageFrench')}</div>
                           </div>
                           {i18n.language === 'fr' && (
                             <FiCheck className="text-lg" style={{ color: 'var(--app-success)' }} />
@@ -649,6 +652,33 @@ const SettingsPage = () => {
                     <Card.Body>
                       <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
                         {t('settings.notificationsInfo')}
+                      </p>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Self-signed certificates Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'rgba(99, 102, 241, 0.2)' }}>
+                          <FiGlobe className="text-2xl" style={{ color: 'var(--app-primary)' }} />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.selfSignedCerts')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.selfSignedCertsDesc')}</p>
+                        </div>
+                      </div>
+                      <Toggle
+                        checked={allowSelfSignedCerts}
+                        onChange={(v) => {
+                          setAllowSelfSignedCerts(v);
+                          window.store.set("allowSelfSignedCerts", v);
+                        }}
+                      />
+                    </div>
+                    <Card.Body>
+                      <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
+                        {t('settings.selfSignedCertsInfo')}
                       </p>
                     </Card.Body>
                   </Card>

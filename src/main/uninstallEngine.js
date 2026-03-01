@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
+import https from "https";
+import http from "http";
 import { buildServerUrl } from "./utils/urlHelper.js";
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 export class UninstallEngine {
   constructor() {
@@ -29,6 +29,7 @@ export class UninstallEngine {
       // Initialiser
       this.serverAddress = store.get("serverAddress");
       this.userToken = store.get("userToken");
+      this.allowSelfSignedCerts = store.get("allowSelfSignedCerts") ?? true;
       this.sendProgress = sendProgress;
 
       // ========================================
@@ -307,26 +308,40 @@ export class UninstallEngine {
         `[UninstallEngine] 🗑️ Suppression BDD pour gameId: ${gameId}`
       );
 
-      const response = await fetch(
-        buildServerUrl(this.serverAddress, `/api/installedGames/removeInstalledGame/${gameId}`),
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${this.userToken}`,
-          },
-        }
+      const url = new URL(
+        buildServerUrl(this.serverAddress, `/api/installedGames/removeInstalledGame/${gameId}`)
       );
+      const isHttps = url.protocol === "https:";
+      const options = {
+        hostname: url.hostname,
+        port: url.port || (isHttps ? 443 : 80),
+        path: url.pathname,
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${this.userToken}`,
+        },
+        ...(isHttps && this.allowSelfSignedCerts ? { rejectUnauthorized: false } : {}),
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error(`[UninstallEngine] ❌ Erreur backend:`, errorData);
-        return false;
-      }
+      return await new Promise((resolve) => {
+        const req = (isHttps ? https : http).request(options, (res) => {
+          res.resume();
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log(`[UninstallEngine] ✅ Réponse backend: ${res.statusCode}`);
+            resolve(true);
+          } else {
+            console.error(`[UninstallEngine] ❌ Erreur backend: ${res.statusCode}`);
+            resolve(false);
+          }
+        });
 
-      const data = await response.json();
-      console.log(`[UninstallEngine] ✅ Réponse backend:`, data);
+        req.on("error", (err) => {
+          console.error("[UninstallEngine] ❌ Erreur réseau:", err.message);
+          resolve(false);
+        });
 
-      return true;
+        req.end();
+      });
     } catch (error) {
       console.error(
         `[UninstallEngine] ❌ Erreur suppression base de données:`,

@@ -52,22 +52,23 @@ class Logger {
    */
   async cleanOldLogs() {
     try {
-      const files = fs.readdirSync(this.logsDir);
-      const logFiles = files
-        .filter(f => f.startsWith('app-') && f.endsWith('.log'))
-        .map(f => ({
-          name: f,
-          path: path.join(this.logsDir, f),
-          time: fs.statSync(path.join(this.logsDir, f)).mtime.getTime()
-        }))
-        .sort((a, b) => b.time - a.time);
+      const files = await fs.promises.readdir(this.logsDir);
+      const logFiles = await Promise.all(
+        files
+          .filter(f => f.startsWith('app-') && f.endsWith('.log'))
+          .map(async f => {
+            const filePath = path.join(this.logsDir, f);
+            const stat = await fs.promises.stat(filePath);
+            return { name: f, path: filePath, time: stat.mtime.getTime() };
+          })
+      );
 
-      // Garder seulement les N fichiers les plus récents
+      logFiles.sort((a, b) => b.time - a.time);
       const filesToDelete = logFiles.slice(this.maxLogFiles);
 
       for (const file of filesToDelete) {
         try {
-          fs.unlinkSync(file.path);
+          await fs.promises.unlink(file.path);
           console.log(`[Logger] Deleted old log file: ${file.name}`);
         } catch (err) {
           console.error(`[Logger] Failed to delete ${file.name}:`, err);

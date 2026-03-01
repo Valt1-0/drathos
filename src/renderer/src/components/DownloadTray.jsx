@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiDownload, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { useActiveDownloads } from "../contexts/downloadContext";
+import { useActiveDownloads, useDownloadQueue } from "../contexts/downloadContext";
 import GameCover from "./GameCover";
 
 const STAGE_I18N_KEYS = {
@@ -17,10 +17,11 @@ const STAGE_I18N_KEYS = {
 const DownloadTray = () => {
   const { t } = useTranslation();
   const activeDownloads = useActiveDownloads();
+  const { queue } = useDownloadQueue();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
-  if (activeDownloads.length === 0) return null;
+  if (activeDownloads.length === 0 && queue.length === 0) return null;
 
   const visible = activeDownloads.slice(0, 3);
   const extra = activeDownloads.length - 3;
@@ -48,8 +49,15 @@ const DownloadTray = () => {
           <div className="flex items-center gap-2">
             <FiDownload className="text-primary text-sm" />
             <span className="text-xs font-semibold" style={{ color: "var(--app-text)" }}>
-              {t("downloads.trayTitle", { count: activeDownloads.length })}
+              {activeDownloads.length > 0
+                ? t("downloads.trayTitle", { count: activeDownloads.length })
+                : t("downloads.queue")}
             </span>
+            {queue.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-white">
+                +{queue.length}
+              </span>
+            )}
             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
           </div>
           <button
