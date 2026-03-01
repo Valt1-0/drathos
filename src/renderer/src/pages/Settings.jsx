@@ -556,7 +556,6 @@ const SettingsPage = () => {
 
                               {/* Theme info */}
                               <div className="text-center">
-                                <div className="text-xl mb-1">{themeOption.preview}</div>
                                 <div className="font-semibold text-xs" style={{ color: 'var(--app-text)' }}>{themeOption.name}</div>
                               </div>
 

@@ -42,8 +42,22 @@
 
 /* LIGHT THEME OVERRIDES */
 [data-theme="lightModern"] {
-  --app-glass-bg: rgba(0, 0, 0, 0.03);
-  --app-glass-border: rgba(0, 0, 0, 0.08);
+  --app-glass-bg: rgba(255, 255, 255, 0.7);
+  --app-glass-border: rgba(79, 70, 229, 0.1);
+  --app-glass-blur: 12px;
+}
+
+[data-theme="lightModern"] ::-webkit-scrollbar-track {
+  background: #C4C4CE;
+}
+
+[data-theme="lightModern"] ::-webkit-scrollbar-thumb {
+  background: #AEAEBB;
+  border: 2px solid #C4C4CE;
+}
+
+[data-theme="lightModern"] ::-webkit-scrollbar-thumb:hover {
+  background: #4F46E5;
 }
 
 /* TAILWIND V4 THEME - Map app variables to Tailwind utilities */
@@ -238,4 +252,9 @@ html, body, #root {
 
 .animate-pulse-slow {
   animation: pulse-slow 8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

@@ -203,6 +203,25 @@ const VersionSelector = ({ currentVersion, versions, onSelectVersion }) => {
   );
 };
 
+const CollapsibleMods = ({ gameId }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+      className="rounded-xl bg-surface border border-border overflow-hidden"
+    >
+      <ModManager
+        gameId={gameId}
+        isOpen={isOpen}
+        onToggle={() => setIsOpen(!isOpen)}
+      />
+    </motion.div>
+  );
+};
+
 const GameDetails = ({
   game,
   allGames = [],
@@ -491,14 +510,7 @@ const GameDetails = ({
 
               {/* Mods */}
               {isInstalled && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="rounded-xl bg-surface border border-border overflow-hidden"
-                >
-                  <ModManager gameId={game._id} />
-                </motion.div>
+                <CollapsibleMods gameId={game._id} />
               )}
             </div>
 
@@ -816,23 +828,54 @@ const ActionButtons = ({
 const GameStatistics = ({ stats, isPlaying }) => {
   const { t } = useTranslation();
   const { isLight, getTextClass } = useTheme();
+  const [isOpen, setIsOpen] = useState(true);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="rounded-xl p-4 bg-surface border border-border"
+      className="rounded-xl bg-surface border border-border overflow-hidden"
     >
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-secondary/20">
-          <FiBarChart2 className="text-base text-secondary" />
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-2.5 p-4 hover:bg-primary/5 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-secondary/20">
+            <FiBarChart2 className="text-base text-secondary" />
+          </div>
+          <h2 className={`text-lg font-bold ${getTextClass('primary')}`}>
+            {t('games.gameStatistics')}
+          </h2>
         </div>
-        <h2 className={`text-lg font-bold ${getTextClass('primary')}`}>
-          {t('games.gameStatistics')}
-        </h2>
-      </div>
+        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface">
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          >
+            <FiChevronDown className={`text-base ${getTextClass('secondary')}`} />
+          </motion.div>
+        </div>
+      </button>
 
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: 'auto' }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, delay: 0.06 }}
+            >
+            <div className="px-4 pb-4 pt-3">
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <div className="group relative overflow-hidden rounded-xl p-4 border transition-all duration-300 hover:scale-105 bg-surface border-border hover:shadow-primary">
@@ -950,6 +993,11 @@ const GameStatistics = ({ stats, isPlaying }) => {
           </div>
         </motion.div>
       )}
+            </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

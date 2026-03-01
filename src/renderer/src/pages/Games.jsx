@@ -41,7 +41,29 @@ const Games = () => {
   const [selectedGame, setSelectedGame] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [selectedGenre, setSelectedGenre] = useState(t('games.allGenres'));
+
+  const defaultFilters = {
+    sortBy: 'name-asc',
+    statusFilter: 'all',
+    selectedGenres: [],
+    showOnlyMultiplayer: false,
+    playtimeRange: 'all',
+  };
+  const [filters, setFilters] = useState(defaultFilters);
+
+  // Load persisted filters on mount
+  useEffect(() => {
+    const loadFilters = async () => {
+      const saved = await window.store.get('gameFilters');
+      if (saved) setFilters((prev) => ({ ...prev, ...saved }));
+    };
+    loadFilters();
+  }, []);
+
+  // Persist filters on change
+  useEffect(() => {
+    window.store.set('gameFilters', filters);
+  }, [filters]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [gameSize, setGameSize] = useState(null);
@@ -818,8 +840,8 @@ const Games = () => {
         searchTerm={searchTerm}
         debouncedSearchTerm={debouncedSearchTerm}
         onSearchChange={setSearchTerm}
-        selectedGenre={selectedGenre}
-        onGenreChange={setSelectedGenre}
+        filters={filters}
+        onFiltersChange={setFilters}
         installedGames={installedGames}
         playingGames={playingGames}
         uninstallingGames={uninstalling}

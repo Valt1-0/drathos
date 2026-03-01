@@ -1,8 +1,9 @@
 import React, { useMemo, useCallback, useState, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { FiClock, FiTrash2, FiPlus, FiUsers, FiLayers, FiDownload } from "react-icons/fi";
+import { FiClock, FiTrash2, FiPlus, FiLayers, FiDownload } from "react-icons/fi";
 import GameCover from "../GameCover";
 import { SearchBar } from "../ui";
+import GameFilters from "./GameFilters";
 
 // Composant GameRow extrait et mémorisé pour optimiser les performances
 const GameRow = memo(({
@@ -149,8 +150,8 @@ const GameLibrary = ({
   searchTerm,
   debouncedSearchTerm,
   onSearchChange,
-  selectedGenre,
-  onGenreChange,
+  filters,
+  onFiltersChange,
   installedGames,
   playingGames,
   uninstallingGames,
@@ -164,7 +165,7 @@ const GameLibrary = ({
   const { t } = useTranslation();
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
   const [FixedSizeList, setFixedSizeList] = useState(null);
-  const [showOnlyMultiplayer, setShowOnlyMultiplayer] = useState(false);
+  const [rawStats, setRawStats] = useState({});
 
   // Window resize + react-window loading
   useEffect(() => {
@@ -184,6 +185,21 @@ const GameLibrary = ({
       clearTimeout(resizeTimer);
     };
   }, []);
+
+  // Load raw stats (seconds) for playtime filtering
+  useEffect(() => {
+    const loadRawStats = async () => {
+      const cached = await window.store.get("installedGamesCache", {});
+      const stats = {};
+      Object.entries(cached).forEach(([gameId, data]) => {
+        if (data.stats) {
+          stats[gameId] = data.stats.totalPlayTime || 0;
+        }
+      });
+      setRawStats(stats);
+    };
+    loadRawStats();
+  }, [gameStats]); // re-load when gameStats changes
 
   // Group and count versions
   const { uniqueGames, versionCounts, gamesByIgdbId } = useMemo(() => {
@@ -214,36 +230,88 @@ const GameLibrary = ({
     return { uniqueGames: unique, versionCounts: counts, gamesByIgdbId: byIgdb };
   }, [games]);
 
-  const filteredGames = useMemo(() => {
-    return uniqueGames.filter((game) => {
-      const matchesSearch = game.name
-        .toLowerCase()
-        .includes(debouncedSearchTerm.toLowerCase());
-
-      const gameGenres = getGenresArray(game);
-      const matchesGenre =
-        selectedGenre === t('games.allGenres') || gameGenres.includes(selectedGenre);
-
-      // Check if any version of this game has multiplayer
-      const key = game.igdbId || game._id;
-      const versions = gamesByIgdbId.get(key) || [game];
-      const matchesMultiplayer = !showOnlyMultiplayer || versions.some(v => v.multiplayer?.enabled);
-
-      return matchesSearch && matchesGenre && matchesMultiplayer;
-    });
-  }, [uniqueGames, gamesByIgdbId, debouncedSearchTerm, selectedGenre, showOnlyMultiplayer, getGenresArray, t]);
-
-  const allGenres = useMemo(() => {
-    return [
-      t('games.allGenres'),
-      ...new Set(games.flatMap((game) => getGenresArray(game))),
-    ];
-  }, [games, getGenresArray, t]);
-
   const isInstalled = useCallback((gameId) =>
     installedGames.some((g) => g.serverGameId?._id === gameId),
     [installedGames]
   );
+
+  const filteredGames = useMemo(() => {
+    const filtered = uniqueGames.filter((game) => {
+      // Search
+      if (debouncedSearchTerm && !game.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // Status
+      if (filters.statusFilter === 'installed' && !isInstalled(game._id)) return false;
+      if (filters.statusFilter === 'not-installed' && isInstalled(game._id)) return false;
+
+      // Genres (multi-select)
+      if (filters.selectedGenres.length > 0) {
+        const gameGenres = getGenresArray(game);
+        if (!filters.selectedGenres.some((g) => gameGenres.includes(g))) return false;
+      }
+
+      // Multiplayer
+      if (filters.showOnlyMultiplayer) {
+        const key = game.igdbId || game._id;
+        const versions = gamesByIgdbId.get(key) || [game];
+        if (!versions.some((v) => v.multiplayer?.enabled)) return false;
+      }
+
+      // Playtime
+      if (filters.playtimeRange !== 'all') {
+        const pt = rawStats[game._id] || 0;
+        switch (filters.playtimeRange) {
+          case 'none': if (pt > 0) return false; break;
+          case 'under1h': if (pt <= 0 || pt >= 3600) return false; break;
+          case '1to10h': if (pt < 3600 || pt >= 36000) return false; break;
+          case '10to50h': if (pt < 36000 || pt >= 180000) return false; break;
+          case 'over50h': if (pt < 180000) return false; break;
+        }
+      }
+
+      return true;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'size':
+          return (b.sizeMB || 0) - (a.sizeMB || 0);
+        case 'release-date':
+          return new Date(b.releaseDate || 0) - new Date(a.releaseDate || 0);
+        case 'playtime':
+          return (rawStats[b._id] || 0) - (rawStats[a._id] || 0);
+        case 'recently-added':
+          return b._id.localeCompare(a._id);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [uniqueGames, gamesByIgdbId, debouncedSearchTerm, filters, rawStats, isInstalled, getGenresArray]);
+
+  const allGenres = useMemo(() => {
+    return [...new Set(games.flatMap((game) => getGenresArray(game)))];
+  }, [games, getGenresArray]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.sortBy !== 'name-asc') count++;
+    if (filters.statusFilter !== 'all') count++;
+    if (filters.selectedGenres.length > 0) count++;
+    if (filters.showOnlyMultiplayer) count++;
+    if (filters.playtimeRange !== 'all') count++;
+    return count;
+  }, [filters]);
 
   const isGamePlaying = useCallback((gameId) => playingGames.has(gameId), [playingGames]);
   const isGameUninstalling = useCallback((gameId) => uninstallingGames.has(gameId), [uninstallingGames]);
@@ -290,55 +358,12 @@ const GameLibrary = ({
           className="text-sm"
         />
 
-        <select
-          value={selectedGenre}
-          onChange={(e) => onGenreChange(e.target.value)}
-          aria-label={t('games.allGenres')}
-          className="w-full bg-background-secondary text-text text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          style={{ border: '1px solid var(--app-border)' }}
-        >
-          {allGenres.map((genre, index) => (
-            <option key={`${genre}-${index}`} value={genre}>
-              {genre}
-            </option>
-          ))}
-        </select>
-
-        {/* Multiplayer Filter Toggle */}
-        <button
-          onClick={() => setShowOnlyMultiplayer(!showOnlyMultiplayer)}
-          role="switch"
-          aria-checked={showOnlyMultiplayer}
-          aria-label={t('games.multiplayer')}
-          className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-300 ${
-            showOnlyMultiplayer
-              ? 'bg-secondary/20 border-secondary/40'
-              : 'bg-background-secondary border-border hover:bg-surface'
-          }`}
-          style={{ border: '1px solid' }}
-        >
-          <div className={`relative w-10 h-5 rounded-full transition-all duration-300 ${
-            showOnlyMultiplayer ? 'bg-secondary' : 'bg-surface'
-          }`}
-            style={!showOnlyMultiplayer ? { border: '2px solid var(--app-border)' } : {}}
-          >
-            <div
-              className="absolute w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300"
-              style={{
-                top: '50%',
-                transform: `translateY(-50%) translateX(${showOnlyMultiplayer ? '20px' : '2px'})`,
-              }}
-            />
-          </div>
-          <FiUsers className={`w-4 h-4 transition-colors ${
-            showOnlyMultiplayer ? 'text-secondary' : 'text-text-secondary'
-          }`} />
-          <span className={`text-sm font-medium flex-1 text-left transition-colors ${
-            showOnlyMultiplayer ? 'text-text' : 'text-text-secondary'
-          }`}>
-            {t('games.multiplayer')}
-          </span>
-        </button>
+        <GameFilters
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          allGenres={allGenres}
+          activeFilterCount={activeFilterCount}
+        />
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -351,7 +376,7 @@ const GameLibrary = ({
           </div>
         ) : FixedSizeList ? (
           <FixedSizeList
-            height={windowHeight - (user?.role === "admin" ? 340 : 280)}
+            height={windowHeight - (user?.role === "admin" ? 460 : 400)}
             itemCount={filteredGames.length}
             itemSize={64}
             width="100%"
@@ -363,7 +388,7 @@ const GameLibrary = ({
           <div
             className="overflow-y-auto py-2"
             style={{
-              height: user?.role === "admin" ? `calc(100vh - 340px)` : `calc(100vh - 280px)`
+              height: user?.role === "admin" ? `calc(100vh - 460px)` : `calc(100vh - 400px)`
             }}
           >
             {/* Fallback: limit to 30 items to avoid DOM explosion */}

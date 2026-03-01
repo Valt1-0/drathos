@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPackage, FiCircle, FiFilter } from "react-icons/fi";
+import { FiPackage, FiCircle, FiFilter, FiChevronDown } from "react-icons/fi";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -54,7 +54,7 @@ const getErrorMessage = (error, t, ctx) => {
   return error?.message ? t('mods.errorGeneric', { message: error.message }) : t('common.error');
 };
 
-const ModManager = ({ gameId, allowDownload = true }) => {
+const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) => {
   const { t } = useTranslation();
   const { isOnline } = useConnection();
   const [activeTab, setActiveTab] = useState(allowDownload ? "available" : "installed");
@@ -255,37 +255,93 @@ const ModManager = ({ gameId, allowDownload = true }) => {
   }
 
   return (
-    <div className="p-4">
-      {/* Compact Header with inline stats */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20">
-            <FiPackage className="text-base text-primary" />
+    <div>
+      {/* Clickable Header */}
+      {onToggle ? (
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center justify-between gap-2.5 p-4 hover:bg-primary/5 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20">
+              <FiPackage className="text-base text-primary" />
+            </div>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--app-text)' }}>
+              {t('mods.modTitle')}
+            </h2>
           </div>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--app-text)' }}>
-            {t('mods.modTitle')}
-          </h2>
-        </div>
 
-        {/* Inline compact stats */}
-        <div className="flex items-center gap-3">
-          {allowDownload && (
+          <div className="flex items-center gap-3">
+            {allowDownload && (
+              <div className="flex items-center gap-1.5">
+                <FiPackage className="w-3 h-3" style={{ color: 'var(--app-primary)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--app-text)' }}>
+                  {pagination.available.totalMods}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5">
-              <FiPackage className="w-3 h-3" style={{ color: 'var(--app-primary)' }} />
+              <FiCircle className="w-3 h-3" style={{ color: 'var(--app-secondary)' }} />
               <span className="text-xs font-semibold" style={{ color: 'var(--app-text)' }}>
-                {pagination.available.totalMods}
+                {pagination.installed.totalMods}
               </span>
             </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <FiCircle className="w-3 h-3" style={{ color: 'var(--app-secondary)' }} />
-            <span className="text-xs font-semibold" style={{ color: 'var(--app-text)' }}>
-              {pagination.installed.totalMods}
-            </span>
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg" style={{ background: 'var(--app-surface)' }}>
+              <motion.div
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              >
+                <FiChevronDown className="w-4 h-4" style={{ color: 'var(--app-textSecondary)' }} />
+              </motion.div>
+            </div>
+          </div>
+        </button>
+      ) : (
+        <div className="flex items-center justify-between p-4 pb-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20">
+              <FiPackage className="text-base text-primary" />
+            </div>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--app-text)' }}>
+              {t('mods.modTitle')}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            {allowDownload && (
+              <div className="flex items-center gap-1.5">
+                <FiPackage className="w-3 h-3" style={{ color: 'var(--app-primary)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--app-text)' }}>
+                  {pagination.available.totalMods}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <FiCircle className="w-3 h-3" style={{ color: 'var(--app-secondary)' }} />
+              <span className="text-xs font-semibold" style={{ color: 'var(--app-text)' }}>
+                {pagination.installed.totalMods}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
+      {/* Collapsible content */}
+      <AnimatePresence initial={false}>
+      {isOpen && (
+      <motion.div
+        initial={{ height: 0 }}
+        animate={{ height: 'auto' }}
+        exit={{ height: 0 }}
+        transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+        style={{ overflow: 'hidden' }}
+      >
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18, delay: 0.06 }}
+      >
+      <div className="p-4 pt-3">
       {/* Compact Search & Tabs */}
       <div className="flex items-center gap-2 mb-2">
         {/* Tabs */}
@@ -474,6 +530,11 @@ const ModManager = ({ gameId, allowDownload = true }) => {
             )}
           </motion.div>
         )}
+      </AnimatePresence>
+      </div>
+      </motion.div>
+      </motion.div>
+      )}
       </AnimatePresence>
     </div>
   );

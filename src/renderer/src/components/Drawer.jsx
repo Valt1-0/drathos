@@ -140,18 +140,17 @@ const Drawer = ({ children }) => {
                 title={isDisabled ? t('nav.serverOffline') : undefined}
               >
                 <motion.div
-                  className="group relative overflow-hidden rounded-xl border"
+                  className={`group relative overflow-hidden rounded-xl border transition-colors duration-200 ${
+                    !isActive && !isDisabled ? 'hover:bg-surface' : ''
+                  }`}
                   style={{
                     background: isActive
                       ? 'linear-gradient(135deg, var(--app-primary) 0%, var(--app-secondary) 100%)'
-                      : 'transparent',
+                      : undefined,
                     borderColor: isActive ? 'var(--app-primary)' : 'transparent',
                     opacity: isDisabled ? 0.35 : (isActive ? 0.9 : 1),
                   }}
-                  whileHover={isDisabled ? {} : {
-                    scale: 1.03,
-                    backgroundColor: isActive ? undefined : 'var(--app-surface)',
-                  }}
+                  whileHover={isDisabled ? {} : { scale: 1.03 }}
                   whileTap={isDisabled ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
@@ -172,19 +171,16 @@ const Drawer = ({ children }) => {
                     isOpen ? "px-4" : "justify-center"
                   }`}>
                     <div className="relative">
-                      <motion.div
-                        className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-all duration-200"
-                        style={{
-                          background: isActive ? 'rgba(255, 255, 255, 0.15)' : 'var(--app-surface)',
-                          color: isActive ? 'var(--app-text)' : 'var(--app-textSecondary)',
-                        }}
-                        whileHover={isDisabled ? {} : {
-                          backgroundColor: isActive ? undefined : 'var(--app-primary)',
-                          color: 'var(--app-text)',
-                        }}
+                      <div
+                        className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-all duration-200 ${
+                          isActive
+                            ? 'text-text'
+                            : 'bg-surface text-text-secondary group-hover:bg-primary group-hover:text-text'
+                        }`}
+                        style={isActive ? { background: 'rgba(255, 255, 255, 0.15)' } : undefined}
                       >
                         <Icon className="text-lg" />
-                      </motion.div>
+                      </div>
                       {/* Sync badge for Settings */}
                       {item.path === "/settings" && pendingSyncs > 0 && (
                         <div className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-warning text-white text-xs font-bold rounded-full animate-pulse">
@@ -253,7 +249,7 @@ const Drawer = ({ children }) => {
               }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300" style={{ background: 'var(--app-surface)', color: 'var(--app-textSecondary)' }}>
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 bg-surface text-text-secondary">
                 <FaTrash className="text-lg group-hover:text-error" />
               </div>
               <AnimatePresence mode="wait">

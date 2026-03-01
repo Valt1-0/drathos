@@ -26,6 +26,7 @@ import TitleBar from "./components/TitleBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UploadNotification from "./components/UploadNotification";
 import UpdateModal from "./components/modals/UpdateModal";
+import DownloadTray from "./components/DownloadTray";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 
@@ -206,6 +207,7 @@ export default function App() {
                           </div>
                           <UploadNotification />
                           <UpdateModal />
+                          <DownloadTray />
                           <Toaster
                             position="top-right"
                             expand={true}

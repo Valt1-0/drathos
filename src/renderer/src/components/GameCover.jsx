@@ -125,26 +125,19 @@ const GameCover = ({ src, alt, className = '', size = 'cover_small', onError, bl
 
   return (
     <>
-      {/* Placeholder simple sans loader si pas d'image */}
+      {/* Shimmer skeleton pendant le chargement */}
       {!imageSrc && !hasError && (
-        <div className={placeholderClasses}>
+        <div className={`${className} relative overflow-hidden`}>
+          <div className="absolute inset-0" style={{ background: 'var(--app-surface)' }} />
           {isLoading && (
-            <div className="relative">
-              {/* Spinner animé seulement si vraiment en train de charger */}
-              <div className="w-12 h-12 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-              {/* Icône de jeu au centre */}
-              <svg
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-blue-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, var(--app-backgroundSecondary) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.5s infinite',
+              }}
+            />
           )}
         </div>
       )}
