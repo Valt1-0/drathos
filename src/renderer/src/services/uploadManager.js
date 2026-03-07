@@ -227,7 +227,12 @@ class UploadManager {
             reject(new Error("Invalid server response"));
           }
         } else {
-          reject(new Error(`HTTP Error ${xhr.status}: ${xhr.statusText}`));
+          let errorMessage = `HTTP Error ${xhr.status}: ${xhr.statusText}`;
+          try {
+            const responseData = JSON.parse(xhr.responseText);
+            if (responseData.message) errorMessage = responseData.message;
+          } catch {}
+          reject(new Error(errorMessage));
         }
       };
 

@@ -4,7 +4,7 @@ import { applyTheme, getThemeById, isLightTheme as checkIsLightTheme } from '../
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [currentTheme, setCurrentTheme] = useState('darkModern');
+  const [currentTheme, setCurrentTheme] = useState('default');
   const [theme, setTheme] = useState(null);
 
   // Changer de thème
@@ -27,7 +27,7 @@ export const ThemeProvider = ({ children }) => {
         if (savedTheme) {
           changeTheme(savedTheme);
         } else {
-          changeTheme('darkModern');
+          changeTheme('default');
         }
       } catch (error) {
         console.error('[ThemeContext] Error loading saved theme:', error);

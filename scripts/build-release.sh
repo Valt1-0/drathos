@@ -1,6 +1,10 @@
 #!/bin/bash
 # Script pour créer une nouvelle release complète (Windows + Linux)
 # Usage: ./scripts/build-release.sh <version>
+#
+# La version est passée explicitement à electron-builder via
+# --config.extraMetadata.version pour gérer les tags dont le
+# package.json n'a pas été mis à jour.
 
 VERSION=$1
 
@@ -18,7 +22,7 @@ mkdir -p "releases/v$VERSION"
 
 # Build Windows
 echo "📦 Building Windows..."
-npm run dist:win
+npm run build && npx electron-builder --win --publish never --config.extraMetadata.version=$VERSION
 if [ $? -eq 0 ]; then
   mv dist/*.exe dist/*.zip "releases/v$VERSION/" 2>/dev/null
   echo "✅ Windows build complete"
@@ -26,11 +30,20 @@ else
   echo "❌ Windows build failed"
 fi
 
-# Build Linux avec Docker
+# Build image Docker avec le code source courant
+echo "🐳 Building Docker image..."
+docker build -t drathos-builder . 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ Docker image build failed"
+  exit 1
+fi
+echo "✅ Docker image ready"
+
+# Build Linux via Docker
 echo "📦 Building Linux with Docker..."
-CID=$(docker create drathos-builder bash -c "npm run build && npx electron-builder --linux --x64 --publish never")
-docker start -a $CID > /dev/null 2>&1
-docker cp $CID:/app/dist/. ./dist-linux/ > /dev/null 2>&1
+CID=$(docker create drathos-builder bash -c "npm run build && npx electron-builder --linux --x64 --publish never --config.extraMetadata.version=$VERSION")
+docker start -a $CID
+docker cp $CID:/app/dist/. ./dist-linux/ 2>/dev/null
 docker rm $CID > /dev/null 2>&1
 
 if [ -f "dist-linux/Drathos-$VERSION-x86_64.AppImage" ]; then

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { checkServerStatus } from "../api/server";
 import { useAuth } from "../contexts/authContext";
+import iconUrl from "@resources/icon.png";
 import {
   FaEye,
   FaEyeSlash
@@ -177,7 +178,7 @@ const Welcome = () => {
         return (
           <motion.div
             key="step1"
-            className="flex flex-col gap-8"
+            className="flex flex-col gap-6"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
@@ -185,33 +186,31 @@ const Welcome = () => {
           >
             {/* Hero Section */}
             <motion.div
-              className="text-center space-y-6"
+              className="text-center space-y-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
               {/* Icon */}
               <motion.div
-                className="flex items-center justify-center mb-4"
+                className="flex items-center justify-center mb-3"
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, delay: 0.2, type: "spring", stiffness: 200 }}
               >
                 <div className="relative">
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-50"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                    className="absolute inset-0 bg-blue-500/20 rounded-3xl blur-2xl"
+                    animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
+                    transition={{ duration: 2.5, repeat: Infinity, repeatType: "reverse" }}
                   />
-                  <div className="relative flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl">
-                    <FiPlay className="text-white text-5xl" />
-                  </div>
+                  <img src={iconUrl} alt="Drathos" className="relative w-20 h-20 object-contain drop-shadow-2xl" draggable={false} />
                 </div>
               </motion.div>
 
               {/* Title */}
               <motion.h1
-                className="text-6xl font-bold text-white"
+                className="text-5xl font-bold text-white"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
@@ -221,7 +220,7 @@ const Welcome = () => {
 
               {/* Subtitle */}
               <motion.p
-                className="text-xl text-slate-400 max-w-2xl mx-auto"
+                className="text-base text-slate-400 max-w-2xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
@@ -232,34 +231,61 @@ const Welcome = () => {
 
             {/* Features Grid */}
             <motion.div
-              className="grid grid-cols-3 gap-6 max-w-5xl mx-auto w-full"
+              className="grid grid-cols-3 gap-4 max-w-5xl mx-auto w-full"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
               {[
-                { icon: FiServer, color: "blue", titleKey: "welcome.featureDistributed", descKey: "welcome.featureDistributedDesc", delay: 0.6 },
-                { icon: FiCheckCircle, color: "purple", titleKey: "welcome.featureEasyInstall", descKey: "welcome.featureEasyInstallDesc", delay: 0.7 },
-                { icon: FiPlay, color: "green", titleKey: "welcome.featureLaunch", descKey: "welcome.featureLaunchDesc", delay: 0.8 }
+                {
+                  icon: FiServer,
+                  titleKey: "welcome.featureDistributed",
+                  descKey: "welcome.featureDistributedDesc",
+                  delay: 0.6,
+                  borderHover: "hover:border-blue-500/50",
+                  overlayFrom: "from-blue-500/10",
+                  iconBg: "bg-blue-500/20",
+                  iconColor: "text-blue-400",
+                },
+                {
+                  icon: FiCheckCircle,
+                  titleKey: "welcome.featureEasyInstall",
+                  descKey: "welcome.featureEasyInstallDesc",
+                  delay: 0.7,
+                  borderHover: "hover:border-purple-500/50",
+                  overlayFrom: "from-purple-500/10",
+                  iconBg: "bg-purple-500/20",
+                  iconColor: "text-purple-400",
+                },
+                {
+                  icon: FiPlay,
+                  titleKey: "welcome.featureLaunch",
+                  descKey: "welcome.featureLaunchDesc",
+                  delay: 0.8,
+                  borderHover: "hover:border-green-500/50",
+                  overlayFrom: "from-green-500/10",
+                  iconBg: "bg-green-500/20",
+                  iconColor: "text-green-400",
+                },
               ].map((feature, index) => (
                 <motion.div
                   key={index}
-                  className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 border border-slate-700/50 hover:border-${feature.color}-500/50 transition-all duration-300`}
+                  className={`group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-slate-700/50 ${feature.borderHover} transition-all duration-300`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: feature.delay }}
                   whileHover={{ scale: 1.05, y: -5 }}
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br from-${feature.color}-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.overlayFrom} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
                   <div className="relative z-10 text-center">
                     <motion.div
-                      className={`flex items-center justify-center w-14 h-14 bg-${feature.color}-500/20 rounded-xl mx-auto mb-4`}
+                      className={`flex items-center justify-center w-12 h-12 ${feature.iconBg} rounded-xl mx-auto mb-3`}
                       whileHover={{ rotate: 360 }}
                       transition={{ duration: 0.6 }}
                     >
-                      <feature.icon className={`text-${feature.color}-400 text-2xl`} />
+                      <feature.icon className={`${feature.iconColor} text-xl`} />
                     </motion.div>
-                    <h3 className="text-lg font-semibold text-white mb-2">{t(feature.titleKey)}</h3>
+                    <h3 className="text-base font-semibold text-white mb-2">{t(feature.titleKey)}</h3>
                     <p className="text-sm text-slate-400">{t(feature.descKey)}</p>
                   </div>
                 </motion.div>
@@ -275,20 +301,20 @@ const Welcome = () => {
             >
               <motion.button
                 onClick={() => setCurrentStep(2)}
-                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 w-full"
+                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 w-full"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative z-10 flex items-center justify-center gap-4">
                   <motion.div
-                    className="flex items-center justify-center w-12 h-12 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-all duration-300"
+                    className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-all duration-300"
                     whileHover={{ x: 5 }}
                   >
-                    <FiArrowRight className="text-blue-400 text-2xl" />
+                    <FiArrowRight className="text-blue-400 text-xl" />
                   </motion.div>
                   <div className="text-left">
-                    <div className="text-xl font-bold text-white">{t('welcome.getStarted')}</div>
+                    <div className="text-lg font-bold text-white">{t('welcome.getStarted')}</div>
                     <div className="text-sm text-slate-400">{t('welcome.quickSteps')}</div>
                   </div>
                 </div>
@@ -720,7 +746,7 @@ const Welcome = () => {
       </div>
 
       {/* Progress Bar - Fixed at top */}
-      <div className="relative z-10 px-12 pt-8 pb-4">
+      <div className="relative z-10 px-12 pt-5 pb-3">
         <div className="flex justify-between gap-4 max-w-6xl mx-auto">
           {[1, 2, 3].map((step) => (
             <motion.div
@@ -740,8 +766,8 @@ const Welcome = () => {
 
       {/* Step Content - Takes full remaining space */}
       <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        <div className="flex items-center justify-center min-h-full px-12 pb-12">
-          <div className="w-full max-w-6xl py-8">
+        <div className="flex items-center justify-center min-h-full px-12 pb-6">
+          <div className="w-full max-w-6xl py-4">
             <AnimatePresence mode="wait">
               {renderStep()}
             </AnimatePresence>

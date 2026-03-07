@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-electron
+dist-linux
+out
+releases
+.git
+.vite
+*.log
