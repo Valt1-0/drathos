@@ -3,13 +3,29 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FiSearch, FiUser, FiClock, FiWifiOff, FiChevronLeft, FiChevronRight,
-  FiGrid, FiList, FiFilter, FiChevronDown, FiX, FiCalendar
+  FiSearch,
+  FiUser,
+  FiClock,
+  FiWifiOff,
+  FiChevronLeft,
+  FiChevronRight,
+  FiGrid,
+  FiList,
+  FiFilter,
+  FiChevronDown,
+  FiX,
+  FiCalendar,
+  FiShield,
+  FiLoader,
+  FiCheck,
 } from "react-icons/fi";
 import { FaGamepad, FaStar, FaSortAmountDown, FaPlay } from "react-icons/fa";
-import { getAllUsers } from "../api/user";
+import { getAllUsers, updateUserRole } from "../api/user";
 import { useTheme } from "../contexts/themeContext";
 import { useConnection } from "../contexts/connectionContext";
+import { useAuth } from "../contexts/authContext";
+import { getSocket } from "../services/socketService";
+import { toast } from "sonner";
 import ProfileAvatar from "../components/ProfileAvatar";
 
 const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
@@ -24,67 +40,277 @@ const formatPlayTime = (seconds) => {
 };
 
 const formatLastActivity = (timestamp, t) => {
-  if (!timestamp) return t('users.never');
+  if (!timestamp) return t("users.never");
   const now = Date.now();
   const diff = now - new Date(timestamp).getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return t('users.justNow');
-  if (minutes < 60) return t('users.minutesAgo', { count: minutes });
-  if (hours < 24) return t('users.hoursAgo', { count: hours });
-  if (days < 7) return t('users.daysAgo', { count: days });
-  if (days < 30) return t('users.weeksAgo', { count: Math.floor(days / 7) });
+  if (minutes < 1) return t("users.justNow");
+  if (minutes < 60) return t("users.minutesAgo", { count: minutes });
+  if (hours < 24) return t("users.hoursAgo", { count: hours });
+  if (days < 7) return t("users.daysAgo", { count: days });
+  if (days < 30) return t("users.weeksAgo", { count: Math.floor(days / 7) });
   return new Date(timestamp).toLocaleDateString();
 };
 
+// Role badge colors
+const ROLE_STYLE = {
+  admin: {
+    color: "var(--app-error)",
+    border: "var(--app-error)",
+    bg: "color-mix(in srgb, var(--app-error) 15%, transparent)",
+  },
+  moderator: {
+    color: "var(--app-warning)",
+    border: "var(--app-warning)",
+    bg: "color-mix(in srgb, var(--app-warning) 15%, transparent)",
+  },
+  member: {
+    color: "var(--app-textSecondary)",
+    border: "var(--app-border)",
+    bg: "var(--app-background)",
+  },
+};
+
+const ASSIGNABLE_ROLES = ["moderator", "member"];
+
+// Role badge / dropdown for admins/moderators
+const RoleToggleButton = ({
+  user,
+  currentUserId,
+  currentUserRole,
+  onRoleChange,
+  t,
+}) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Read-only badge: own account, or moderator cannot touch admin
+  if (
+    user._id === currentUserId ||
+    (currentUserRole === "moderator" && user.role === "admin")
+  ) {
+    const style = ROLE_STYLE[user.role] || ROLE_STYLE.member;
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border w-fit"
+        style={{
+          color: style.color,
+          borderColor: style.border,
+          background: style.bg,
+        }}
+      >
+        <FiShield className="text-xs" />
+        <span className="capitalize">{user.role}</span>
+      </span>
+    );
+  }
+
+  const availableRoles = ASSIGNABLE_ROLES;
+  const style = ROLE_STYLE[user.role] || ROLE_STYLE.member;
+
+  const handleSelect = async (e, newRole) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(false);
+    if (newRole === user.role) return;
+    setLoading(true);
+    try {
+      await updateUserRole(user._id, newRole);
+      onRoleChange(user._id, newRole);
+      toast.success(t("users.roleUpdated"));
+    } catch {
+      toast.error(t("users.roleUpdateError"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative" onClick={(e) => e.preventDefault()}>
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        disabled={loading}
+        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs transition-all hover:opacity-80 disabled:opacity-50 border"
+        style={{
+          background: style.bg,
+          color: style.color,
+          borderColor: style.border,
+        }}
+      >
+        {loading ? (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          >
+            <FiLoader className="text-xs" />
+          </motion.div>
+        ) : (
+          <FiShield className="text-xs" />
+        )}
+        <span className="capitalize">{user.role}</span>
+        <FiChevronDown
+          className={`text-xs transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="absolute top-full left-0 mt-1 rounded-lg border shadow-lg z-50 overflow-hidden min-w-28"
+            style={{
+              background: "var(--app-surface)",
+              borderColor: "var(--app-border)",
+            }}
+          >
+            {availableRoles.map((role) => {
+              const rs = ROLE_STYLE[role];
+              return (
+                <button
+                  key={role}
+                  onClick={(e) => handleSelect(e, role)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:opacity-80"
+                  style={{
+                    background: role === user.role ? rs.bg : "transparent",
+                    color: role === user.role ? rs.color : "var(--app-text)",
+                  }}
+                >
+                  <FiShield
+                    className="text-xs flex-shrink-0"
+                    style={{ color: rs.color }}
+                  />
+                  <span className="capitalize">{role}</span>
+                  {role === user.role && (
+                    <FiCheck className="ml-auto text-xs" />
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // Grid Card View
-const UserCard = ({ user, t }) => (
+const UserCard = ({
+  user,
+  t,
+  isPrivileged,
+  currentUserId,
+  currentUserRole,
+  onRoleChange,
+}) => (
   <Link to={`/users/${user._id}`}>
     <motion.div
       variants={fadeIn}
       className="group p-5 rounded-2xl border hover:scale-[1.02] transition-all cursor-pointer"
-      style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
-      whileHover={{ borderColor: 'var(--app-primary)' }}
+      style={{
+        background: "var(--app-surface)",
+        borderColor: "var(--app-border)",
+      }}
+      whileHover={{ borderColor: "var(--app-primary)" }}
     >
       <div className="flex items-center gap-4 mb-4">
-        <ProfileAvatar profilePicture={user.profilePicture} username={user.username} size="md" />
+        <ProfileAvatar
+          profilePicture={user.profilePicture}
+          username={user.username}
+          size="md"
+        />
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold truncate" style={{ color: 'var(--app-text)' }}>
+          <h3
+            className="font-semibold truncate"
+            style={{ color: "var(--app-text)" }}
+          >
             {user.username}
           </h3>
-          <p className="text-xs capitalize" style={{ color: 'var(--app-textSecondary)' }}>
-            {user.role}
-          </p>
+          {isPrivileged ? (
+            <RoleToggleButton
+              user={user}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+              onRoleChange={onRoleChange}
+              t={t}
+            />
+          ) : (
+            <p
+              className="text-xs capitalize"
+              style={{ color: "var(--app-textSecondary)" }}
+            >
+              {user.role}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: 'var(--app-background)' }}>
-          <FiClock className="text-sm" style={{ color: 'var(--app-primary)' }} />
-          <span className="text-sm font-medium" style={{ color: 'var(--app-text)' }}>
+        <div
+          className="flex items-center gap-2 p-2 rounded-lg"
+          style={{ background: "var(--app-background)" }}
+        >
+          <FiClock
+            className="text-sm"
+            style={{ color: "var(--app-primary)" }}
+          />
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--app-text)" }}
+          >
             {formatPlayTime(user.stats?.totalPlayTime || 0)}
           </span>
         </div>
-        <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: 'var(--app-background)' }}>
-          <FaGamepad className="text-sm" style={{ color: 'var(--app-secondary)' }} />
-          <span className="text-sm font-medium" style={{ color: 'var(--app-text)' }}>
-            {user.stats?.gamesPlayed || 0} {t('users.gamesPlayed')}
+        <div
+          className="flex items-center gap-2 p-2 rounded-lg"
+          style={{ background: "var(--app-background)" }}
+        >
+          <FaGamepad
+            className="text-sm"
+            style={{ color: "var(--app-secondary)" }}
+          />
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--app-text)" }}
+          >
+            {user.stats?.gamesPlayed || 0} {t("users.gamesPlayed")}
           </span>
         </div>
       </div>
 
       {/* Last Activity & Favorite Game */}
-      <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--app-border)' }}>
-        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--app-textSecondary)' }}>
+      <div
+        className="space-y-2 pt-2 border-t"
+        style={{ borderColor: "var(--app-border)" }}
+      >
+        <div
+          className="flex items-center gap-2 text-xs"
+          style={{ color: "var(--app-textSecondary)" }}
+        >
           <FiCalendar className="flex-shrink-0" />
-          <span className="truncate">{t('users.lastActivity')}: {formatLastActivity(user.stats?.lastActivity, t)}</span>
+          <span className="truncate">
+            {t("users.lastActivity")}:{" "}
+            {formatLastActivity(user.stats?.lastActivity, t)}
+          </span>
         </div>
         {user.stats?.favoriteGame && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--app-textSecondary)' }}>
-            <FaStar className="flex-shrink-0" style={{ color: 'var(--app-warning)' }} />
+          <div
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--app-textSecondary)" }}
+          >
+            <FaStar
+              className="flex-shrink-0"
+              style={{ color: "var(--app-warning)" }}
+            />
             <span className="truncate">{user.stats.favoriteGame}</span>
           </div>
         )}
@@ -94,45 +320,110 @@ const UserCard = ({ user, t }) => (
 );
 
 // List Row View
-const UserRow = ({ user, t }) => (
+const UserRow = ({
+  user,
+  t,
+  isPrivileged,
+  currentUserId,
+  currentUserRole,
+  onRoleChange,
+}) => (
   <Link to={`/users/${user._id}`}>
     <motion.div
       variants={fadeIn}
       className="group flex items-center gap-4 p-4 rounded-xl border hover:scale-[1.01] transition-all cursor-pointer"
-      style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
-      whileHover={{ borderColor: 'var(--app-primary)' }}
+      style={{
+        background: "var(--app-surface)",
+        borderColor: "var(--app-border)",
+      }}
+      whileHover={{ borderColor: "var(--app-primary)" }}
     >
-      <ProfileAvatar profilePicture={user.profilePicture} username={user.username} size="sm" />
+      <ProfileAvatar
+        profilePicture={user.profilePicture}
+        username={user.username}
+        size="sm"
+      />
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold truncate" style={{ color: 'var(--app-text)' }}>
+        <h3
+          className="font-semibold truncate"
+          style={{ color: "var(--app-text)" }}
+        >
           {user.username}
         </h3>
-        <p className="text-xs capitalize" style={{ color: 'var(--app-textSecondary)' }}>
-          {user.role}
-        </p>
+        {isPrivileged ? (
+          <RoleToggleButton
+            user={user}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            onRoleChange={onRoleChange}
+            t={t}
+          />
+        ) : (
+          <p
+            className="text-xs capitalize"
+            style={{ color: "var(--app-textSecondary)" }}
+          >
+            {user.role}
+          </p>
+        )}
       </div>
 
       <div className="hidden sm:flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'var(--app-background)' }}>
-          <FiClock className="text-xs" style={{ color: 'var(--app-primary)' }} />
-          <span className="text-xs" style={{ color: 'var(--app-text)' }}>{formatPlayTime(user.stats?.totalPlayTime || 0)}</span>
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+          style={{ background: "var(--app-background)" }}
+        >
+          <FiClock
+            className="text-xs"
+            style={{ color: "var(--app-primary)" }}
+          />
+          <span className="text-xs" style={{ color: "var(--app-text)" }}>
+            {formatPlayTime(user.stats?.totalPlayTime || 0)}
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'var(--app-background)' }}>
-          <FaPlay className="text-xs" style={{ color: 'var(--app-secondary)' }} />
-          <span className="text-xs" style={{ color: 'var(--app-text)' }}>{user.stats?.totalSessions || 0}</span>
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+          style={{ background: "var(--app-background)" }}
+        >
+          <FaPlay
+            className="text-xs"
+            style={{ color: "var(--app-secondary)" }}
+          />
+          <span className="text-xs" style={{ color: "var(--app-text)" }}>
+            {user.stats?.totalSessions || 0}
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'var(--app-background)' }}>
-          <FaGamepad className="text-xs" style={{ color: 'var(--app-success)' }} />
-          <span className="text-xs" style={{ color: 'var(--app-text)' }}>{user.stats?.gamesInstalled || 0}</span>
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+          style={{ background: "var(--app-background)" }}
+        >
+          <FaGamepad
+            className="text-xs"
+            style={{ color: "var(--app-success)" }}
+          />
+          <span className="text-xs" style={{ color: "var(--app-text)" }}>
+            {user.stats?.gamesInstalled || 0}
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'var(--app-background)' }}>
-          <FaGamepad className="text-xs" style={{ color: 'var(--app-warning)' }} />
-          <span className="text-xs" style={{ color: 'var(--app-text)' }}>{user.stats?.gamesPlayed || 0}</span>
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+          style={{ background: "var(--app-background)" }}
+        >
+          <FaGamepad
+            className="text-xs"
+            style={{ color: "var(--app-warning)" }}
+          />
+          <span className="text-xs" style={{ color: "var(--app-text)" }}>
+            {user.stats?.gamesPlayed || 0}
+          </span>
         </div>
       </div>
 
-      <div className="text-xs text-right" style={{ color: 'var(--app-textSecondary)' }}>
+      <div
+        className="text-xs text-right"
+        style={{ color: "var(--app-textSecondary)" }}
+      >
         {formatLastActivity(user.stats?.lastActivity, t)}
       </div>
     </motion.div>
@@ -142,22 +433,49 @@ const UserRow = ({ user, t }) => (
 const SkeletonCard = () => (
   <div
     className="p-5 rounded-2xl border animate-pulse"
-    style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
+    style={{
+      background: "var(--app-surface)",
+      borderColor: "var(--app-border)",
+    }}
   >
     <div className="flex items-center gap-4 mb-4">
-      <div className="w-14 h-14 rounded-xl" style={{ background: 'var(--app-background)' }} />
+      <div
+        className="w-14 h-14 rounded-xl"
+        style={{ background: "var(--app-background)" }}
+      />
       <div className="flex-1">
-        <div className="h-5 w-24 rounded mb-2" style={{ background: 'var(--app-background)' }} />
-        <div className="h-3 w-16 rounded" style={{ background: 'var(--app-background)' }} />
+        <div
+          className="h-5 w-24 rounded mb-2"
+          style={{ background: "var(--app-background)" }}
+        />
+        <div
+          className="h-3 w-16 rounded"
+          style={{ background: "var(--app-background)" }}
+        />
       </div>
     </div>
     <div className="grid grid-cols-2 gap-2 mb-3">
-      <div className="h-10 rounded-lg" style={{ background: 'var(--app-background)' }} />
-      <div className="h-10 rounded-lg" style={{ background: 'var(--app-background)' }} />
+      <div
+        className="h-10 rounded-lg"
+        style={{ background: "var(--app-background)" }}
+      />
+      <div
+        className="h-10 rounded-lg"
+        style={{ background: "var(--app-background)" }}
+      />
     </div>
-    <div className="pt-2 border-t space-y-2" style={{ borderColor: 'var(--app-border)' }}>
-      <div className="h-3 w-32 rounded" style={{ background: 'var(--app-background)' }} />
-      <div className="h-3 w-24 rounded" style={{ background: 'var(--app-background)' }} />
+    <div
+      className="pt-2 border-t space-y-2"
+      style={{ borderColor: "var(--app-border)" }}
+    >
+      <div
+        className="h-3 w-32 rounded"
+        style={{ background: "var(--app-background)" }}
+      />
+      <div
+        className="h-3 w-24 rounded"
+        style={{ background: "var(--app-background)" }}
+      />
     </div>
   </div>
 );
@@ -165,18 +483,39 @@ const SkeletonCard = () => (
 const SkeletonRow = () => (
   <div
     className="flex items-center gap-4 p-4 rounded-xl border animate-pulse"
-    style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
+    style={{
+      background: "var(--app-surface)",
+      borderColor: "var(--app-border)",
+    }}
   >
-    <div className="w-10 h-10 rounded-xl" style={{ background: 'var(--app-background)' }} />
+    <div
+      className="w-10 h-10 rounded-xl"
+      style={{ background: "var(--app-background)" }}
+    />
     <div className="flex-1">
-      <div className="h-4 w-28 rounded mb-1" style={{ background: 'var(--app-background)' }} />
-      <div className="h-3 w-16 rounded" style={{ background: 'var(--app-background)' }} />
+      <div
+        className="h-4 w-28 rounded mb-1"
+        style={{ background: "var(--app-background)" }}
+      />
+      <div
+        className="h-3 w-16 rounded"
+        style={{ background: "var(--app-background)" }}
+      />
     </div>
     <div className="hidden sm:flex gap-6">
-      <div className="h-4 w-12 rounded" style={{ background: 'var(--app-background)' }} />
-      <div className="h-4 w-8 rounded" style={{ background: 'var(--app-background)' }} />
+      <div
+        className="h-4 w-12 rounded"
+        style={{ background: "var(--app-background)" }}
+      />
+      <div
+        className="h-4 w-8 rounded"
+        style={{ background: "var(--app-background)" }}
+      />
     </div>
-    <div className="h-3 w-20 rounded" style={{ background: 'var(--app-background)' }} />
+    <div
+      className="h-3 w-20 rounded"
+      style={{ background: "var(--app-background)" }}
+    />
   </div>
 );
 
@@ -189,14 +528,16 @@ const Dropdown = ({ isOpen, onToggle, label, icon: Icon, children }) => (
       aria-haspopup="true"
       className="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all"
       style={{
-        background: isOpen ? 'var(--app-primary)' : 'var(--app-surface)',
-        borderColor: isOpen ? 'var(--app-primary)' : 'var(--app-border)',
-        color: isOpen ? '#fff' : 'var(--app-text)'
+        background: isOpen ? "var(--app-primary)" : "var(--app-surface)",
+        borderColor: isOpen ? "var(--app-primary)" : "var(--app-border)",
+        color: isOpen ? "#fff" : "var(--app-text)",
       }}
     >
       <Icon className="text-sm" />
       <span className="text-sm">{label}</span>
-      <FiChevronDown className={`text-sm transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      <FiChevronDown
+        className={`text-sm transition-transform ${isOpen ? "rotate-180" : ""}`}
+      />
     </button>
     <AnimatePresence>
       {isOpen && (
@@ -205,7 +546,10 @@ const Dropdown = ({ isOpen, onToggle, label, icon: Icon, children }) => (
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           className="absolute top-full left-0 mt-2 min-w-48 rounded-xl border shadow-lg z-50 overflow-hidden"
-          style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
+          style={{
+            background: "var(--app-surface)",
+            borderColor: "var(--app-border)",
+          }}
         >
           {children}
         </motion.div>
@@ -215,24 +559,29 @@ const Dropdown = ({ isOpen, onToggle, label, icon: Icon, children }) => (
 );
 
 const SORT_OPTIONS = [
-  { value: 'username_asc', label: 'users.sortNameAsc' },
-  { value: 'username_desc', label: 'users.sortNameDesc' },
-  { value: 'playtime_desc', label: 'users.sortPlaytimeDesc' },
-  { value: 'playtime_asc', label: 'users.sortPlaytimeAsc' },
-  { value: 'created_desc', label: 'users.sortNewest' },
-  { value: 'created_asc', label: 'users.sortOldest' },
+  { value: "username_asc", label: "users.sortNameAsc" },
+  { value: "username_desc", label: "users.sortNameDesc" },
+  { value: "playtime_desc", label: "users.sortPlaytimeDesc" },
+  { value: "playtime_asc", label: "users.sortPlaytimeAsc" },
+  { value: "created_desc", label: "users.sortNewest" },
+  { value: "created_asc", label: "users.sortOldest" },
 ];
 
 const ROLE_OPTIONS = [
-  { value: 'all', label: 'users.filterAllRoles' },
-  { value: 'admin', label: 'users.filterAdmin' },
-  { value: 'user', label: 'users.filterUser' },
+  { value: "all", label: "users.filterAllRoles" },
+  { value: "admin", label: "users.filterAdmin" },
+  { value: "member", label: "users.filterUser" },
 ];
 
 const Users = () => {
   const { t } = useTranslation();
   const { getBackgroundStyle } = useTheme();
   const { isOnline } = useConnection();
+  const { user: currentUser } = useAuth();
+
+  const currentUserRole = currentUser?.role;
+  const isPrivileged =
+    currentUserRole === "admin" || currentUserRole === "moderator";
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -241,31 +590,56 @@ const Users = () => {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
   // New states for filters, sort and view
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [sortBy, setSortBy] = useState('username_asc');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+  const [sortBy, setSortBy] = useState("username_asc");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
 
-  const loadUsers = useCallback(async (page = 1, searchQuery = "") => {
-    if (!isOnline) {
-      setLoading(false);
-      return;
-    }
+  const currentUserId = currentUser?.id || currentUser?._id;
 
-    setLoading(true);
-    try {
-      const result = await getAllUsers({ search: searchQuery, page, limit: 20 });
-      if (result) {
-        setUsers(result.users || []);
-        setPagination(result.pagination || { page: 1, pages: 1, total: 0 });
+  const handleRoleChange = useCallback((userId, newRole) => {
+    setUsers((prev) =>
+      prev.map((u) => (u._id === userId ? { ...u, role: newRole } : u)),
+    );
+  }, []);
+
+  // Real-time role updates via socket
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleRoleUpdate = ({ userId, newRole }) => handleRoleChange(userId, newRole);
+    socket.on("user:roleUpdated", handleRoleUpdate);
+    return () => { socket.off("user:roleUpdated", handleRoleUpdate); };
+  }, [handleRoleChange]);
+
+  const loadUsers = useCallback(
+    async (page = 1, searchQuery = "") => {
+      if (!isOnline) {
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error loading users:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [isOnline]);
+
+      setLoading(true);
+      try {
+        const result = await getAllUsers({
+          search: searchQuery,
+          page,
+          limit: 20,
+        });
+        if (result) {
+          setUsers(result.users || []);
+          setPagination(result.pagination || { page: 1, pages: 1, total: 0 });
+        }
+      } catch (error) {
+        console.error("Error loading users:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isOnline],
+  );
 
   useEffect(() => {
     if (isOnline !== null) {
@@ -278,24 +652,24 @@ const Users = () => {
     let result = [...users];
 
     // Apply role filter
-    if (roleFilter !== 'all') {
-      result = result.filter(user => user.role === roleFilter);
+    if (roleFilter !== "all") {
+      result = result.filter((user) => user.role === roleFilter);
     }
 
     // Apply sorting
     result.sort((a, b) => {
       switch (sortBy) {
-        case 'username_asc':
+        case "username_asc":
           return a.username.localeCompare(b.username);
-        case 'username_desc':
+        case "username_desc":
           return b.username.localeCompare(a.username);
-        case 'playtime_desc':
+        case "playtime_desc":
           return (b.stats?.totalPlayTime || 0) - (a.stats?.totalPlayTime || 0);
-        case 'playtime_asc':
+        case "playtime_asc":
           return (a.stats?.totalPlayTime || 0) - (b.stats?.totalPlayTime || 0);
-        case 'created_desc':
+        case "created_desc":
           return new Date(b.createdAt) - new Date(a.createdAt);
-        case 'created_asc':
+        case "created_asc":
           return new Date(a.createdAt) - new Date(b.createdAt);
         default:
           return 0;
@@ -317,16 +691,19 @@ const Users = () => {
   };
 
   const clearFilters = () => {
-    setRoleFilter('all');
-    setSortBy('username_asc');
+    setRoleFilter("all");
+    setSortBy("username_asc");
   };
 
-  const hasActiveFilters = roleFilter !== 'all' || sortBy !== 'username_asc';
+  const hasActiveFilters = roleFilter !== "all" || sortBy !== "username_asc";
 
   // Offline state
   if (!isOnline) {
     return (
-      <div className="h-full overflow-y-auto p-6" style={getBackgroundStyle('gradient')}>
+      <div
+        className="h-full overflow-y-auto p-6"
+        style={getBackgroundStyle("gradient")}
+      >
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -335,15 +712,27 @@ const Users = () => {
           >
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-              style={{ background: 'var(--app-surface)', border: '1px solid var(--app-warning)' }}
+              style={{
+                background: "var(--app-surface)",
+                border: "1px solid var(--app-warning)",
+              }}
             >
-              <FiWifiOff className="text-3xl" style={{ color: 'var(--app-warning)' }} />
+              <FiWifiOff
+                className="text-3xl"
+                style={{ color: "var(--app-warning)" }}
+              />
             </div>
-            <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--app-text)' }}>
-              {t('users.offlineTitle')}
+            <h2
+              className="text-xl font-bold mb-2"
+              style={{ color: "var(--app-text)" }}
+            >
+              {t("users.offlineTitle")}
             </h2>
-            <p className="text-center" style={{ color: 'var(--app-textSecondary)' }}>
-              {t('users.offlineMessage')}
+            <p
+              className="text-center"
+              style={{ color: "var(--app-textSecondary)" }}
+            >
+              {t("users.offlineMessage")}
             </p>
           </motion.div>
         </div>
@@ -352,7 +741,10 @@ const Users = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-primary" style={getBackgroundStyle('gradient')}>
+    <div
+      className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-primary"
+      style={getBackgroundStyle("gradient")}
+    >
       <div className="max-w-6xl mx-auto p-6 space-y-6">
         {/* Header */}
         <motion.div
@@ -361,11 +753,17 @@ const Users = () => {
           className="flex flex-col md:flex-row md:items-center justify-between gap-4"
         >
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>
-              {t('users.title')}
+            <h1
+              className="text-2xl font-bold"
+              style={{ color: "var(--app-text)" }}
+            >
+              {t("users.title")}
             </h1>
-            <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
-              {t('users.subtitle', { count: pagination.total })}
+            <p
+              className="text-sm"
+              style={{ color: "var(--app-textSecondary)" }}
+            >
+              {t("users.subtitle", { count: pagination.total })}
             </p>
           </div>
 
@@ -373,18 +771,18 @@ const Users = () => {
           <form onSubmit={handleSearch} className="relative">
             <FiSearch
               className="absolute left-4 top-1/2 -translate-y-1/2"
-              style={{ color: 'var(--app-textSecondary)' }}
+              style={{ color: "var(--app-textSecondary)" }}
             />
             <input
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t('users.searchPlaceholder')}
+              placeholder={t("users.searchPlaceholder")}
               className="w-full md:w-72 pl-11 pr-4 py-3 rounded-xl border outline-none transition-all focus:border-primary"
               style={{
-                background: 'var(--app-surface)',
-                borderColor: 'var(--app-border)',
-                color: 'var(--app-text)'
+                background: "var(--app-surface)",
+                borderColor: "var(--app-border)",
+                color: "var(--app-text)",
               }}
             />
           </form>
@@ -399,22 +797,35 @@ const Users = () => {
           {/* Filter Dropdown */}
           <Dropdown
             isOpen={showFilters}
-            onToggle={() => { setShowFilters(!showFilters); setShowSort(false); }}
-            label={t('users.filters')}
+            onToggle={() => {
+              setShowFilters(!showFilters);
+              setShowSort(false);
+            }}
+            label={t("users.filters")}
             icon={FiFilter}
           >
             <div className="p-2">
-              <p className="px-3 py-2 text-xs font-semibold uppercase" style={{ color: 'var(--app-textSecondary)' }}>
-                {t('users.filterByRole')}
+              <p
+                className="px-3 py-2 text-xs font-semibold uppercase"
+                style={{ color: "var(--app-textSecondary)" }}
+              >
+                {t("users.filterByRole")}
               </p>
-              {ROLE_OPTIONS.map(option => (
+              {ROLE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => { setRoleFilter(option.value); setShowFilters(false); }}
+                  onClick={() => {
+                    setRoleFilter(option.value);
+                    setShowFilters(false);
+                  }}
                   className="w-full text-left px-3 py-2 rounded-lg transition-colors"
                   style={{
-                    background: roleFilter === option.value ? 'var(--app-primary)' : 'transparent',
-                    color: roleFilter === option.value ? '#fff' : 'var(--app-text)'
+                    background:
+                      roleFilter === option.value
+                        ? "var(--app-primary)"
+                        : "transparent",
+                    color:
+                      roleFilter === option.value ? "#fff" : "var(--app-text)",
                   }}
                 >
                   {t(option.label)}
@@ -426,19 +837,28 @@ const Users = () => {
           {/* Sort Dropdown */}
           <Dropdown
             isOpen={showSort}
-            onToggle={() => { setShowSort(!showSort); setShowFilters(false); }}
-            label={t('users.sortBy')}
+            onToggle={() => {
+              setShowSort(!showSort);
+              setShowFilters(false);
+            }}
+            label={t("users.sortBy")}
             icon={FaSortAmountDown}
           >
             <div className="p-2">
-              {SORT_OPTIONS.map(option => (
+              {SORT_OPTIONS.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => { setSortBy(option.value); setShowSort(false); }}
+                  onClick={() => {
+                    setSortBy(option.value);
+                    setShowSort(false);
+                  }}
                   className="w-full text-left px-3 py-2 rounded-lg transition-colors"
                   style={{
-                    background: sortBy === option.value ? 'var(--app-primary)' : 'transparent',
-                    color: sortBy === option.value ? '#fff' : 'var(--app-text)'
+                    background:
+                      sortBy === option.value
+                        ? "var(--app-primary)"
+                        : "transparent",
+                    color: sortBy === option.value ? "#fff" : "var(--app-text)",
                   }}
                 >
                   {t(option.label)}
@@ -454,10 +874,10 @@ const Users = () => {
               animate={{ opacity: 1, scale: 1 }}
               onClick={clearFilters}
               className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors"
-              style={{ color: 'var(--app-error)' }}
+              style={{ color: "var(--app-error)" }}
             >
               <FiX className="text-sm" />
-              {t('users.clearFilters')}
+              {t("users.clearFilters")}
             </motion.button>
           )}
 
@@ -467,27 +887,33 @@ const Users = () => {
           {/* View Toggle */}
           <div
             className="flex rounded-lg border overflow-hidden"
-            style={{ borderColor: 'var(--app-border)' }}
+            style={{ borderColor: "var(--app-border)" }}
           >
             <button
-              onClick={() => setViewMode('grid')}
+              onClick={() => setViewMode("grid")}
               className="p-2 transition-colors"
               style={{
-                background: viewMode === 'grid' ? 'var(--app-primary)' : 'var(--app-surface)',
-                color: viewMode === 'grid' ? '#fff' : 'var(--app-text)'
+                background:
+                  viewMode === "grid"
+                    ? "var(--app-primary)"
+                    : "var(--app-surface)",
+                color: viewMode === "grid" ? "#fff" : "var(--app-text)",
               }}
-              title={t('users.viewGrid')}
+              title={t("users.viewGrid")}
             >
               <FiGrid />
             </button>
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode("list")}
               className="p-2 transition-colors"
               style={{
-                background: viewMode === 'list' ? 'var(--app-primary)' : 'var(--app-surface)',
-                color: viewMode === 'list' ? '#fff' : 'var(--app-text)'
+                background:
+                  viewMode === "list"
+                    ? "var(--app-primary)"
+                    : "var(--app-surface)",
+                color: viewMode === "list" ? "#fff" : "var(--app-text)",
               }}
-              title={t('users.viewList')}
+              title={t("users.viewList")}
             >
               <FiList />
             </button>
@@ -496,7 +922,7 @@ const Users = () => {
 
         {/* Users Grid/List */}
         {loading ? (
-          viewMode === 'grid' ? (
+          viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (
                 <SkeletonCard key={i} />
@@ -517,27 +943,38 @@ const Users = () => {
           >
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-              style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+              style={{
+                background: "var(--app-surface)",
+                border: "1px solid var(--app-border)",
+              }}
             >
-              <FiUser className="text-3xl" style={{ color: 'var(--app-textSecondary)' }} />
+              <FiUser
+                className="text-3xl"
+                style={{ color: "var(--app-textSecondary)" }}
+              />
             </div>
-            <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--app-text)' }}>
-              {t('users.noUsersFound')}
+            <h2
+              className="text-xl font-bold mb-2"
+              style={{ color: "var(--app-text)" }}
+            >
+              {t("users.noUsersFound")}
             </h2>
-            <p style={{ color: 'var(--app-textSecondary)' }}>
-              {search || hasActiveFilters ? t('users.tryAnotherSearch') : t('users.noUsersYet')}
+            <p style={{ color: "var(--app-textSecondary)" }}>
+              {search || hasActiveFilters
+                ? t("users.tryAnotherSearch")
+                : t("users.noUsersYet")}
             </p>
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
                 className="mt-4 px-4 py-2 rounded-lg text-sm"
-                style={{ background: 'var(--app-primary)', color: '#fff' }}
+                style={{ background: "var(--app-primary)", color: "#fff" }}
               >
-                {t('users.clearFilters')}
+                {t("users.clearFilters")}
               </button>
             )}
           </motion.div>
-        ) : viewMode === 'grid' ? (
+        ) : viewMode === "grid" ? (
           <motion.div
             initial="hidden"
             animate="visible"
@@ -545,7 +982,15 @@ const Users = () => {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
           >
             {filteredAndSortedUsers.map((user) => (
-              <UserCard key={user._id} user={user} t={t} />
+              <UserCard
+                key={user._id}
+                user={user}
+                t={t}
+                isPrivileged={isPrivileged}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                onRoleChange={handleRoleChange}
+              />
             ))}
           </motion.div>
         ) : (
@@ -556,7 +1001,15 @@ const Users = () => {
             className="space-y-3"
           >
             {filteredAndSortedUsers.map((user) => (
-              <UserRow key={user._id} user={user} t={t} />
+              <UserRow
+                key={user._id}
+                user={user}
+                t={t}
+                isPrivileged={isPrivileged}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                onRoleChange={handleRoleChange}
+              />
             ))}
           </motion.div>
         )}
@@ -573,9 +1026,9 @@ const Users = () => {
               disabled={pagination.page <= 1}
               className="p-2 rounded-lg border transition-all disabled:opacity-50"
               style={{
-                background: 'var(--app-surface)',
-                borderColor: 'var(--app-border)',
-                color: 'var(--app-text)'
+                background: "var(--app-surface)",
+                borderColor: "var(--app-border)",
+                color: "var(--app-text)",
               }}
             >
               <FiChevronLeft />
@@ -600,9 +1053,18 @@ const Users = () => {
                     onClick={() => handlePageChange(pageNum)}
                     className="w-10 h-10 rounded-lg border transition-all"
                     style={{
-                      background: pageNum === pagination.page ? 'var(--app-primary)' : 'var(--app-surface)',
-                      borderColor: pageNum === pagination.page ? 'var(--app-primary)' : 'var(--app-border)',
-                      color: pageNum === pagination.page ? '#fff' : 'var(--app-text)'
+                      background:
+                        pageNum === pagination.page
+                          ? "var(--app-primary)"
+                          : "var(--app-surface)",
+                      borderColor:
+                        pageNum === pagination.page
+                          ? "var(--app-primary)"
+                          : "var(--app-border)",
+                      color:
+                        pageNum === pagination.page
+                          ? "#fff"
+                          : "var(--app-text)",
                     }}
                   >
                     {pageNum}
@@ -616,9 +1078,9 @@ const Users = () => {
               disabled={pagination.page >= pagination.pages}
               className="p-2 rounded-lg border transition-all disabled:opacity-50"
               style={{
-                background: 'var(--app-surface)',
-                borderColor: 'var(--app-border)',
-                color: 'var(--app-text)'
+                background: "var(--app-surface)",
+                borderColor: "var(--app-border)",
+                color: "var(--app-text)",
               }}
             >
               <FiChevronRight />

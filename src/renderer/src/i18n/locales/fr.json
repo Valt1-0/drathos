@@ -807,7 +807,9 @@
     "roleModerator": "Modérateur",
     "roleMember": "Membre",
     "roleUpdated": "Rôle mis à jour",
-    "roleUpdateError": "Erreur lors de la mise à jour du rôle"
+    "roleUpdateError": "Erreur lors de la mise à jour du rôle",
+    "promoteToAdmin": "Promouvoir en Admin",
+    "demoteToUser": "Rétrograder en Utilisateur"
   },
   "executable": {
     "analyzingFiles": "Analyse des fichiers du jeu...",

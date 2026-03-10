@@ -807,7 +807,9 @@
     "roleModerator": "Moderator",
     "roleMember": "Member",
     "roleUpdated": "Role updated",
-    "roleUpdateError": "Error updating role"
+    "roleUpdateError": "Error updating role",
+    "promoteToAdmin": "Promote to Admin",
+    "demoteToUser": "Demote to User"
   },
   "executable": {
     "analyzingFiles": "Analyzing game files...",

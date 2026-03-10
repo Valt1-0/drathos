@@ -21,3 +21,5 @@ export const disconnectSocket = () => {
   socket?.disconnect();
   socket = null;
 };
+
+export const getSocket = () => socket;

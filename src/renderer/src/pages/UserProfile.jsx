@@ -8,6 +8,8 @@ import { getUserProfile, updateUserRole } from "../api/user";
 import { useTheme } from "../contexts/themeContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useAuth } from "../contexts/authContext";
+import { toast } from "sonner";
+import { getSocket } from "../services/socketService";
 import GameCover from "../components/GameCover";
 import ProfileAvatar from "../components/ProfileAvatar";
 
@@ -19,12 +21,26 @@ const ROLES = [
   { value: 'member', label: 'users.roleMember', color: 'var(--app-textSecondary)' },
 ];
 
-const RoleSelector = ({ currentRole, userId, currentUserId, onRoleChange, t }) => {
+const RoleSelector = ({ currentRole, userId, currentUserId, currentUserRole, onRoleChange, t }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Don't show selector for own profile
   if (userId === currentUserId) return null;
+
+  // Moderators can't change an admin's role — show read-only badge
+  if (currentUserRole === 'moderator' && currentRole === 'admin') {
+    const cfg = ROLES[0]; // admin
+    return (
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm w-fit" style={{ borderColor: cfg.color, color: cfg.color, background: 'var(--app-background)' }}>
+        <FiShield className="text-sm" />
+        <span className="capitalize">{t(cfg.label)}</span>
+      </span>
+    );
+  }
+
+  // admin role is exclusive to the first user — nobody can assign it
+  const availableRoles = ROLES.filter(r => r.value !== 'admin');
 
   const currentRoleConfig = ROLES.find(r => r.value === currentRole) || ROLES[2];
 
@@ -38,8 +54,10 @@ const RoleSelector = ({ currentRole, userId, currentUserId, onRoleChange, t }) =
     try {
       await updateUserRole(userId, newRole);
       onRoleChange(newRole);
+      toast.success(t('users.roleUpdated'));
     } catch (error) {
       console.error("Failed to update role:", error);
+      toast.error(t('users.roleUpdateError'));
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -73,11 +91,11 @@ const RoleSelector = ({ currentRole, userId, currentUserId, onRoleChange, t }) =
             style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
           >
             <div className="p-2">
-              {ROLES.map(role => (
+              {availableRoles.map(role => (
                 <button
                   key={role.value}
                   onClick={() => handleRoleChange(role.value)}
-                  disabled={loading || (currentRole === 'admin' && role.value !== 'admin')}
+                  disabled={loading}
                   className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
                   style={{
                     color: role.value === currentRole ? role.color : 'var(--app-text)'
@@ -191,7 +209,23 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
+
+  // Real-time role update from socket (another admin changed this user's role)
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleRoleUpdate = ({ userId: updatedUserId, newRole }) => {
+      setProfile(prev => {
+        if (!prev || prev.user._id !== updatedUserId) return prev;
+        return { ...prev, user: { ...prev.user, role: newRole } };
+      });
+    };
+
+    socket.on('user:roleUpdated', handleRoleUpdate);
+    return () => { socket.off('user:roleUpdated', handleRoleUpdate); };
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -392,12 +426,13 @@ const UserProfile = () => {
             <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--app-text)' }}>
               {user.username}
             </h1>
-            {isAdmin ? (
+            {isPrivileged ? (
               <div className="mb-3">
                 <RoleSelector
                   currentRole={user.role}
                   userId={user._id}
-                  currentUserId={currentUser?.id}
+                  currentUserId={currentUser?.id || currentUser?._id}
+                  currentUserRole={currentUser?.role}
                   onRoleChange={handleRoleChange}
                   t={t}
                 />
