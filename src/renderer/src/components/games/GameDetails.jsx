@@ -27,6 +27,7 @@ import {
   FiPackage,
   FiChevronDown,
   FiCheck,
+  FiExternalLink,
 } from "react-icons/fi";
 import GameCover from "../GameCover";
 import ModManager from "../mods/ModManager";
@@ -335,6 +336,7 @@ const GameDetails = ({
   onInstall,
   onUninstall,
   onOpenFolder,
+  onCreateShortcut,
   onDeleteFromServer,
   getGenresArray,
   getPlatformsArray,
@@ -551,6 +553,22 @@ const GameDetails = ({
                       </div>
                     );
                   })()}
+
+                  {/* Shortcut button */}
+                  {isInstalled && onCreateShortcut && (
+                    <div className="relative group/sc">
+                      <button
+                        onClick={() => onCreateShortcut(game)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-md backdrop-blur-sm border text-xs font-medium bg-surface/80 border-border/50 text-text-secondary hover:border-primary/50 hover:text-primary transition-colors"
+                      >
+                        <FiExternalLink className="w-3.5 h-3.5" />
+                        {t('games.shortcut')}
+                      </button>
+                      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 rounded-lg px-3 py-2 text-[11px] text-center text-text-secondary bg-background border border-border shadow-lg opacity-0 group-hover/sc:opacity-100 transition-opacity z-50">
+                        {t('games.shortcutTooltip')}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               </div>
             </motion.div>

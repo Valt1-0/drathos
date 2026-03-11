@@ -167,7 +167,7 @@ const Games = () => {
       setSelectedGame(game);
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state?.selectGameId, games]);
+  }, [location.state?.selectGameId, games, navigate]);
 
   useEffect(() => {
     const handleQueueChange = (queueItems) => {
@@ -552,6 +552,32 @@ const Games = () => {
     }
   };
 
+  const createShortcut = useCallback(async (game) => {
+    const installedData = getInstalledGameData(game._id);
+    if (!installedData?.path) return;
+
+    let executable = installedData.executable;
+    if (!executable) {
+      const detected = await window.api.getBestExecutable({ gamePath: installedData.path, gameName: game.name });
+      executable = detected.success ? detected.executable : null;
+    }
+    if (!executable) {
+      toast.error(t('games.shortcutFailed'), { duration: 3000 });
+      return;
+    }
+
+    const result = await window.api.createShortcut({
+      gameName: game.name,
+      gamePath: installedData.path,
+      executable,
+    });
+    if (result.success) {
+      toast.success(t('games.shortcutCreated', { name: game.name }), { duration: 3000 });
+    } else {
+      toast.error(t('games.shortcutFailed'), { duration: 3000 });
+    }
+  }, [getInstalledGameData, t]);
+
   const confirmDeleteGame = async () => {
     if (!modals.deleteGameModal.game) return;
 
@@ -726,6 +752,7 @@ const Games = () => {
         onInstall={handleInstallGame}
         onUninstall={handleUninstallGame}
         onOpenFolder={openGameFolder}
+        onCreateShortcut={createShortcut}
         onDeleteFromServer={(game) => modals.deleteGameModal.open(game, user, isInstalled)}
         getGenresArray={getGenresArray}
         getPlatformsArray={getPlatformsArray}

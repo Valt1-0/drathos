@@ -156,6 +156,10 @@ const api = {
     },
   },
 
+  // Créer un raccourci bureau
+  createShortcut: ({ gameName, gamePath, executable }) =>
+    ipcRenderer.invoke("createShortcut", { gameName, gamePath, executable }),
+
   // Contrôles de fenêtre
   windowMinimize: () => ipcRenderer.send("window-minimize"),
   windowMaximize: () => ipcRenderer.send("window-maximize"),

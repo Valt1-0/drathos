@@ -570,6 +570,7 @@ const SORT_OPTIONS = [
 const ROLE_OPTIONS = [
   { value: "all", label: "users.filterAllRoles" },
   { value: "admin", label: "users.filterAdmin" },
+  { value: "moderator", label: "users.filterModerator" },
   { value: "member", label: "users.filterUser" },
 ];
 
