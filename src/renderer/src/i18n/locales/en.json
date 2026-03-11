@@ -213,7 +213,14 @@
     "versionsAvailable": "Available versions",
     "versionCount": "{{count}} version total",
     "versionCount_plural": "{{count}} versions total",
-    "more": "more"
+    "more": "more",
+    "userStatusLabel": "Status",
+    "userStatusNone": "No status",
+    "userStatusBacklog": "Backlog",
+    "userStatusInProgress": "In Progress",
+    "userStatusCompleted": "Completed",
+    "userStatusDropped": "Dropped",
+    "userStatusFilterAll": "All"
   },
   "collections": {
     "title": "Collections",

@@ -14,6 +14,7 @@ import { useTheme } from "../contexts/themeContext";
 import gameManager from "../services/gameManager";
 import { useGameStats } from "../hooks/games/useGameStats";
 import { useGameModals } from "../hooks/games/useGameModals";
+import useGameStatuses from "../hooks/games/useGameStatuses";
 import { useDebounce } from "../hooks/useDebounce";
 import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import GameLibrary from "../components/games/GameLibrary";
@@ -47,6 +48,7 @@ const Games = () => {
     selectedGenres: [],
     showOnlyMultiplayer: false,
     playtimeRange: 'all',
+    userStatusFilter: 'all',
   };
   const [filters, setFilters] = useState(defaultFilters);
 
@@ -71,6 +73,7 @@ const Games = () => {
   const [pendingUninstalls, setPendingUninstalls] = useState(new Set());
 
   const { gameStats, updateSessionStats } = useGameStats();
+  const { gameStatuses, setStatus } = useGameStatuses();
   const modals = useGameModals();
   const activeDownloads = useActiveDownloads();
   const { enqueueGame, queue } = useDownloadQueue();
@@ -686,6 +689,7 @@ const Games = () => {
         activeDownloads={activeDownloads}
         queue={queue}
         gameStats={gameStats}
+        gameStatuses={gameStatuses}
         user={user}
         onAddGame={modals.addGameModal.open}
         getGenresArray={getGenresArray}
@@ -713,6 +717,8 @@ const Games = () => {
         onDeleteFromServer={(game) => modals.deleteGameModal.open(game, user, isInstalled)}
         getGenresArray={getGenresArray}
         getPlatformsArray={getPlatformsArray}
+        gameStatus={selectedGame ? (gameStatuses[selectedGame._id] || null) : null}
+        onSetStatus={setStatus}
       />
 
       <UninstallModal

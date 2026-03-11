@@ -7,6 +7,13 @@ import GameFilters from "./GameFilters";
 import { useConnection } from "../../contexts/connectionContext";
 
 // Composant GameRow extrait et mémorisé pour optimiser les performances
+const STATUS_DOTS = {
+  backlog: 'bg-primary',
+  inProgress: 'bg-warning',
+  completed: 'bg-success',
+  dropped: 'bg-red-400',
+};
+
 const GameRow = memo(({
   game,
   versionCount,
@@ -19,6 +26,7 @@ const GameRow = memo(({
   isDownloading,
   isQueued,
   gameStats,
+  userStatus,
   getGenresArray,
   onSelectGame,
   t
@@ -83,6 +91,11 @@ const GameRow = memo(({
             {/* Badge installed */}
             {installed && !playing && !downloading && (
               <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--app-success)' }}></div>
+            )}
+
+            {/* User status badge */}
+            {userStatus && STATUS_DOTS[userStatus] && (
+              <div className={`absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full ${STATUS_DOTS[userStatus]}`} />
             )}
           </div>
 
@@ -218,6 +231,7 @@ const GameLibrary = ({
   activeDownloads = [],
   queue = [],
   gameStats,
+  gameStatuses = {},
   user,
   onAddGame,
   getGenresArray,
@@ -320,6 +334,11 @@ const GameLibrary = ({
         if (!versions.some((v) => v.multiplayer?.enabled)) return false;
       }
 
+      // User status
+      if (filters.userStatusFilter && filters.userStatusFilter !== 'all') {
+        if ((gameStatuses?.[game._id] || null) !== filters.userStatusFilter) return false;
+      }
+
       // Playtime
       if (filters.playtimeRange !== 'all') {
         const pt = rawStats[game._id] || 0;
@@ -358,7 +377,7 @@ const GameLibrary = ({
     });
 
     return filtered;
-  }, [uniqueGames, gamesByIgdbId, debouncedSearchTerm, filters, rawStats, isInstalled, getGenresArray]);
+  }, [uniqueGames, gamesByIgdbId, debouncedSearchTerm, filters, rawStats, isInstalled, getGenresArray, gameStatuses]);
 
   const allGenres = useMemo(() => {
     return [...new Set(games.flatMap((game) => getGenresArray(game)))];
@@ -371,6 +390,7 @@ const GameLibrary = ({
     if (filters.selectedGenres.length > 0) count++;
     if (filters.showOnlyMultiplayer) count++;
     if (filters.playtimeRange !== 'all') count++;
+    if (filters.userStatusFilter && filters.userStatusFilter !== 'all') count++;
     return count;
   }, [filters]);
 
@@ -405,12 +425,13 @@ const GameLibrary = ({
         isDownloading={isDownloading}
         isQueued={isQueued}
         gameStats={gameStats}
+        userStatus={gameStatuses?.[game._id] || null}
         getGenresArray={getGenresArray}
         onSelectGame={onSelectGame}
         t={t}
       />
     );
-  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, isDownloading, isQueued, gameStats, getGenresArray, onSelectGame, t]);
+  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, isDownloading, isQueued, gameStats, gameStatuses, getGenresArray, onSelectGame, t]);
 
   return (
     <div className="w-56 xl:w-64 bg-background flex flex-col" style={{ borderRight: '1px solid var(--app-border)' }}>
@@ -479,6 +500,7 @@ const GameLibrary = ({
                   isDownloading={isDownloading}
                   isQueued={isQueued}
                   gameStats={gameStats}
+                  userStatus={gameStatuses?.[game._id] || null}
                   getGenresArray={getGenresArray}
                   onSelectGame={onSelectGame}
                   t={t}
