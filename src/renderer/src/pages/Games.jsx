@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { getAllServerGames, deleteServerGame } from "../api/serverGames";
@@ -33,6 +33,7 @@ const Games = () => {
   const { t } = useTranslation();
   const { isLight, getTextClass } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isOnline } = useConnection();
   const { user } = useAuth();
 
@@ -156,6 +157,17 @@ const Games = () => {
 
     load();
   }, [isOnline]);
+
+  // Pré-sélection depuis QuickLaunch (navigate state)
+  useEffect(() => {
+    const gameId = location.state?.selectGameId;
+    if (!gameId || !games.length) return;
+    const game = games.find(g => g._id === gameId);
+    if (game) {
+      setSelectedGame(game);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.selectGameId, games]);
 
   useEffect(() => {
     const handleQueueChange = (queueItems) => {

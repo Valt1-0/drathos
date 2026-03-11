@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, useState } from "react";
 import {
   HashRouter as Router,
   Routes,
@@ -28,7 +28,9 @@ import UploadNotification from "./components/UploadNotification";
 import UpdateModal from "./components/modals/UpdateModal";
 import DownloadTray from "./components/DownloadTray";
 import ErrorBoundary from "./components/ErrorBoundary";
+import QuickLaunch from "./components/QuickLaunch";
 import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
+import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
 
 // * Pages critiques importées directement (pas de lazy loading)
 import Games from "./pages/Games";
@@ -70,11 +72,13 @@ function PageLoader() {
 function AppRoutes() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [quickLaunchOpen, setQuickLaunchOpen] = useState(false);
 
-  // Enable global keyboard shortcuts
   useGlobalShortcuts(navigate);
+  useKeyboardShortcuts({ 'ctrl+k': () => user && setQuickLaunchOpen(true) });
 
   return (
+    <>
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {!user && <Route path="/welcome" element={<Welcome />} />}
@@ -170,6 +174,12 @@ function AppRoutes() {
         />
       </Routes>
     </Suspense>
+    <QuickLaunch
+      isOpen={quickLaunchOpen}
+      onClose={() => setQuickLaunchOpen(false)}
+      navigate={navigate}
+    />
+    </>
   );
 }
 

@@ -222,6 +222,13 @@
     "userStatusDropped": "Dropped",
     "userStatusFilterAll": "All"
   },
+  "quickLaunch": {
+    "placeholder": "Search for a game...",
+    "noResults": "No games found",
+    "navigate": "navigate",
+    "confirm": "launch",
+    "close": "close"
+  },
   "collections": {
     "title": "Collections",
     "subtitle": "Organize your games into collections",

@@ -222,6 +222,13 @@
     "userStatusDropped": "Abandonné",
     "userStatusFilterAll": "Tous"
   },
+  "quickLaunch": {
+    "placeholder": "Rechercher un jeu...",
+    "noResults": "Aucun jeu trouvé",
+    "navigate": "naviguer",
+    "confirm": "lancer",
+    "close": "fermer"
+  },
   "collections": {
     "title": "Collections",
     "subtitle": "Organisez vos jeux en collections",
