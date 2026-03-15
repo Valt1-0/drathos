@@ -5,7 +5,7 @@ export const buildServerUrl = (serverAddress, path = '', protocol = null) => {
   }
   if (protocol) return `${protocol}://${serverAddress}${path}`;
 
-  // Détection intelligente : HTTPS pour domaines, HTTP pour IPs
+  // Smart detection: HTTPS for domains, HTTP for IPs
   const addressWithoutPort = serverAddress.split(':')[0];
   const isDomain = /[a-zA-Z]/.test(addressWithoutPort);
   const defaultProtocol = isDomain ? 'https' : 'http';
@@ -22,7 +22,7 @@ export const detectServerProtocol = async (serverAddress, testPath = '/api/serve
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     try {
-      // Ne pas spécifier de mode pour Electron - laisse le navigateur gérer
+      // Do not specify a mode for Electron - let the browser handle it
       const response = await fetch(url, { method: 'GET', signal: controller.signal });
       clearTimeout(timeoutId);
       return response.ok;
@@ -32,33 +32,33 @@ export const detectServerProtocol = async (serverAddress, testPath = '/api/serve
     }
   };
 
-  // Extraire l'adresse sans port pour la détection
+  // Extract the address without port for detection
   const addressWithoutPort = serverAddress.split(':')[0];
 
-  // Détecter si c'est un domaine (contient des lettres) ou une IP (uniquement chiffres et points)
+  // Detect whether it is a domain (contains letters) or an IP (digits and dots only)
   const isDomain = /[a-zA-Z]/.test(addressWithoutPort);
 
-  // Pour les domaines, privilégier HTTPS (reverse proxy, certificats)
-  // Pour les IPs, privilégier HTTP (serveurs locaux)
+  // For domains, prefer HTTPS (reverse proxy, certificates)
+  // For IPs, prefer HTTP (local servers)
   if (isDomain) {
-    // Tester HTTPS en premier pour les domaines
+    // Test HTTPS first for domains
     const httpsUrl = `https://${serverAddress}${testPath}`;
     if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}` };
 
-    // Fallback sur HTTP si HTTPS échoue
+    // Fallback to HTTP if HTTPS fails
     const httpUrl = `http://${serverAddress}${testPath}`;
     if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}` };
   } else {
-    // Tester HTTP en premier pour les IPs
+    // Test HTTP first for IPs
     const httpUrl = `http://${serverAddress}${testPath}`;
     if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}` };
 
-    // Fallback sur HTTPS si HTTP échoue
+    // Fallback to HTTPS if HTTP fails
     const httpsUrl = `https://${serverAddress}${testPath}`;
     if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}` };
   }
 
-  // Si aucun ne fonctionne, fallback intelligent selon le type
+  // If none work, smart fallback based on type
   return {
     protocol: isDomain ? 'https' : 'http',
     url: `${isDomain ? 'https' : 'http'}://${serverAddress}`

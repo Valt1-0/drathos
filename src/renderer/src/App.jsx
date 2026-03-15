@@ -32,12 +32,12 @@ import QuickLaunch from "./components/QuickLaunch";
 import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
 
-// * Pages critiques importées directement (pas de lazy loading)
+// * Critical pages imported directly (no lazy loading)
 import Games from "./pages/Games";
 import Collections from "./pages/Collections";
 import Home from "./pages/Home";
 
-// * Lazy-loaded Pages pour les pages moins utilisées
+// * Lazy-loaded pages for less frequently used pages
 const Welcome = lazy(() => import("./pages/Welcome"));
 const Download = lazy(() => import("./pages/Download"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -185,9 +185,9 @@ function AppRoutes() {
 
 export default function App() {
   useEffect(() => {
-    // Raccourci clavier pour ouvrir le DevTools
+    // Keyboard shortcut to open DevTools
     const handleKeyDown = (e) => {
-      // F12 ou Ctrl+Shift+I
+      // F12 or Ctrl+Shift+I
       if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
         e.preventDefault();
         window.api.windowToggleDevTools();

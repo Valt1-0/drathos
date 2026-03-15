@@ -53,10 +53,10 @@ const TitleBar = () => {
         borderBottom: '1px solid var(--app-border)',
       }}
     >
-      {/* Zone draggable */}
+      {/* Draggable area */}
       <div className="flex-1 h-full" />
 
-      {/* Boutons de contrôle */}
+      {/* Control buttons */}
       <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' }}>
         {/* Minimize */}
         <button

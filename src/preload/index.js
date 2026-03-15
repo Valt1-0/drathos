@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer } from "electron";
 
 // Custom APIs for renderer
 const api = {
-  // === APIS EXISTANTES (inchangées) ===
+  // === EXISTING APIS (unchanged) ===
   selectAndCreateFolder: (subfolderName) =>
     ipcRenderer.invoke("dialog:selectAndCreate", subfolderName),
   selectFolder: () => ipcRenderer.invoke("dialog:openFolder"),
@@ -29,60 +29,60 @@ const api = {
   configureExecutable: (gameId, config) =>
     ipcRenderer.invoke("configureExecutable", { gameId, config }),
 
-  // Détecter tous les exécutables dans un dossier de jeu
+  // Detect all executables in a game folder
   detectExecutables: ({ gamePath, gameName }) =>
     ipcRenderer.invoke("detectExecutables", { gamePath, gameName }),
-  // Obtenir le meilleur exécutable pour un jeu
+  // Get the best executable for a game
   getBestExecutable: ({ gamePath, gameName }) =>
     ipcRenderer.invoke("getBestExecutable", { gamePath, gameName }),
-  // Vérifier si un fichier est exécutable
+  // Check if a file is executable
   isFileExecutable: (filePath) =>
     ipcRenderer.invoke("isFileExecutable", filePath),
-  // Lister le contenu d'un dossier de jeu
+  // List the contents of a game folder
   listGameDirectory: (gamePath) =>
     ipcRenderer.invoke("listGameDirectory", gamePath),
-  // Ouvrir le dossier d'un jeu
+  // Open a game's folder
   openGameFolder: (gamePath) => ipcRenderer.invoke("openGameFolder", gamePath),
-  // Lister le contenu d'une archive (zip, 7z, rar, tar, etc.)
+  // List the contents of an archive (zip, 7z, rar, tar, etc.)
   listArchiveFiles: (filePath) => ipcRenderer.invoke("listArchiveFiles", filePath),
-  // Sélectionner et scanner une archive (pour les jeux)
+  // Select and scan an archive (for games)
   selectAndScanArchive: () => ipcRenderer.invoke("selectAndScanArchive"),
-  // Sélectionner un fichier archive (pour les mods - sans scan)
+  // Select an archive file (for mods - without scan)
   selectArchiveFile: () => ipcRenderer.invoke("selectArchiveFile"),
-  // Lire un fichier archive en tant que buffer
+  // Read an archive file as a buffer
   readArchiveFile: (filePath) => ipcRenderer.invoke("readArchiveFile", filePath),
-  // Obtenir les infos d'un processus de jeu
+  // Get the process info of a game
   getGameProcess: (gameId) => ipcRenderer.invoke("getGameProcess", gameId),
-  // Vérifier si un jeu est en cours
+  // Check if a game is currently running
   isGameRunning: (gameId) => ipcRenderer.invoke("isGameRunning", gameId),
 
-  // Arrêter un jeu normalement
+  // Stop a game normally
   stopGame: ({ gameId, force = false }) =>
     ipcRenderer.invoke("stopGame", { gameId, force }),
 
-  // Arrêter un jeu de force
+  // Force-stop a game
   forceStopGame: ({ gameId }) =>
     ipcRenderer.invoke("forceStopGame", { gameId }),
 
-  // Désinstaller un jeu
+  // Uninstall a game
   uninstallGame: ({ gameId, gamePath, gameName }) =>
     ipcRenderer.invoke("uninstallGame", { gameId, gamePath, gameName }),
 
-  // Vérifier si un jeu peut être désinstallé
+  // Check if a game can be uninstalled
   canUninstallGame: ({ gameId, gamePath }) =>
     ipcRenderer.invoke("canUninstallGame", { gameId, gamePath }),
 
-  // Écouter la progression de désinstallation
+  // Listen to uninstall progress
   onUninstallProgress: (callback) => {
     ipcRenderer.removeAllListeners("uninstallProgress");
     ipcRenderer.on("uninstallProgress", (_event, data) => callback(data));
   },
 
-  // Obtenir la taille d'un jeu
+  // Get the size of a game
   getGameSize: ({ gamePath }) =>
     ipcRenderer.invoke("getGameSize", { gamePath }),
 
-  // Obtenir l'espace disque libre
+  // Get free disk space
   getDiskSpace: () => ipcRenderer.invoke("getDiskSpace"),
 
   onSaveGameStats: (callback) => {
@@ -156,18 +156,18 @@ const api = {
     },
   },
 
-  // Créer un raccourci bureau
+  // Create a desktop shortcut
   createShortcut: ({ gameName, gamePath, executable }) =>
     ipcRenderer.invoke("createShortcut", { gameName, gamePath, executable }),
 
-  // Contrôles de fenêtre
+  // Window controls
   windowMinimize: () => ipcRenderer.send("window-minimize"),
   windowMaximize: () => ipcRenderer.send("window-maximize"),
   windowClose: () => ipcRenderer.send("window-close"),
   windowIsMaximized: () => ipcRenderer.invoke("window-is-maximized"),
   windowToggleDevTools: () => ipcRenderer.send("window-toggle-devtools"),
 
-  // Recharger l'application complètement
+  // Reload the application completely
   reloadApp: () => ipcRenderer.send("reload-app"),
 
   // Native notifications
@@ -214,7 +214,7 @@ if (process.contextIsolated) {
     console.error("[Preload] Erreur lors de l'exposition des APIs:", error);
   }
 } else {
-  // Fallback si contextIsolation est désactivé
+  // Fallback if contextIsolation is disabled
   window.api = api;
   window.store = {
     get: (key) => ipcRenderer.invoke("store-get", key),

@@ -2,18 +2,18 @@ import { motion } from "framer-motion";
 import Card from "./Card";
 
 /**
- * Stat Component - Système de design Drathos
+ * Stat Component - Drathos design system
  *
- * Composant carte statistique pour afficher des métriques.
+ * Statistics card component for displaying metrics.
  *
- * @param {React.ReactNode} icon - Icône de la statistique
- * @param {string} label - Label de la statistique
- * @param {string|number} value - Valeur de la statistique
- * @param {string} change - Changement (ex: "+12%")
- * @param {boolean} changePositive - Si le changement est positif
- * @param {string} variant - Couleur: 'primary', 'secondary', 'accent', 'success', 'warning'
- * @param {boolean} gradient - Utiliser un fond gradient
- * @param {string} className - Classes CSS additionnelles
+ * @param {React.ReactNode} icon - Statistic icon
+ * @param {string} label - Statistic label
+ * @param {string|number} value - Statistic value
+ * @param {string} change - Change (e.g. "+12%")
+ * @param {boolean} changePositive - Whether the change is positive
+ * @param {string} variant - Color: 'primary', 'secondary', 'accent', 'success', 'warning'
+ * @param {boolean} gradient - Use a gradient background
+ * @param {string} className - Additional CSS classes
  */
 const Stat = ({
   icon,
@@ -36,7 +36,7 @@ const Stat = ({
       {...props}
     >
       <div className="p-6">
-        {/* Icône */}
+        {/* Icon */}
         {icon && (
           <motion.div
             className="flex items-center justify-center w-14 h-14 rounded-xl mb-4"
@@ -61,7 +61,7 @@ const Stat = ({
           {label}
         </p>
 
-        {/* Valeur */}
+        {/* Value */}
         <div className="flex items-end justify-between">
           <h3
             className="text-3xl font-bold"
@@ -70,7 +70,7 @@ const Stat = ({
             {value}
           </h3>
 
-          {/* Changement */}
+          {/* Change */}
           {change && (
             <motion.span
               className="text-sm font-semibold px-2 py-1 rounded-lg"

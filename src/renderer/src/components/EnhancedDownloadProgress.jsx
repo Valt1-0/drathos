@@ -22,13 +22,13 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
   const [displayETA, setDisplayETA] = useState("");
   const animationRef = useRef(null);
 
-  // Animation fluide du progress bar (60fps)
+  // Smooth progress bar animation (60fps)
   useEffect(() => {
     const target = Number.isFinite(download.progress) ? download.progress : 0;
     const animate = () => {
       setAnimatedProgress((prev) => {
         const diff = target - prev;
-        // Easing pour animation fluide
+        // Easing for smooth animation
         const newValue = prev + diff * 0.1;
         return Math.abs(diff) < 0.1 ? target : newValue;
       });
@@ -45,11 +45,11 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     };
   }, [download.progress]);
 
-  // Mise à jour des métriques avec smooth transitions
+  // Update metrics with smooth transitions
   useEffect(() => {
     setDisplaySpeed(download.speed ?? 0);
 
-    // Calcul ETA formaté
+    // Formatted ETA calculation
     if (download.eta && download.eta > 0) {
       const minutes = Math.floor(download.eta / 60);
       const seconds = Math.floor(download.eta % 60);
@@ -59,7 +59,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   }, [download.speed, download.eta]);
 
-  // Couleurs dynamiques selon le stage
+  // Dynamic colors by stage
   const getStageColor = (stage) => {
     switch (stage) {
       case "preparing":
@@ -82,7 +82,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   };
 
-  // Icônes par stage
+  // Icons by stage
   const getStageIcon = (stage) => {
     switch (stage) {
       case "preparing":
@@ -105,7 +105,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   };
 
-  // Messages dynamiques
+  // Dynamic messages
   const getStageMessage = (stage) => {
     switch (stage) {
       case "preparing":
@@ -129,7 +129,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   };
 
-  // Border color selon le stage
+  // Border color by stage
   const getBorderColor = (stage) => {
     switch (stage) {
       case "preparing":
@@ -164,7 +164,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
       {/* Glow effect on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      {/* Header avec image et infos de base */}
+      {/* Header with image and basic info */}
       <div className="relative z-10 flex items-center gap-4 mb-4">
         <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border bg-background-secondary border-border">
           <img
@@ -266,11 +266,11 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </div>
       </div>
 
-      {/* Progress Bar Animée */}
+      {/* Animated Progress Bar */}
       <div className="relative z-10">
         {/* Background */}
         <div className="w-full h-3 rounded-full overflow-hidden border bg-background-secondary border-border">
-          {/* Progress principal avec gradient */}
+          {/* Main progress with gradient */}
           <motion.div
             className={`h-full ${getStageColor(
               download.stage
@@ -279,7 +279,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
             animate={{ width: `${animatedProgress}%` }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            {/* Effet de brillance animé */}
+            {/* Animated shine effect */}
             {download.stage === "downloading" && (
               <motion.div
                 className="absolute top-0 right-0 h-full w-20 bg-gradient-to-r from-transparent via-white/30 to-transparent"
@@ -296,7 +296,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
           </motion.div>
         </div>
 
-        {/* Labels de progression */}
+        {/* Progress labels */}
         <div className="flex justify-between mt-3 text-xs">
           <div className={`flex items-center gap-2 ${getTextClass('secondary')}`}>
             <FiDownload className="text-xs" />
@@ -327,7 +327,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </div>
       </div>
 
-      {/* Métriques détaillées (téléchargement) */}
+      {/* Detailed metrics (downloading) */}
       {download.stage === "downloading" && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -362,7 +362,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </motion.div>
       )}
 
-      {/* Message d'erreur */}
+      {/* Error message */}
       {download.stage === "failed" && download.error && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -377,7 +377,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </motion.div>
       )}
 
-      {/* Informations de succès */}
+      {/* Success information */}
       {download.stage === "completed" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -404,16 +404,16 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
   );
 };
 
-// Fonction de comparaison personnalisée pour React.memo
-// Ne re-rend que si les propriétés pertinentes du download ont changé
+// Custom comparison function for React.memo
+// Only re-renders if relevant download properties have changed
 const arePropsEqual = (prevProps, nextProps) => {
   const prev = prevProps.download;
   const next = nextProps.download;
 
-  // Si l'un des deux est null/undefined
+  // If either is null/undefined
   if (!prev || !next) return prev === next;
 
-  // Comparer uniquement les propriétés qui affectent le rendu
+  // Compare only the properties that affect rendering
   return (
     prev.id === next.id &&
     prev.progress === next.progress &&
@@ -433,5 +433,5 @@ const arePropsEqual = (prevProps, nextProps) => {
   );
 };
 
-// Exporter le composant mémorisé
+// Export the memoized component
 export default memo(EnhancedDownloadProgress, arePropsEqual);

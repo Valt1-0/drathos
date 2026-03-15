@@ -4,7 +4,7 @@ import imageCacheService from "../services/imageCacheService";
 const optimizeIGDBImageUrl = (url, size = "cover_small") => {
   if (!url) return "";
 
-  // Si l'URL est déjà optimisée, la retourner telle quelle
+  // If the URL is already optimized, return it as-is
   if (
     url.includes("t_cover_small") ||
     url.includes("t_cover_big") ||
@@ -13,8 +13,8 @@ const optimizeIGDBImageUrl = (url, size = "cover_small") => {
     return url;
   }
 
-  // Remplacer t_thumb par la taille demandée
-  // Les tailles disponibles sur IGDB:
+  // Replace t_thumb with the requested size
+  // Available sizes on IGDB:
   // - t_thumb: 90x128
   // - t_cover_small: 264x352
   // - t_cover_big: 528x704

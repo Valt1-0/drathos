@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import '@renderer/assets/main.css';
 import logo from '@resources/icon.png';
 
-// Particules pré-générées
+// Pre-generated particles
 const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
   id: i,
   x: Math.random() * 550,
@@ -22,7 +22,7 @@ function SplashScreen() {
     let progressInterval;
     let mounted = true;
 
-    // Récupérer la version
+    // Get the version
     const init = async () => {
       try {
         if (window.api?.updater?.getStatus) {
@@ -35,7 +35,7 @@ function SplashScreen() {
         console.error('[Splash] Error getting version:', error);
       }
 
-      // Animation de progression de base
+      // Basic progress animation
       if (mounted) {
         setProgress(10);
         progressInterval = setInterval(() => {
@@ -54,7 +54,7 @@ function SplashScreen() {
 
     init();
 
-    // Écouter les événements de mise à jour - avec un délai pour s'assurer que window.api est prêt
+    // Listen for update events - with a delay to ensure window.api is ready
     setTimeout(() => {
       if (!mounted || !window.api?.updater) return;
 
@@ -117,7 +117,7 @@ function SplashScreen() {
         transition={{ duration: 0.4 }}
         className="relative w-[550px] h-[350px] bg-gradient-to-br from-gray-900 to-slate-900 rounded-2xl border border-blue-500/30 shadow-2xl overflow-hidden"
       >
-        {/* Particules d'arrière-plan */}
+        {/* Background particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {PARTICLES.map((p) => (
             <motion.div
@@ -138,7 +138,7 @@ function SplashScreen() {
           ))}
         </div>
 
-        {/* Contenu */}
+        {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full px-12">
           {/* Logo */}
           <motion.div
@@ -154,7 +154,7 @@ function SplashScreen() {
             />
           </motion.div>
 
-          {/* Titre */}
+          {/* Title */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -191,7 +191,7 @@ function SplashScreen() {
             <span className="text-sm text-gray-300">{status}</span>
           </motion.div>
 
-          {/* Barre de progression */}
+          {/* Progress bar */}
           <div className="w-full max-w-xs">
             <div className="h-1 bg-gray-800/50 rounded-full overflow-hidden">
               <motion.div
@@ -208,7 +208,7 @@ function SplashScreen() {
           </div>
         </div>
 
-        {/* Glow en bas */}
+        {/* Bottom glow */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-blue-500/10 to-transparent pointer-events-none" />
       </motion.div>
     </div>

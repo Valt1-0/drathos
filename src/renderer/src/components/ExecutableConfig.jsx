@@ -30,7 +30,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
         setFiles(data.allFiles);
         setSuggestedExecutables(data.suggestedExecutables);
 
-        // Auto-sélectionner le premier executable suggéré
+        // Auto-select the first suggested executable
         if (data.suggestedExecutables.length > 0) {
           setSelectedFile(data.suggestedExecutables[0].relativePath);
         }
@@ -93,7 +93,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
       <div className="bg-gray-800 text-white p-6 rounded-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-4">{t("executable.configure")}</h2>
 
-        {/* Executables suggérés */}
+        {/* Suggested executables */}
         {suggestedExecutables.length > 0 && (
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2 text-green-400">
@@ -128,7 +128,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
           </div>
         )}
 
-        {/* Tous les fichiers */}
+        {/* All files */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">{t("executable.allFiles")}</h3>
           <div className="max-h-60 overflow-y-auto bg-gray-900 rounded p-2">
@@ -159,7 +159,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
           </div>
         </div>
 
-        {/* Configuration avancée */}
+        {/* Advanced configuration */}
         <div className="space-y-4 mb-6">
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -198,7 +198,7 @@ const ExecutableConfig = ({ gameId, onSave, onClose, installedPath }) => {
           </label>
         </div>
 
-        {/* Boutons d'action */}
+        {/* Action buttons */}
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}

@@ -23,13 +23,16 @@ import {
   FiLoader,
   FiList,
   FiX,
+  FiAlertTriangle,
 } from "react-icons/fi";
 import { toast } from "sonner";
+
+const LOW_DISK_THRESHOLD_GB = 5;
 
 const Download = () => {
   const { t } = useTranslation();
 
-  // Utiliser les hooks optimisés au lieu de useDownload()
+  // Use optimized hooks instead of useDownload()
   const downloadStats = useDownloadStats();
   const activeDownloads = useActiveDownloads();
   const completedDownloads = useDownloadsByStage("completed");
@@ -44,8 +47,9 @@ const Download = () => {
     usedPercent: 0,
   });
   const [diskSpaceLoading, setDiskSpaceLoading] = useState(true);
+  const [diskSpaceError, setDiskSpaceError] = useState(false);
 
-  // Charger l'espace disque au montage
+  // Load disk space on mount
   useEffect(() => {
     const loadDiskSpace = async () => {
       try {
@@ -57,11 +61,14 @@ const Download = () => {
             totalSpace: result.totalGB,
             usedPercent: result.usedPercent,
           });
+          setDiskSpaceError(false);
         } else {
+          setDiskSpaceError(true);
           toast.error(t('errors.diskSpace'));
         }
       } catch (error) {
         console.error("Error loading disk space:", error);
+        setDiskSpaceError(true);
         toast.error(t('errors.diskSpace'));
       } finally {
         setDiskSpaceLoading(false);
@@ -69,7 +76,7 @@ const Download = () => {
     };
 
     loadDiskSpace();
-    // Rafraîchir l'espace disque toutes les 30 secondes
+    // Refresh disk space every 30 seconds
     const interval = setInterval(loadDiskSpace, 30000);
     return () => clearInterval(interval);
   }, [t]);
@@ -112,7 +119,7 @@ const Download = () => {
 
   return (
     <div className="h-full bg-background text-text overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
-      {/* Header avec stats */}
+      {/* Header with stats */}
       <div className="px-8 py-8 max-w-7xl mx-auto">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -206,6 +213,11 @@ const Download = () => {
                     <FiLoader className="text-2xl text-warning animate-spin" />
                     <span className="ml-3 text-text-secondary text-sm">{t('downloads.loadingDiskSpace')}</span>
                   </div>
+                ) : diskSpaceError ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <FiAlertTriangle className="text-error shrink-0" />
+                    <span className="text-sm text-text-secondary">{t('downloads.diskSpaceUnavailable')}</span>
+                  </div>
                 ) : diskSpace.freeSpace > 0 ? (
                   <>
                     <div className="flex items-baseline gap-2 mb-2">
@@ -266,7 +278,23 @@ const Download = () => {
           </div>
         </motion.div>
 
-        {/* File d'attente */}
+        {/* Low disk space warning */}
+        {!diskSpaceLoading && !diskSpaceError && diskSpace.freeSpace > 0 && diskSpace.freeSpace < LOW_DISK_THRESHOLD_GB && activeDownloads.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 p-4 rounded-xl border mb-6"
+            style={{ background: 'rgba(var(--app-error-rgb, 239, 68, 68), 0.1)', borderColor: 'var(--app-error)' }}
+          >
+            <FiAlertTriangle className="text-error text-xl shrink-0" />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--app-error)' }}>{t('downloads.lowDiskWarning')}</p>
+              <p className="text-xs text-text-secondary">{t('downloads.lowDiskWarningDesc', { free: diskSpace.freeSpace })}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Download queue */}
         <AnimatePresence mode="wait">
           {queue.length > 0 && (
             <motion.div
@@ -343,7 +371,7 @@ const Download = () => {
           )}
         </AnimatePresence>
 
-        {/* Téléchargements actifs */}
+        {/* Active downloads */}
         <AnimatePresence mode="wait">
           {activeDownloads.length > 0 && (
             <motion.div
@@ -380,7 +408,7 @@ const Download = () => {
           )}
         </AnimatePresence>
 
-        {/* Téléchargements terminés */}
+        {/* Completed downloads */}
         <AnimatePresence mode="wait">
           {completedDownloads.length > 0 && (
             <motion.div
@@ -456,7 +484,7 @@ const Download = () => {
           )}
         </AnimatePresence>
 
-        {/* Téléchargements échoués */}
+        {/* Failed downloads */}
         <AnimatePresence mode="wait">
           {failedDownloads.length > 0 && (
             <motion.div
@@ -529,7 +557,7 @@ const Download = () => {
           )}
         </AnimatePresence>
 
-        {/* État vide */}
+        {/* Empty state */}
         {totalDownloads === 0 && queue.length === 0 && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}

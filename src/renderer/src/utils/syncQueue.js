@@ -3,8 +3,8 @@
 import { syncStatsToServer } from "../api/gameStats.js";
 
 /**
- * Gestionnaire de queue pour les syncs ratées
- * Sauvegarde les syncs en attente et les retente automatiquement
+ * Queue manager for failed syncs
+ * Saves pending syncs and retries them automatically
  */
 class SyncQueue {
   constructor() {
@@ -16,7 +16,7 @@ class SyncQueue {
   }
 
   /**
-   * Charge la queue depuis le localStorage
+   * Loads the queue from localStorage
    */
   async loadQueue() {
     try {
@@ -32,7 +32,7 @@ class SyncQueue {
   }
 
   /**
-   * Sauvegarde la queue dans le localStorage
+   * Saves the queue to localStorage
    */
   async saveQueue() {
     try {
@@ -43,7 +43,7 @@ class SyncQueue {
   }
 
   /**
-   * Ajoute une sync à la queue
+   * Adds a sync to the queue
    */
   async enqueue(gameId, localStats, sessionDuration) {
     const syncItem = {
@@ -60,15 +60,15 @@ class SyncQueue {
 
     console.log(`[SyncQueue] ➕ Sync ajoutée pour ${gameId} (queue: ${this.queue.length})`);
 
-    // Notifier les listeners
+    // Notify listeners
     this.notifyListeners();
 
-    // Tenter immédiatement la sync
+    // Attempt the sync immediately
     this.processQueue();
   }
 
   /**
-   * Supprime une sync de la queue
+   * Removes a sync from the queue
    */
   async dequeue(gameId) {
     const initialLength = this.queue.length;
@@ -78,13 +78,13 @@ class SyncQueue {
       await this.saveQueue();
       console.log(`[SyncQueue] ➖ Sync retirée pour ${gameId} (queue: ${this.queue.length})`);
 
-      // Notifier les listeners
+      // Notify listeners
       this.notifyListeners();
     }
   }
 
   /**
-   * Démarre le traitement automatique de la queue
+   * Starts automatic queue processing
    */
   startAutoRetry() {
     if (this.retryInterval) {
@@ -102,7 +102,7 @@ class SyncQueue {
   }
 
   /**
-   * Arrête le traitement automatique
+   * Stops automatic processing
    */
   stopAutoRetry() {
     if (this.retryInterval) {
@@ -113,7 +113,7 @@ class SyncQueue {
   }
 
   /**
-   * Traite la queue de syncs
+   * Processes the sync queue
    */
   async processQueue() {
     if (this.isProcessing || this.queue.length === 0) {
@@ -125,12 +125,12 @@ class SyncQueue {
     try {
       console.log(`[SyncQueue] 🔄 Traitement de ${this.queue.length} sync(s)...`);
 
-      // Copie de la queue pour itération sécurisée
+      // Copy of the queue for safe iteration
       const itemsToProcess = [...this.queue];
 
       for (const item of itemsToProcess) {
         try {
-          // Vérifier le nombre de tentatives
+          // Check the number of attempts
           if (item.attempts >= this.MAX_RETRIES) {
             console.warn(
               `[SyncQueue] ⚠️ Sync ${item.gameId} abandonnée (max retries atteint)`
@@ -139,18 +139,18 @@ class SyncQueue {
             continue;
           }
 
-          // Incrémenter les tentatives
+          // Increment attempts
           item.attempts += 1;
           item.lastAttempt = Date.now();
 
-          // Tenter la sync
+          // Attempt the sync
           await syncStatsToServer(item.gameId, item.localStats, item.sessionDuration);
 
           console.log(
             `[SyncQueue] ✅ Sync réussie pour ${item.gameId} (tentative ${item.attempts})`
           );
 
-          // Retirer de la queue si succès
+          // Remove from queue if successful
           await this.dequeue(item.gameId);
         } catch (error) {
           console.error(
@@ -158,7 +158,7 @@ class SyncQueue {
             error.message
           );
 
-          // Mettre à jour la queue
+          // Update the queue
           await this.saveQueue();
         }
       }
@@ -170,7 +170,7 @@ class SyncQueue {
   }
 
   /**
-   * Nettoie les syncs trop anciennes (> 7 jours)
+   * Removes syncs that are too old (> 7 days)
    */
   async cleanOldItems() {
     const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -190,7 +190,7 @@ class SyncQueue {
   }
 
   /**
-   * Récupère le statut de la queue
+   * Retrieves the queue status
    */
   getStatus() {
     return {
@@ -205,14 +205,14 @@ class SyncQueue {
   }
 
   /**
-   * Récupère le nombre de syncs en attente
+   * Retrieves the number of pending syncs
    */
   getPendingCount() {
     return this.queue.length;
   }
 
   /**
-   * Ajoute un listener pour les changements de queue
+   * Adds a listener for queue changes
    */
   addListener(callback) {
     if (!this.listeners) {
@@ -223,7 +223,7 @@ class SyncQueue {
   }
 
   /**
-   * Supprime un listener
+   * Removes a listener
    */
   removeListener(id) {
     if (this.listeners && this.listeners[id]) {
@@ -232,7 +232,7 @@ class SyncQueue {
   }
 
   /**
-   * Notifie les listeners d'un changement
+   * Notifies listeners of a change
    */
   notifyListeners() {
     if (this.listeners) {
@@ -248,13 +248,13 @@ class SyncQueue {
 // Instance singleton
 const syncQueue = new SyncQueue();
 
-// Charger la queue au démarrage
+// Load the queue on startup
 syncQueue.loadQueue();
 
-// Démarrer l'auto-retry
+// Start auto-retry
 syncQueue.startAutoRetry();
 
-// Nettoyer les vieilles syncs toutes les heures
+// Clean old syncs every hour
 setInterval(() => {
   syncQueue.cleanOldItems();
 }, 60 * 60 * 1000);

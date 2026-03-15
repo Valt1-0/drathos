@@ -1,6 +1,6 @@
 /**
- * Logger centralisé pour le main process
- * Gère les logs dans la console et dans des fichiers avec rotation
+ * Centralized logger for the main process
+ * Handles logs in the console and in files with rotation
  */
 
 import fs from 'fs';
@@ -12,32 +12,32 @@ class Logger {
   constructor() {
     this.logsDir = null;
     this.currentLogFile = null;
-    this.maxLogFiles = 7; // Garder 7 jours de logs
+    this.maxLogFiles = 7; // Keep 7 days of logs
     this.maxLogSizeBytes = 10 * 1024 * 1024; // 10 MB par fichier
     this.initialized = false;
   }
 
   /**
-   * Initialise le système de logging
+   * Initializes the logging system
    */
   async initialize() {
     if (this.initialized) return;
 
     try {
-      // Créer le dossier logs dans userData
+      // Create the logs folder in userData
       const userDataPath = app.getPath('userData');
       this.logsDir = path.join(userDataPath, 'logs');
 
-      // Créer le dossier s'il n'existe pas
+      // Create the folder if it does not exist
       if (!fs.existsSync(this.logsDir)) {
         fs.mkdirSync(this.logsDir, { recursive: true });
       }
 
-      // Définir le fichier de log actuel
+      // Set the current log file
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       this.currentLogFile = path.join(this.logsDir, `app-${today}.log`);
 
-      // Nettoyer les vieux logs
+      // Clean up old logs
       await this.cleanOldLogs();
 
       this.initialized = true;
@@ -48,7 +48,7 @@ class Logger {
   }
 
   /**
-   * Nettoie les fichiers de logs trop anciens
+   * Removes log files that are too old
    */
   async cleanOldLogs() {
     try {
@@ -80,7 +80,7 @@ class Logger {
   }
 
   /**
-   * Vérifie si le fichier de log actuel est trop gros et crée un nouveau si nécessaire
+   * Checks if the current log file is too large and creates a new one if needed
    */
   checkLogRotation() {
     if (!this.currentLogFile) return;
@@ -89,7 +89,7 @@ class Logger {
       if (fs.existsSync(this.currentLogFile)) {
         const stats = fs.statSync(this.currentLogFile);
         if (stats.size > this.maxLogSizeBytes) {
-          // Créer un nouveau fichier avec timestamp
+          // Create a new file with timestamp
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
           const today = new Date().toISOString().split('T')[0];
           this.currentLogFile = path.join(this.logsDir, `app-${today}-${timestamp}.log`);
@@ -101,7 +101,7 @@ class Logger {
   }
 
   /**
-   * Écrit un message dans le fichier de log
+   * Writes a message to the log file
    */
   writeToFile(level, message, data) {
     if (!this.initialized || !this.currentLogFile) return;
@@ -120,7 +120,7 @@ class Logger {
   }
 
   /**
-   * Log niveau DEBUG
+   * DEBUG level log
    */
   debug(message, data = null) {
     console.debug(`[DEBUG] ${message}`, data || '');
@@ -128,7 +128,7 @@ class Logger {
   }
 
   /**
-   * Log niveau INFO
+   * INFO level log
    */
   info(message, data = null) {
     console.log(`[INFO] ${message}`, data || '');
@@ -136,7 +136,7 @@ class Logger {
   }
 
   /**
-   * Log niveau WARN
+   * WARN level log
    */
   warn(message, data = null) {
     console.warn(`[WARN] ${message}`, data || '');
@@ -144,7 +144,7 @@ class Logger {
   }
 
   /**
-   * Log niveau ERROR
+   * ERROR level log
    */
   error(message, error = null, data = null) {
     console.error(`[ERROR] ${message}`, error || '', data || '');
@@ -162,7 +162,7 @@ class Logger {
   }
 
   /**
-   * Récupère le contenu des logs récents
+   * Retrieves the content of recent logs
    */
   getRecentLogs(lines = 100) {
     if (!this.currentLogFile || !fs.existsSync(this.currentLogFile)) {
@@ -181,7 +181,7 @@ class Logger {
   }
 
   /**
-   * Récupère les informations système pour le rapport de bug
+   * Retrieves system information for the bug report
    */
   getSystemInfo() {
     return {
@@ -208,7 +208,7 @@ class Logger {
   }
 
   /**
-   * Exporte un rapport de bug complet
+   * Exports a complete bug report
    */
   async exportBugReport() {
     try {

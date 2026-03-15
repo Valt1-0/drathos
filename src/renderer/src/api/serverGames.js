@@ -38,7 +38,7 @@ export const addGameToServer = async (
   igdbId,
   onProgress = null,
   executableName = null,
-  multiplayer = null, // Nouveau format: { enabled, type, maxPlayers, modes }
+  multiplayer = null, // New format: { enabled, type, maxPlayers, modes }
   options = {}
 ) => {
   try {
@@ -126,9 +126,9 @@ export const configureUploadManager = (settings) => {
 };
 
 /**
- * Supprime un jeu du serveur (Admin uniquement)
- * @param {string} gameId - ID du jeu à supprimer
- * @returns {Promise<Object>} Résultat de la suppression
+ * Deletes a game from the server (Admin only)
+ * @param {string} gameId - ID of the game to delete
+ * @returns {Promise<Object>} Deletion result
  */
 export const deleteServerGame = async (gameId) => {
   try {

@@ -7,18 +7,18 @@ export const ThemeProvider = ({ children }) => {
   const [currentTheme, setCurrentTheme] = useState('default');
   const [theme, setTheme] = useState(null);
 
-  // Changer de thème
+  // Change theme
   const changeTheme = useCallback((themeId) => {
     console.log('[ThemeContext] Changing theme to:', themeId);
     const newTheme = applyTheme(themeId);
     setCurrentTheme(themeId);
     setTheme(newTheme);
 
-    // Sauvegarder le choix
+    // Save the selection
     window.store.set('selectedTheme', themeId);
   }, []);
 
-  // Charger le thème sauvegardé au démarrage
+  // Load the saved theme on startup
   useEffect(() => {
     const loadSavedTheme = async () => {
       try {
@@ -38,27 +38,27 @@ export const ThemeProvider = ({ children }) => {
     loadSavedTheme();
   }, [changeTheme]);
 
-  // Détecter si le thème actuel est clair
+  // Detect if the current theme is light
   const isLight = useMemo(() => {
     return checkIsLightTheme(currentTheme);
   }, [currentTheme]);
 
-  // Obtenir la couleur d'un thème
+  // Get a theme color
   const getColor = (colorKey) => {
     return theme?.colors?.[colorKey] || '#FFFFFF';
   };
 
-  // Obtenir un gradient
+  // Get a gradient
   const getGradient = (gradientKey) => {
     return theme?.gradients?.[gradientKey] || 'none';
   };
 
-  // Obtenir une shadow
+  // Get a shadow
   const getShadow = (shadowKey) => {
     return theme?.shadows?.[shadowKey] || 'none';
   };
 
-  // Obtenir une classe de texte appropriée selon le variant
+  // Get an appropriate text class based on the variant
   const getTextClass = useCallback((variant = 'primary') => {
     const variants = {
       primary: 'text-text',
@@ -68,14 +68,14 @@ export const ThemeProvider = ({ children }) => {
     return variants[variant] || variants.primary;
   }, [isLight]);
 
-  // Obtenir une classe glassmorphism appropriée selon le thème
+  // Get an appropriate glassmorphism class based on the theme
   const getGlassClass = useCallback(() => {
     return isLight
       ? 'backdrop-blur-xl bg-black/5 border border-black/10'
       : 'backdrop-blur-xl bg-white/5 border border-white/10';
   }, [isLight]);
 
-  // Obtenir un style inline pour le background
+  // Get an inline style for the background
   const getBackgroundStyle = useCallback((variant = 'primary') => {
     const variants = {
       primary: { background: 'var(--app-background)' },

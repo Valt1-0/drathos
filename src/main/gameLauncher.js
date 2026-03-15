@@ -14,7 +14,7 @@ export class GameLauncher {
   }
 
   /**
-   * Lance un jeu
+   * Launch a game
    */
   async launchGame(gameId, gamePath, executableName, onStatusChange = () => {}, store = null) {
     try {
@@ -67,7 +67,7 @@ export class GameLauncher {
   }
 
   /**
-   * Valide le lancement du jeu
+   * Validate game launch
    */
   _validateGameLaunch(gameId, gamePath, executableName) {
     const existingProcess = this.activeProcesses.get(gameId);
@@ -148,7 +148,7 @@ export class GameLauncher {
   }
 
   /**
-   * Configure les événements du processus
+   * Configure process events
    */
   _setupProcessEvents(gameProcess, processInfo, onStatusChange) {
     gameProcess.on("spawn", () => {
@@ -232,7 +232,7 @@ export class GameLauncher {
   }
 
   /**
-   * Configure la capture des logs du processus
+   * Configure process log capture
    */
   _setupProcessLogging(gameProcess, gameId) {
     if (gameProcess.stdout) {
@@ -261,7 +261,7 @@ export class GameLauncher {
   }
 
   /**
-   * Arrête un jeu
+   * Stop a game
    */
   async stopGame(gameId, force = false) {
     const processInfo = this.activeProcesses.get(gameId);
@@ -325,7 +325,7 @@ export class GameLauncher {
   }
 
   /**
-   * Démarre le tracking de session
+   * Start session tracking
    */
   startSessionTracking(gameId, onStatusChange) {
     if (this.sessionTrackers.has(gameId)) {
@@ -352,7 +352,7 @@ export class GameLauncher {
   }
 
   /**
-   * Envoie les statistiques au renderer
+   * Send statistics to the renderer
    */
   async sendStatsToBackend(gameId) {
     try {
@@ -384,7 +384,7 @@ export class GameLauncher {
   }
 
   /**
-   * Nettoie les ressources d'un jeu
+   * Clean up a game's resources
    */
   async cleanupProcess(gameId) {
     const processInfo = this.activeProcesses.get(gameId);
@@ -400,7 +400,7 @@ export class GameLauncher {
           }
         }).catch(() => {});
       } catch (error) {
-        // Wine cleanup est optionnel
+        // Wine cleanup is optional
       }
     }
 
@@ -414,7 +414,7 @@ export class GameLauncher {
   }
 
   /**
-   * Nettoie toutes les ressources
+   * Clean up all resources
    */
   cleanup() {
     console.log("[GameLauncher] Nettoyage de tous les jeux actifs...");
@@ -430,7 +430,7 @@ export class GameLauncher {
   }
 
   /**
-   * Obtient la liste des jeux actifs
+   * Get the list of active games
    */
   getActiveGames() {
     const activeGames = [];
@@ -450,14 +450,14 @@ export class GameLauncher {
   }
 
   /**
-   * Vérifie si un jeu est en cours
+   * Check if a game is running
    */
   isGameRunning(gameId) {
     return this.activeProcesses.has(gameId);
   }
 
   /**
-   * Ouvre le dossier du jeu
+   * Open the game folder
    */
   openGameFolder(gamePath) {
     if (fs.existsSync(gamePath)) {
@@ -469,7 +469,7 @@ export class GameLauncher {
   }
 
   /**
-   * Obtient les informations d'un processus
+   * Get information about a process
    */
   getGameProcess(gameId) {
     return this.activeProcesses.get(gameId) || null;

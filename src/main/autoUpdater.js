@@ -3,7 +3,7 @@ import { app } from 'electron';
 import logger from './utils/logger.js';
 
 /**
- * Auto-updater simple et efficace
+ * Simple and efficient auto-updater
  */
 export class AutoUpdateManager {
   constructor() {
@@ -13,18 +13,18 @@ export class AutoUpdateManager {
     this.mainWindow = null;
     this.checkInterval = null;
 
-    // Déterminer si on est en production
+    // Determine if we are in production
     this.isProduction = app.isPackaged && process.env.NODE_ENV === 'production';
 
-    // Configuration de base
+    // Basic configuration
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
 
-    // Toujours configurer les événements (même en dev pour le débogage)
+    // Always configure events (even in dev for debugging)
     this.setupEvents();
 
-    // Auto-update temporairement désactivé
-    // Configuration du feed uniquement en production
+    // Auto-update temporarily disabled
+    // Feed configuration only in production
     // if (this.isProduction) {
     //   try {
     //     autoUpdater.setFeedURL({
@@ -94,7 +94,7 @@ export class AutoUpdateManager {
       this.status = 'error';
       this.emit('error', { message: error.message });
 
-      // Reset le statut après 10 secondes pour permettre une nouvelle tentative
+      // Reset the status after 10 seconds to allow a new attempt
       setTimeout(() => {
         if (this.status === 'error') {
           logger.info('[AutoUpdater] Resetting error status');
@@ -200,8 +200,8 @@ export class AutoUpdateManager {
   }
 
   /**
-   * Démarre une vérification automatique périodique des mises à jour
-   * @param {number} intervalMinutes - Intervalle en minutes (par défaut: 60)
+   * Starts an automatic periodic update check
+   * @param {number} intervalMinutes - Interval in minutes (default: 60)
    */
   startPeriodicCheck(intervalMinutes = 60) {
     if (!this.isProduction) {
@@ -209,7 +209,7 @@ export class AutoUpdateManager {
       return;
     }
 
-    // Arrêter toute vérification existante
+    // Stop any existing check
     this.stopPeriodicCheck();
 
     const intervalMs = intervalMinutes * 60 * 1000;
@@ -224,7 +224,7 @@ export class AutoUpdateManager {
   }
 
   /**
-   * Arrête la vérification automatique périodique
+   * Stops the automatic periodic check
    */
   stopPeriodicCheck() {
     if (this.checkInterval) {
@@ -235,7 +235,7 @@ export class AutoUpdateManager {
   }
 
   /**
-   * Nettoie les ressources lors de la fermeture
+   * Cleans up resources on shutdown
    */
   cleanup() {
     this.stopPeriodicCheck();

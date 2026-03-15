@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -17,7 +17,7 @@ import { Button } from "../components/ui";
 
 const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 
-const StatCard = ({ icon, label, value, color }) => (
+const StatCard = memo(({ icon, label, value, color }) => (
   <motion.div
     variants={fadeIn}
     className="p-5 rounded-2xl border hover:scale-[1.02] transition-transform"
@@ -36,7 +36,9 @@ const StatCard = ({ icon, label, value, color }) => (
       </div>
     </div>
   </motion.div>
-);
+));
+
+StatCard.displayName = 'StatCard';
 
 const GameCard = ({ game, t }) => (
   <motion.div
@@ -113,7 +115,7 @@ const Home = () => {
     if (isOnline === null) return;
 
     const load = async () => {
-      // 1. Charger cache local (jeux installés)
+      // 1. Load local cache (installed games)
       const localCache = await window.store.get("installedGamesCache", {});
       const localInstalled = Object.entries(localCache).map(([id, data]) => ({
         _id: `installed_${id}`,
@@ -121,7 +123,7 @@ const Home = () => {
         path: data.path,
       }));
 
-      // 2. Offline: seulement jeux installés
+      // 2. Offline: installed games only
       if (!isOnline) {
         gamesCache.clear();
         setInstalledGames(localInstalled);
@@ -130,7 +132,7 @@ const Home = () => {
         return;
       }
 
-      // 3. Online + cache valide: utiliser le cache
+      // 3. Online + valid cache: use the cache
       if (gamesCache.isValid()) {
         const c = gamesCache.get();
         setInstalledGames(c.installedGames);
@@ -139,7 +141,7 @@ const Home = () => {
         return;
       }
 
-      // 4. Online + pas de cache: fetch
+      // 4. Online + no cache: fetch
       setLoading(true);
       try {
         const [installed, games] = await Promise.all([
@@ -159,7 +161,7 @@ const Home = () => {
     load();
   }, [isOnline]);
 
-  // Load stats - utilise les stats locales si offline
+  // Load stats - use local stats if offline
   useEffect(() => {
     if (!installedGames?.length) return;
 
@@ -167,7 +169,7 @@ const Home = () => {
       try {
         const gameIds = installedGames.map(g => g.serverGameId?._id).filter(Boolean);
 
-        // Si offline, utiliser uniquement les stats locales
+        // If offline, use only local stats
         const allMergedStats = isOnline
           ? await Promise.all(gameIds.map(id => getMergedStats(id)))
           : await Promise.all(gameIds.map(id => getLocalStats(id)));
@@ -205,7 +207,7 @@ const Home = () => {
     loadStats();
   }, [installedGames, isOnline]);
 
-  // Ce qui s'affiche dépend DIRECTEMENT de isOnline
+  // What is displayed depends DIRECTLY on isOnline
   const games = isOnline ? serverGames : [];
 
   if (loading || isOnline === null) {

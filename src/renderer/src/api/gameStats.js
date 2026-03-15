@@ -5,9 +5,9 @@ import { buildServerUrl } from "../utils/urlHelper";
 
 
 /**
- * Récupère les statistiques d'un jeu depuis le serveur
- * @param {string} gameId - ID du jeu
- * @returns {Promise<Object>} Statistiques du jeu
+ * Retrieves game statistics from the server
+ * @param {string} gameId - Game ID
+ * @returns {Promise<Object>} Game statistics
  */
 export async function getGameStats(gameId) {
   const serverAddress = await window.store.get("serverAddress");
@@ -30,11 +30,11 @@ export async function getGameStats(gameId) {
 }
 
 /**
- * Synchronise les statistiques locales vers le serveur
- * @param {string} gameId - ID du jeu
- * @param {Object} localStats - Statistiques locales complètes
- * @param {number} sessionDuration - Durée de la dernière session en secondes
- * @returns {Promise<Object>} Résultat de la synchronisation
+ * Synchronizes local statistics to the server
+ * @param {string} gameId - Game ID
+ * @param {Object} localStats - Complete local statistics
+ * @param {number} sessionDuration - Duration of the last session in seconds
+ * @returns {Promise<Object>} Synchronization result
  */
 export async function syncStatsToServer(gameId, localStats, sessionDuration) {
   const serverAddress = await window.store.get("serverAddress");
@@ -66,9 +66,9 @@ export async function syncStatsToServer(gameId, localStats, sessionDuration) {
 }
 
 /**
- * Récupère les statistiques locales d'un jeu
- * @param {string} gameId - ID du jeu
- * @returns {Promise<Object|null>} Statistiques locales ou null
+ * Retrieves local statistics for a game
+ * @param {string} gameId - Game ID
+ * @returns {Promise<Object|null>} Local statistics or null
  */
 export async function getLocalStats(gameId) {
   try {
@@ -80,10 +80,10 @@ export async function getLocalStats(gameId) {
 }
 
 /**
- * Sauvegarde les statistiques d'une session localement
- * @param {string} gameId - ID du jeu
- * @param {Object} sessionData - Données de la session { duration, startTime }
- * @returns {Promise<Object>} Résultat de la sauvegarde
+ * Saves session statistics locally
+ * @param {string} gameId - Game ID
+ * @param {Object} sessionData - Session data { duration, startTime }
+ * @returns {Promise<Object>} Save result
  */
 export async function saveLocalStats(gameId, sessionData) {
   try {
@@ -95,39 +95,39 @@ export async function saveLocalStats(gameId, sessionData) {
 }
 
 /**
- * Récupère et merge les statistiques locales et serveur
- * @param {string} gameId - ID du jeu
- * @returns {Promise<Object>} Statistiques mergées
+ * Retrieves and merges local and server statistics
+ * @param {string} gameId - Game ID
+ * @returns {Promise<Object>} Merged statistics
  */
 export async function getMergedStats(gameId) {
-  // 1️⃣ Charger les stats locales (toujours disponibles)
+  // 1️⃣ Load local stats (always available)
   const localStats = await getLocalStats(gameId);
 
   try {
-    // 2️⃣ Essayer de récupérer les stats serveur (mode online)
+    // 2️⃣ Try to fetch server stats (online mode)
     const remoteStats = await getGameStats(gameId);
 
-    // 3️⃣ MERGE : Prendre les données les plus récentes
+    // 3️⃣ MERGE: Take the most recent data
     return mergeStats(localStats, remoteStats);
   } catch {
-    // 4️⃣ Mode hors ligne : utiliser uniquement les stats locales
+    // 4️⃣ Offline mode: use only local stats
     return localStats;
   }
 }
 
 /**
- * Helper pour merger les stats local/remote
+ * Helper to merge local/remote stats
  * @private
  */
 function mergeStats(local, remote) {
   if (!local) return remote;
   if (!remote) return local;
 
-  // Convertir les timestamps si nécessaire
+  // Convert timestamps if necessary
   const localLastPlayed = local.lastPlayed || 0;
   const remoteLastPlayed = remote.lastPlayed ? new Date(remote.lastPlayed).getTime() : 0;
 
-  // Prendre les valeurs maximales (les plus à jour)
+  // Take the maximum values (the most up to date)
   return {
     totalPlayTime: Math.max(local.totalPlayTime || 0, parsePlayTimeToSeconds(remote.totalPlayTime) || 0),
     totalSessions: Math.max(local.totalSessions || 0, remote.totalSessions || 0),
@@ -140,7 +140,7 @@ function mergeStats(local, remote) {
 }
 
 /**
- * Helper pour parser le temps de jeu formaté du serveur (ex: "2h 30m" -> 9000 secondes)
+ * Helper to parse the formatted play time from the server (e.g., "2h 30m" -> 9000 seconds)
  * @private
  */
 function parsePlayTimeToSeconds(formatted) {
@@ -160,9 +160,9 @@ function parsePlayTimeToSeconds(formatted) {
 }
 
 /**
- * Formate les statistiques brutes en format d'affichage
- * @param {Object} stats - Statistiques brutes (en secondes, timestamps)
- * @returns {Object} Statistiques formatées pour l'affichage
+ * Formats raw statistics into a display format
+ * @param {Object} stats - Raw statistics (in seconds, timestamps)
+ * @returns {Object} Formatted statistics for display
  */
 export function formatStats(stats) {
   if (!stats) return null;
@@ -184,24 +184,24 @@ export function formatStats(stats) {
 }
 
 /**
- * Formate une durée en secondes en format lisible
+ * Formats a duration in seconds into a human-readable format
  * @private
  */
 function formatPlayTime(seconds) {
-  // Validation stricte : vérifier que seconds est un nombre valide
+  // Strict validation: check that seconds is a valid number
   if (!seconds || isNaN(seconds) || seconds < 60) return "< 1 minute";
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
-  // Double-check pour éviter NaN dans l'affichage
+  // Double-check to avoid NaN in the display
   if (isNaN(hours) || isNaN(minutes)) return "< 1 minute";
 
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 /**
- * Formate un timestamp en temps relatif
+ * Formats a timestamp as relative time
  * @private
  */
 function formatRelativeTime(timestamp) {

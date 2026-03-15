@@ -71,7 +71,9 @@
     "mods": "Mods",
     "clearData": "Clear Data",
     "serverOnline": "Server Online",
-    "serverOffline": "Server Offline"
+    "serverOffline": "Server Offline",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "games": {
     "title": "Game Library",
@@ -357,6 +359,9 @@
     "noDownloadsYet": "No Downloads Yet",
     "noDownloadsDesc": "Your downloads will appear here once you start installing games",
     "loadingDiskSpace": "Loading disk space...",
+    "diskSpaceUnavailable": "Disk space data unavailable",
+    "lowDiskWarning": "Low disk space",
+    "lowDiskWarningDesc": "Only {{free}} GB remaining — download may fail",
     "noLocationSelected": "No download location selected",
     "configure": "Configure",
     "backgroundInfo": "Downloads continue in the background even if you close this page",

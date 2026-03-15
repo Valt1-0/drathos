@@ -49,7 +49,7 @@ const SettingsPage = () => {
   const { enabled: notificationsEnabled, setNotificationsEnabled } = useNotifications();
   const themesList = getThemesList();
 
-  // Déterminer si le thème actuel est clair ou sombre
+  // Determine if the current theme is light or dark
   const isLightTheme = theme?.colors?.background &&
     parseInt(theme.colors.background.replace('#', ''), 16) > 0x808080;
 
@@ -72,6 +72,7 @@ const SettingsPage = () => {
   // Profile Picture States
   const [profilePicture, setProfilePicture] = useState(user?.profilePicture || null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const fileInputRef = useRef(null);
 
   // Categories
@@ -118,8 +119,9 @@ const SettingsPage = () => {
     }
 
     setUploadingPicture(true);
+    setUploadProgress(0);
     try {
-      const result = await uploadProfilePicture(file);
+      const result = await uploadProfilePicture(file, setUploadProgress);
       setProfilePicture(result.profilePicture);
       updateUser({ profilePicture: result.profilePicture });
       toast.success(t('settings.profilePictureUpdated'));
@@ -130,7 +132,7 @@ const SettingsPage = () => {
       });
     } finally {
       setUploadingPicture(false);
-      // Reset file input
+      setUploadProgress(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -155,7 +157,7 @@ const SettingsPage = () => {
     }
   };
 
-  // Toggle entre Light Modern et Dark Modern
+  // Toggle between Light Modern and Dark Modern
   const handleQuickThemeToggle = () => {
     const newTheme = isLightTheme ? 'darkModern' : 'lightModern';
     changeAppTheme(newTheme);
@@ -370,10 +372,14 @@ const SettingsPage = () => {
                               whileHover={{ opacity: isOnline ? 1 : 0 }}
                               className={`absolute inset-0 rounded-2xl flex items-center justify-center gap-2 ${isOnline ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                               style={{ background: 'rgba(0, 0, 0, 0.6)' }}
-                              onClick={() => isOnline && fileInputRef.current?.click()}
+                              onClick={() => isOnline && !uploadingPicture && fileInputRef.current?.click()}
                             >
                               {uploadingPicture ? (
-                                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                uploadProgress !== null && uploadProgress < 100 ? (
+                                  <span className="text-white text-sm font-bold">{uploadProgress}%</span>
+                                ) : (
+                                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                )
                               ) : (
                                 <FiCamera className="text-2xl text-white" />
                               )}

@@ -1,17 +1,17 @@
 import { motion } from "framer-motion";
 
 /**
- * Toggle Component - Système de design Drathos
+ * Toggle Component - Drathos design system
  *
- * Composant switch avec animations fluides.
+ * Switch component with smooth animations.
  *
- * @param {boolean} checked - État du toggle
- * @param {Function} onChange - Callback au changement
- * @param {boolean} disabled - État désactivé
- * @param {string} size - Taille: 'sm', 'md', 'lg'
- * @param {string} label - Label du toggle
- * @param {string} description - Description sous le label
- * @param {string} className - Classes CSS additionnelles
+ * @param {boolean} checked - Toggle state
+ * @param {Function} onChange - Callback on change
+ * @param {boolean} disabled - Disabled state
+ * @param {string} size - Size: 'sm', 'md', 'lg'
+ * @param {string} label - Toggle label
+ * @param {string} description - Description below the label
+ * @param {string} className - Additional CSS classes
  */
 const Toggle = ({
   checked = false,
@@ -23,7 +23,7 @@ const Toggle = ({
   className = '',
   ...props
 }) => {
-  // Tailles (container width/height, thumb size, offset when checked)
+  // Sizes (container width/height, thumb size, offset when checked)
   const sizes = {
     sm: {
       width: 36,
@@ -106,7 +106,7 @@ const Toggle = ({
         />
       </button>
 
-      {/* Label et Description */}
+      {/* Label and Description */}
       {(label || description) && (
         <div className="flex-1">
           {label && (

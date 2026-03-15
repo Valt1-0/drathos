@@ -770,10 +770,20 @@ const Users = () => {
 
           {/* Search */}
           <form onSubmit={handleSearch} className="relative">
-            <FiSearch
-              className="absolute left-4 top-1/2 -translate-y-1/2"
-              style={{ color: "var(--app-textSecondary)" }}
-            />
+            {loading && search ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="absolute left-4 top-1/2 -translate-y-1/2"
+              >
+                <FiLoader style={{ color: "var(--app-primary)" }} />
+              </motion.div>
+            ) : (
+              <FiSearch
+                className="absolute left-4 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--app-textSecondary)" }}
+              />
+            )}
             <input
               type="text"
               value={searchInput}

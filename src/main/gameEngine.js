@@ -16,8 +16,8 @@ export class GameEngine {
       speedSamples: 10,
       maxRetries: 3,
       retryDelay: 1000,
-      // ⚠️ Mettre à false en production si certificat valide (Let's Encrypt)
-      allowSelfSignedCerts: true, // Pour dev/serveurs avec certificats auto-signés
+      // ⚠️ Set to false in production if certificate is valid (Let's Encrypt)
+      allowSelfSignedCerts: true, // For dev/servers with self-signed certificates
     };
 
     this.activeDownloads = new Map();
@@ -453,7 +453,7 @@ export class GameEngine {
       console.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
     }
 
-    // Calculer la taille installée (en MB)
+    // Calculate the installed size (in MB)
     let installSizeMB = 0;
     try {
       const sizeBytes = await this.calculateDirSize(extractPath);
@@ -506,7 +506,7 @@ export class GameEngine {
       throw new Error(errorMsg);
     }
 
-    // Préparer les données du cache (le main process fera la mise à jour atomique)
+    // Prepare cache data (the main process will perform the atomic update)
     const cacheData = {
       name: serverGame.name,
       summary: serverGame.summary,
@@ -572,27 +572,27 @@ export class GameEngine {
     if (!metrics) return;
 
     const now = Date.now();
-    const timeDelta = (now - metrics.lastUpdateTime) / 1000; // secondes
+    const timeDelta = (now - metrics.lastUpdateTime) / 1000; // seconds
 
     if (timeDelta > 0) {
       const bytesDelta = downloadedBytes - metrics.lastBytes;
       const instantSpeed = bytesDelta / timeDelta; // bytes/s
 
-      // Ajouter à l'historique des vitesses
+      // Add to speed history
       metrics.speeds.push(instantSpeed);
       if (metrics.speeds.length > this.config.speedSamples) {
         metrics.speeds.shift();
       }
 
-      // Calculer la vitesse moyenne
+      // Calculate average speed
       const avgSpeed =
         metrics.speeds.reduce((a, b) => a + b, 0) / metrics.speeds.length;
 
-      // Calculer l'ETA
+      // Calculate ETA
       const remainingBytes = totalSize - downloadedBytes;
       const eta = avgSpeed > 0 ? remainingBytes / avgSpeed : 0;
 
-      // Mettre à jour les métriques
+      // Update metrics
       metrics.lastUpdateTime = now;
       metrics.lastBytes = downloadedBytes;
       metrics.instantSpeed = instantSpeed;

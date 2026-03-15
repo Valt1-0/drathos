@@ -1,4 +1,4 @@
-// Cache mémoire pour éviter les refetch inutiles entre navigations
+// In-memory cache to avoid unnecessary refetches between navigations
 let cache = {
   games: [],
   installedGames: [],
@@ -12,7 +12,7 @@ export const gamesCache = {
   get: () => cache,
 
   set: (data) => {
-    // Sync games et serverGames
+    // Sync games and serverGames
     if (data.games) data.serverGames = data.games;
     if (data.serverGames) data.games = data.serverGames;
     cache = { ...cache, ...data, lastFetch: Date.now() };

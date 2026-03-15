@@ -93,7 +93,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
       setZipFile({ name: result.fileName, path: result.filePath });
       setAvailableExecutables(result.executables || []);
 
-      // Auto-sélection du meilleur exécutable
+      // Auto-select the best executable
       const windowsExecs = result.executables?.filter(e => e.platform === 'windows') || [];
       if (windowsExecs.length === 1) {
         setExecutableName(windowsExecs[0].path);
@@ -130,7 +130,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
     try {
       setErrorMessage("");
 
-      // Sauvegarder les infos avant de fermer la modal
+      // Save the info before closing the modal
       const gameInfo = {
         name: selectedGame.name,
         id: selectedGame.id,
@@ -141,18 +141,18 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
       };
       const fileInfo = { ...zipFile };
 
-      // Fermer la modal IMMÉDIATEMENT pour éviter le freeze
+      // Close the modal IMMEDIATELY to avoid freezing
       handleClose();
 
-      // Démarrer l'upload dans le contexte global
+      // Start the upload in the global context
       startUpload(gameInfo.name);
 
-      // Lancer le processus en arrière-plan (ne bloque pas l'UI)
+      // Run the process in the background (does not block the UI)
       setTimeout(async () => {
         try {
           let fileToUpload = fileInfo;
 
-          // Convertir le path en File object si nécessaire
+          // Convert the path to a File object if needed
           if (fileInfo.path && !fileInfo.size) {
             const fileData = await window.api.readArchiveFile(fileInfo.path);
             if (!fileData.success) throw new Error(fileData.error);
@@ -161,7 +161,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
             fileToUpload = new File([blob], fileInfo.name, { type: 'application/octet-stream' });
           }
 
-          // Lancer l'upload
+          // Start the upload
           await addGameToServer(
             fileToUpload,
             gameInfo.version,
@@ -172,10 +172,10 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
             gameInfo.multiplayer
           );
 
-          // Upload réussi
+          // Upload successful
           completeUpload();
 
-          // Rafraîchir la liste après un court délai
+          // Refresh the list after a short delay
           setTimeout(() => {
             onSuccess?.();
           }, 500);
@@ -192,7 +192,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    // Reset tous les états
+    // Reset all states
     setSelectedGame(null);
     setZipFile(null);
     setVersion("1.0.0");
@@ -445,7 +445,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         </label>
 
 
-                        {/* Executables Found - Liste groupée */}
+                        {/* Executables Found - Grouped list */}
                         {!isLoadingExecutables && availableExecutables.length > 0 && (
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
@@ -574,7 +574,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
                       {/* Multiplayer Section */}
                       <div className="space-y-3">
-                        {/* Toggle Principal */}
+                        {/* Main Toggle */}
                         <div className="flex items-center justify-between p-4 bg-surface rounded-xl border border-border">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -609,7 +609,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           </button>
                         </div>
 
-                        {/* Détails Multiplayer (conditionnels) */}
+                        {/* Multiplayer Details (conditional) */}
                         <AnimatePresence>
                           {multiplayer.enabled && (
                             <motion.div

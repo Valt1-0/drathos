@@ -4,7 +4,7 @@ import { is } from '@electron-toolkit/utils';
 import logger from './utils/logger.js';
 
 /**
- * Fenêtre splash simple et efficace
+ * Simple and efficient splash window
  */
 export class SplashWindow {
   constructor(icon) {
@@ -31,14 +31,14 @@ export class SplashWindow {
       },
     });
 
-    // Charger la page splash
+    // Load the splash page
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       this.window.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/splash.html`);
     } else {
       this.window.loadFile(join(__dirname, '../renderer/splash.html'));
     }
 
-    // Afficher quand prêt
+    // Show when ready
     this.window.once('ready-to-show', () => {
       this.window.show();
       logger.info('[Splash] Window shown');

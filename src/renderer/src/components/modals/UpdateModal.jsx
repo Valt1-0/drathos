@@ -20,7 +20,7 @@ export default function UpdateModal() {
 
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Auto-fermer le modal si le statut revient à idle
+  // Auto-close the modal if the status returns to idle
   useEffect(() => {
     if (updateStatus === 'idle' && showUpdateModal) {
       setShowUpdateModal(false);

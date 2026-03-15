@@ -9,7 +9,7 @@ async function runUninstallation() {
   try {
     console.log(`[UninstallWorker] 🗑️ Désinstallation: ${workerData.gameId}`);
 
-    // Lancer la désinstallation complète
+    // Start the full uninstallation
     const result = await uninstallEngine.uninstallGame(
       workerData.gameId,
       workerData.gamePath,
@@ -23,7 +23,7 @@ async function runUninstallation() {
       }
     );
 
-    // Résultat final
+    // Final result
     if (result.success) {
       console.log(
         `[UninstallWorker] ✅ Désinstallation réussie: ${workerData.gameId}`

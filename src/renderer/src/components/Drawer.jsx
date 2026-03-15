@@ -84,7 +84,7 @@ const Drawer = ({ children }) => {
         >
           <motion.button
             onClick={toggleDrawer}
-            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-label={isOpen ? t('nav.closeMenu') : t('nav.openMenu')}
             aria-expanded={isOpen}
             className="p-3 rounded-xl flex items-center justify-center transition-all duration-300"
             style={{
@@ -237,9 +237,9 @@ const Drawer = ({ children }) => {
           <button
             onClick={openDeleteModal}
             aria-label={t('nav.clearData')}
-            className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-border hover:border-error"
+            className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-error/30 hover:border-error"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-r from-error/10 to-transparent transition-opacity duration-300 group-hover:from-error/20" />
             <motion.div
               className="relative flex items-center py-3"
               animate={{
@@ -249,8 +249,8 @@ const Drawer = ({ children }) => {
               }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 bg-surface text-text-secondary">
-                <FaTrash className="text-lg group-hover:text-error" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 bg-surface">
+                <FaTrash className="text-lg text-error/60 group-hover:text-error" />
               </div>
               <AnimatePresence mode="wait">
                 {isOpen && (

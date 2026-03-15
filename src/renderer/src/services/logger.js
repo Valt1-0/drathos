@@ -1,6 +1,6 @@
 /**
- * Service de logging côté renderer
- * Envoie les logs au main process pour écriture dans fichier
+ * Renderer-side logging service
+ * Sends logs to the main process for writing to a file
  */
 
 class Logger {
@@ -9,7 +9,7 @@ class Logger {
   }
 
   /**
-   * Log niveau DEBUG
+   * DEBUG level log
    */
   debug(message, data = null) {
     console.debug(`[DEBUG] ${message}`, data || '');
@@ -24,7 +24,7 @@ class Logger {
   }
 
   /**
-   * Log niveau INFO
+   * INFO level log
    */
   info(message, data = null) {
     console.log(`[INFO] ${message}`, data || '');
@@ -39,7 +39,7 @@ class Logger {
   }
 
   /**
-   * Log niveau WARN
+   * WARN level log
    */
   warn(message, data = null) {
     console.warn(`[WARN] ${message}`, data || '');
@@ -54,7 +54,7 @@ class Logger {
   }
 
   /**
-   * Log niveau ERROR
+   * ERROR level log
    */
   error(message, error = null, context = null) {
     console.error(`[ERROR] ${message}`, error || '', context || '');
@@ -76,7 +76,7 @@ class Logger {
   }
 
   /**
-   * Récupère les logs récents
+   * Gets recent logs
    */
   async getLogs(lines = 100) {
     if (!this.isAvailable) {
@@ -92,7 +92,7 @@ class Logger {
   }
 
   /**
-   * Récupère les informations système
+   * Gets system information
    */
   async getSystemInfo() {
     if (!this.isAvailable) {
@@ -108,7 +108,7 @@ class Logger {
   }
 
   /**
-   * Exporte un rapport de bug
+   * Exports a bug report
    */
   async exportBugReport(description, userEmail = '') {
     if (!this.isAvailable) {
@@ -127,7 +127,7 @@ class Logger {
   }
 
   /**
-   * Ouvre le dossier de logs
+   * Opens the logs folder
    */
   async openLogsFolder() {
     if (!this.isAvailable) {
@@ -143,7 +143,7 @@ class Logger {
   }
 }
 
-// Instance singleton
+// Singleton instance
 const logger = new Logger();
 
 export default logger;

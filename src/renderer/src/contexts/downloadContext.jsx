@@ -6,14 +6,14 @@ const DownloadContext = createContext();
 
 export const DownloadProvider = ({ children }) => {
   const [downloads, setDownloads] = useState([]);
-  const [queue, setQueue] = useState([]); // jeux en attente de téléchargement
+  const [queue, setQueue] = useState([]); // games waiting to be downloaded
 
   const isProcessingRef = useRef(false);
-  const queueRef = useRef([]); // miroir de queue pour les callbacks async (évite les stale closures)
-  const downloadCallbacksRef = useRef(new Map()); // gameId -> callback de progression
-  const startDownloadRef = useRef(null); // auto-référence via ref pour éviter la récursion circulaire
+  const queueRef = useRef([]); // mirror of queue for async callbacks (avoids stale closures)
+  const downloadCallbacksRef = useRef(new Map()); // gameId -> progress callback
+  const startDownloadRef = useRef(null); // self-reference via ref to avoid circular recursion
 
-  // Listener IPC unique pour tous les téléchargements — monté une seule fois
+  // Single IPC listener for all downloads — mounted once
   useEffect(() => {
     window.api.onDownloadProgress((data) => {
       const cb = downloadCallbacksRef.current.get(data.id);
@@ -21,7 +21,7 @@ export const DownloadProvider = ({ children }) => {
     });
   }, []);
 
-  // Mis à jour à chaque render pour que les callbacks aient toujours la dernière version
+  // Updated on every render so callbacks always have the latest version
   startDownloadRef.current = (game) => {
     isProcessingRef.current = true;
     const downloadId = `${game._id}-${Date.now()}`;
@@ -71,7 +71,7 @@ export const DownloadProvider = ({ children }) => {
             console.warn("[DownloadQueue] Could not refresh installed games:", err);
           }
 
-          // Démarrer le suivant dans la queue
+          // Start the next item in the queue
           isProcessingRef.current = false;
           if (queueRef.current.length > 0) {
             const next = queueRef.current.shift();
@@ -97,9 +97,9 @@ export const DownloadProvider = ({ children }) => {
   };
 
   /**
-   * Ajoute un jeu à la queue de téléchargement.
-   * Démarre immédiatement si rien en cours, sinon met en attente.
-   * Retourne 'started' ou 'queued'.
+   * Adds a game to the download queue.
+   * Starts immediately if nothing is in progress, otherwise queues it.
+   * Returns 'started' or 'queued'.
    */
   const enqueueGame = useCallback((game) => {
     if (!isProcessingRef.current) {
@@ -116,7 +116,7 @@ export const DownloadProvider = ({ children }) => {
     setQueue([...queueRef.current]);
   }, []);
 
-  // Gardées pour la compatibilité avec les hooks existants
+  // Kept for compatibility with existing hooks
   const addDownload = useCallback((download) => {
     setDownloads((prev) => [...prev, download]);
   }, []);
@@ -219,7 +219,7 @@ export const useDownloadCount = () => {
   return useMemo(() => downloads.length, [downloads.length]);
 };
 
-/** Hook pour lire et gérer la queue de téléchargement */
+/** Hook to read and manage the download queue */
 export const useDownloadQueue = () => {
   const { queue, enqueueGame, removeFromQueue } = useContext(DownloadContext);
   return useMemo(

@@ -5,7 +5,7 @@ export async function getInstalledGames() {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
 
-  // Charger le cache local (object)
+  // Load the local cache (object)
   const cachedGamesObject = await window.store.get("installedGamesCache", {});
 
   if (!token) {
@@ -50,13 +50,13 @@ export async function getInstalledGames() {
 
     const serverGames = await response.json();
 
-    // Merger avec le cache local pour garder executable et stats locales
+    // Merge with the local cache to keep executable and local stats
     const mergedGames = serverGames.map((serverGame) => {
       const gameId = serverGame.serverGameId?._id || serverGame.serverGameId;
       const localData = cachedGamesObject[gameId];
 
       if (localData) {
-        // Utiliser les stats locales qui sont plus à jour
+        // Use local stats which are more up to date
         return {
           ...serverGame,
           stats: localData.stats || serverGame.stats,

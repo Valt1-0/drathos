@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -73,6 +73,9 @@ const Games = () => {
   const [uninstalling, setUninstalling] = useState(new Set());
   const [pendingUninstalls, setPendingUninstalls] = useState(new Set());
 
+  const watchdogTimersRef = useRef(new Set());
+  useEffect(() => () => watchdogTimersRef.current.forEach(clearTimeout), []);
+
   const { gameStats, updateSessionStats } = useGameStats();
   const { gameStatuses, setStatus } = useGameStatuses();
   const modals = useGameModals();
@@ -106,7 +109,7 @@ const Games = () => {
   // Load games
   useEffect(() => {
     const load = async () => {
-      // 1. Charger cache local d'abord (jeux installés)
+      // 1. Load local cache first (installed games)
       const localCache = await window.store.get("installedGamesCache", {});
       const localInstalled = Object.entries(localCache).map(([id, data]) => ({
         _id: `installed_${id}`,
@@ -114,7 +117,7 @@ const Games = () => {
         path: data.path,
       }));
 
-      // 2. Si offline ou pas encore vérifié: afficher seulement les jeux installés
+      // 2. If offline or not yet checked: show only installed games
       if (!isOnline) {
         gamesCache.clear();
         setInstalledGames(localInstalled);
@@ -124,7 +127,7 @@ const Games = () => {
         return;
       }
 
-      // 3. Online + cache mémoire valide: utiliser le cache
+      // 3. Online + valid memory cache: use the cache
       if (gamesCache.isValid()) {
         const c = gamesCache.get();
         setGames(c.games);
@@ -134,7 +137,7 @@ const Games = () => {
         return;
       }
 
-      // 4. Online + pas de cache: fetch serveur
+      // 4. Online + no cache: fetch from server
       setLoading(true);
       try {
         const [allGames, installed, activeGames] = await Promise.all([
@@ -158,7 +161,7 @@ const Games = () => {
     load();
   }, [isOnline]);
 
-  // Pré-sélection depuis QuickLaunch (navigate state)
+  // Pre-selection from QuickLaunch (navigate state)
   useEffect(() => {
     const gameId = location.state?.selectGameId;
     if (!gameId || !games.length) return;
@@ -346,13 +349,13 @@ const Games = () => {
         return;
       }
 
+      setPlayingGames((prev) => new Set([...prev, game._id]));
+
       try {
         await launchGameAPI(game._id);
       } catch (error) {
         // Offline mode - continue anyway
       }
-
-      setPlayingGames((prev) => new Set([...prev, game._id]));
 
       const cachedGames = await window.store.get("installedGamesCache", {});
       const cachedData = cachedGames[game._id];
@@ -386,6 +389,22 @@ const Games = () => {
           newSet.delete(game._id);
           return newSet;
         });
+      } else {
+        // Watchdog: if no status event in 15s, verify the game is still active
+        const timerId = setTimeout(async () => {
+          watchdogTimersRef.current.delete(timerId);
+          try {
+            const activeGames = await gameManager.getActiveGames();
+            if (!activeGames.some(g => g.gameId === game._id)) {
+              setPlayingGames((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(game._id);
+                return newSet;
+              });
+            }
+          } catch { /* best-effort */ }
+        }, 15000);
+        watchdogTimersRef.current.add(timerId);
       }
     } catch (error) {
       console.error("Error launching", game.name, ":", error);

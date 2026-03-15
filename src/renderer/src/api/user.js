@@ -112,30 +112,49 @@ export const updateProfileVisibility = async (isPublic) => {
   return response.json();
 };
 
-export const uploadProfilePicture = async (file) => {
+export const uploadProfilePicture = async (file, onProgress) => {
   const { serverAddress, token } = await getConfig();
   const formData = new FormData();
   formData.append("profilePicture", file);
+  const url = buildServerUrl(serverAddress, "/api/users/profile/picture");
 
-  const response = await fetchWithTimeout(
-    buildServerUrl(serverAddress, "/api/users/profile/picture"),
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData
-    }
-  );
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to upload profile picture");
-  }
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
 
-  const data = await response.json();
-  if (data.profilePicture) {
-    data.profilePicture = buildProfilePictureUrlSync(data.profilePicture, serverAddress);
-  }
-  return data;
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (data.profilePicture) {
+            data.profilePicture = buildProfilePictureUrlSync(data.profilePicture, serverAddress);
+          }
+          resolve(data);
+        } catch {
+          reject(new Error("Failed to parse response"));
+        }
+      } else {
+        try {
+          const error = JSON.parse(xhr.responseText);
+          reject(new Error(error.message || "Failed to upload profile picture"));
+        } catch {
+          reject(new Error("Failed to upload profile picture"));
+        }
+      }
+    });
+
+    xhr.addEventListener("error", () => reject(new Error("Network error")));
+    xhr.addEventListener("timeout", () => reject(new Error("Upload timed out")));
+    xhr.open("POST", url);
+    xhr.timeout = 30000;
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.send(formData);
+  });
 };
 
 export const deleteProfilePicture = async () => {

@@ -3,17 +3,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiAlertCircle } from "react-icons/fi";
 
 /**
- * Input Component - Système de design Drathos
+ * Input Component - Drathos design system
  *
- * Composant champ de texte avec support d'icônes, états et animations.
+ * Text field component with icon support, states and animations.
  *
- * @param {React.ReactNode} icon - Icône à afficher
- * @param {string} iconPosition - Position de l'icône: 'left', 'right'
- * @param {string} label - Label du champ
- * @param {string} helperText - Texte d'aide en dessous du champ
- * @param {string} error - Message d'erreur
- * @param {boolean} disabled - État désactivé
- * @param {string} className - Classes CSS additionnelles
+ * @param {React.ReactNode} icon - Icon to display
+ * @param {string} iconPosition - Icon position: 'left', 'right'
+ * @param {string} label - Field label
+ * @param {string} helperText - Helper text below the field
+ * @param {string} error - Error message
+ * @param {boolean} disabled - Disabled state
+ * @param {string} className - Additional CSS classes
  */
 const Input = ({
   icon,
@@ -47,7 +47,7 @@ const Input = ({
         }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
-        {/* Icône gauche */}
+        {/* Left icon */}
         {icon && iconPosition === 'left' && (
           <div
             className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none"
@@ -90,7 +90,7 @@ const Input = ({
           {...props}
         />
 
-        {/* Icône droite */}
+        {/* Right icon */}
         {icon && iconPosition === 'right' && !error && (
           <div
             className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none"
@@ -100,7 +100,7 @@ const Input = ({
           </div>
         )}
 
-        {/* Icône erreur */}
+        {/* Error icon */}
         {error && (
           <div
             className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none"
@@ -110,7 +110,7 @@ const Input = ({
           </div>
         )}
 
-        {/* Effet de glow au focus */}
+        {/* Glow effect on focus */}
         <AnimatePresence>
           {isFocused && !error && (
             <motion.div
@@ -127,7 +127,7 @@ const Input = ({
         </AnimatePresence>
       </motion.div>
 
-      {/* Helper Text ou Error */}
+      {/* Helper Text or Error */}
       <AnimatePresence mode="wait">
         {error && (
           <motion.p

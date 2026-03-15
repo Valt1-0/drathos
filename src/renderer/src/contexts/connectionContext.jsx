@@ -3,12 +3,12 @@ import syncQueue from "../utils/syncQueue";
 
 const ConnectionContext = createContext();
 
-const CHECK_INTERVAL_ONLINE = 10000; // 10s quand online
-const CHECK_INTERVAL_OFFLINE_MIN = 2000; // 2s initial quand offline
-const CHECK_INTERVAL_OFFLINE_MAX = 15000; // 15s max quand offline
+const CHECK_INTERVAL_ONLINE = 10000; // 10s when online
+const CHECK_INTERVAL_OFFLINE_MIN = 2000; // 2s initial when offline
+const CHECK_INTERVAL_OFFLINE_MAX = 15000; // 15s max when offline
 
 export function ConnectionProvider({ children }) {
-  const [isOnline, setIsOnline] = useState(null); // null = pas encore vérifié
+  const [isOnline, setIsOnline] = useState(null); // null = not yet checked
   const intervalRef = useRef(null);
   const offlineFailsRef = useRef(0);
 
@@ -39,14 +39,28 @@ export function ConnectionProvider({ children }) {
     }
   }, []);
 
-  // Check initial une seule fois
+  // Initial check once
   useEffect(() => {
     checkConnection();
   }, [checkConnection]);
 
-  // Interval adaptatif avec backoff quand offline
+  // Re-check immediately when the app comes back to the foreground
   useEffect(() => {
-    if (isOnline === null) return; // Attendre le premier check
+    let lastFocusCheck = 0;
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastFocusCheck < 2000) return;
+      lastFocusCheck = now;
+      checkConnection();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [checkConnection]);
+
+  // Adaptive interval with backoff when offline
+  useEffect(() => {
+    if (isOnline === null) return; // Wait for the first check
     let cancelled = false;
 
     if (isOnline) {
@@ -63,7 +77,7 @@ export function ConnectionProvider({ children }) {
           if (cancelled) return;
           offlineFailsRef.current++;
           const nowOnline = await checkConnection();
-          // Si toujours offline, re-planifier (setIsOnline(false) ne re-trigger pas l'effect)
+          // If still offline, reschedule (setIsOnline(false) does not re-trigger the effect)
           if (!nowOnline) scheduleNext();
         }, delay);
       };
@@ -77,7 +91,7 @@ export function ConnectionProvider({ children }) {
     };
   }, [isOnline, checkConnection]);
 
-  // Sync queue quand on repasse online
+  // Sync queue when coming back online
   useEffect(() => {
     if (isOnline) syncQueue.processQueue();
   }, [isOnline]);

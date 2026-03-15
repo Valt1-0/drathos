@@ -78,13 +78,13 @@ const UploadModModal = ({ onClose, onSuccess }) => {
         return;
       }
 
-      // Vérifier la taille du fichier (sans charger le fichier en mémoire)
+      // Check file size (without loading the file into memory)
       if (result.fileSize > 20 * 1024 * 1024 * 1024) { // 20GB
         toast.error(t('mods.fileTooLarge'));
         return;
       }
 
-      // Créer un objet File-like pour la compatibilité
+      // Create a File-like object for compatibility
       const file = {
         name: result.fileName,
         size: result.fileSize,
@@ -111,14 +111,14 @@ const UploadModModal = ({ onClose, onSuccess }) => {
     setUploadProgress(0);
 
     try {
-      // Si le fichier a une propriété path (depuis l'API native), lire le fichier
+      // If the file has a path property (from the native API), read the file
       let fileToUpload = selectedFile;
       if (selectedFile.path) {
         const buffer = await window.api.readArchiveFile(selectedFile.path);
         if (!buffer.success) {
           throw new Error(buffer.error || 'Failed to read file');
         }
-        // Créer un Blob depuis le buffer
+        // Create a Blob from the buffer
         const blob = new Blob([buffer.buffer], { type: 'application/octet-stream' });
         fileToUpload = new File([blob], selectedFile.name, { type: 'application/octet-stream' });
       }

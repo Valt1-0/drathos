@@ -28,7 +28,7 @@ const UploadNotification = () => {
   } = useUpload();
   const { isLight, getTextClass } = useTheme();
 
-  // Fonction pour formater la vitesse
+  // Function to format speed
   const formatSpeed = (bytesPerSecond) => {
     if (bytesPerSecond === 0) return t('upload.calculating');
     const mbps = bytesPerSecond / (1024 * 1024);
@@ -39,7 +39,7 @@ const UploadNotification = () => {
     return `${kbps.toFixed(2)} KB/s`;
   };
 
-  // Fonction pour formater le temps restant
+  // Function to format remaining time
   const formatETA = (seconds) => {
     if (seconds === 0 || !isFinite(seconds)) return t('upload.calculating');
     const hours = Math.floor(seconds / 3600);
@@ -55,7 +55,7 @@ const UploadNotification = () => {
     }
   };
 
-  // Fonction pour formater les bytes
+  // Function to format bytes
   const formatBytes = (bytes) => {
     if (bytes === 0) return "0 B";
     const mb = bytes / (1024 * 1024);

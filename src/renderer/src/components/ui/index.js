@@ -1,5 +1,5 @@
 // UI Components - Drathos
-// Export centralisé de tous les composants UI
+// Centralized export of all UI components
 
 export { default as Button } from './Button';
 export { default as Card } from './Card';

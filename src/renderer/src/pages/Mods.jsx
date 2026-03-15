@@ -19,7 +19,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import ConfirmationModal from "../components/modals/ConfirmationModal";
 
-// Lazy load modal pour optimiser
+// Lazy load modal for optimization
 const UploadModModal = lazy(
   () => import("../components/modals/UploadModModal"),
 );
@@ -84,7 +84,7 @@ const Mods = () => {
   const [modToDelete, setModToDelete] = useState(null);
 
   useEffect(() => {
-    // Skip si pas confirmé online
+    // Skip if not confirmed online
     if (isOnline !== true) {
       setLoading(false);
       return;
@@ -183,7 +183,7 @@ const Mods = () => {
     );
   }
 
-  // Bloquer si offline
+  // Block if offline
   if (!isOnline) {
     return (
       <div

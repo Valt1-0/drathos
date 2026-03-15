@@ -40,7 +40,7 @@ const Welcome = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Valide si l'adresse est une IP ou un DNS
+  // Validates if the address is an IP or a DNS
   const validateAddress = (address) => {
     const ipRegex =
       /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]{1,5})?$/;
@@ -157,21 +157,21 @@ const Welcome = () => {
     }
   };
 
-  // Gestion de la touche Entrée pour le serveur (step 2)
+  // Handle the Enter key for the server step (step 2)
   const handleServerKeyDown = (e) => {
     if (e.key === "Enter" && !isChecking && serverAddress) {
       handleServerCheck();
     }
   };
 
-  // Gestion de la touche Entrée pour l'authentification (step 3)
+  // Handle the Enter key for authentication (step 3)
   const handleAuthKeyDown = (e) => {
     if (e.key === "Enter") {
       handleAuth();
     }
   };
 
-  // Rendu des étapes
+  // Render steps
   const renderStep = () => {
     switch (currentStep) {
       case 1:

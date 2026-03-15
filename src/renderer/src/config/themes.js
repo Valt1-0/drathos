@@ -1,4 +1,4 @@
-// Configuration des thèmes de l'application
+// Application theme configuration
 export const themes = {
   ocean: {
     id: "ocean",
@@ -7,8 +7,8 @@ export const themes = {
     colors: {
       primary: "#06B6D4",
       primaryHover: "#0891B2",
-      secondary: "#1E3A8A",
-      secondaryHover: "#1E40AF",
+      secondary: "#0369A1",
+      secondaryHover: "#0284C7",
       accent: "#14B8A6",
       accentHover: "#0D9488",
       background: "#0F172A",
@@ -23,12 +23,12 @@ export const themes = {
     },
     gradients: {
       primary: "linear-gradient(135deg, #06B6D4 0%, #0891B2 100%)",
-      secondary: "linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%)",
+      secondary: "linear-gradient(135deg, #0369A1 0%, #0284C7 100%)",
       button: "linear-gradient(135deg, #06B6D4 0%, #0891B2 100%)",
     },
     shadows: {
       primary: "0 4px 20px rgba(6, 182, 212, 0.3)",
-      secondary: "0 4px 20px rgba(30, 58, 138, 0.4)",
+      secondary: "0 4px 20px rgba(3, 105, 161, 0.4)",
       accent: "0 4px 20px rgba(20, 184, 166, 0.3)",
     },
   },
@@ -66,7 +66,7 @@ export const themes = {
     },
   },
 
-  // Thème par défaut (actuel)
+  // Default theme (current)
   default: {
     id: "default",
     name: "Drathos Classic",
@@ -100,7 +100,7 @@ export const themes = {
     },
   },
 
-  // Mode Dark Moderne
+  // Dark Modern mode
   darkModern: {
     id: "darkModern",
     name: "Dark Modern",
@@ -134,7 +134,7 @@ export const themes = {
     },
   },
 
-  // Mode Light Moderne - Repensé
+  // Light Modern mode - Redesigned
   lightModern: {
     id: "lightModern",
     name: "Light Modern",
@@ -169,31 +169,31 @@ export const themes = {
   },
 };
 
-// Obtenir tous les thèmes en tableau
+// Get all themes as an array
 export const getThemesList = () => Object.values(themes);
 
-// Obtenir un thème par son ID
+// Get a theme by its ID
 export const getThemeById = (id) => themes[id] || themes.default;
 
-// Détecter si un thème est clair
+// Detect if a theme is light
 export const isLightTheme = (themeId) => {
   const theme = themes[themeId];
   if (!theme) return false;
 
-  // Vérifier explicitement si c'est lightModern
+  // Explicitly check if it is lightModern
   if (themeId === "lightModern") return true;
 
-  // Sinon, vérifier la luminosité du background
+  // Otherwise, check the brightness of the background
   if (theme.colors?.background) {
     const hex = theme.colors.background.replace("#", "");
     const rgb = parseInt(hex, 16);
-    return rgb > 0x808080; // Plus de 50% de luminosité
+    return rgb > 0x808080; // More than 50% brightness
   }
 
   return false;
 };
 
-// Appliquer un thème en CSS variables
+// Apply a theme via CSS variables
 export const applyTheme = (themeId) => {
   const theme = getThemeById(themeId);
   const root = document.documentElement;

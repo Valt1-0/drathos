@@ -58,7 +58,7 @@ export const UploadProvider = ({ children }) => {
 
   const completeUpload = () => {
     setUploadState("success");
-    // Auto-reset après 5 secondes
+    // Auto-reset after 5 seconds
     setTimeout(() => {
       resetUpload();
     }, 5000);
@@ -67,7 +67,7 @@ export const UploadProvider = ({ children }) => {
   const failUpload = (error) => {
     setUploadState("error");
     setUploadError(error);
-    // Auto-reset après 10 secondes
+    // Auto-reset after 10 seconds
     setTimeout(() => {
       resetUpload();
     }, 10000);

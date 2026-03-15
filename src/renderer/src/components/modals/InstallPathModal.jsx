@@ -20,7 +20,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
       if (newPath) {
         setDownloadPath(newPath);
 
-        // Récupérer l'espace disque disponible
+        // Get available disk space
         const space = await window.api.getDiskSpace();
         if (space.success) {
           setDiskSpace(space);
@@ -35,7 +35,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
 
   const handleConfirm = async () => {
     if (downloadPath) {
-      // Sauvegarder le chemin dans le store
+      // Save the path to the store
       await window.store.set("downloadPath", downloadPath);
       onConfirm(downloadPath);
       onClose();

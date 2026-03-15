@@ -2,17 +2,17 @@ import { motion } from "framer-motion";
 import { useTheme } from "../../contexts/themeContext";
 
 /**
- * Card Component - Système de design Drathos
+ * Card Component - Drathos design system
  *
- * Composant carte réutilisable avec effet glassmorphism,
- * variants et animations.
+ * Reusable card component with glassmorphism effect,
+ * variants and animations.
  *
- * @param {string} variant - Style de la carte: 'glass', 'solid', 'gradient', 'stat'
- * @param {boolean} hover - Activer les effets hover
- * @param {boolean} gradient - Utiliser une bordure gradient
- * @param {string} gradientColor - Couleur du gradient: 'primary', 'secondary', 'accent'
- * @param {string} className - Classes CSS additionnelles
- * @param {React.ReactNode} children - Contenu de la carte
+ * @param {string} variant - Card style: 'glass', 'solid', 'gradient', 'stat'
+ * @param {boolean} hover - Enable hover effects
+ * @param {boolean} gradient - Use a gradient border
+ * @param {string} gradientColor - Gradient color: 'primary', 'secondary', 'accent'
+ * @param {string} className - Additional CSS classes
+ * @param {React.ReactNode} children - Card content
  */
 const Card = ({
   variant = 'glass',
@@ -25,7 +25,7 @@ const Card = ({
 }) => {
   const { theme } = useTheme();
 
-  // Styles de base selon le variant
+  // Base styles by variant
   const getVariantClasses = () => {
     switch (variant) {
       case 'glass':
@@ -45,11 +45,11 @@ const Card = ({
     }
   };
 
-  // Styles inline selon le variant et le thème
+  // Inline styles by variant and theme
   const getInlineStyles = () => {
     const styles = {};
 
-    // Déterminer si le thème est clair
+    // Determine if the theme is light
     const isLight = theme?.colors?.background &&
       parseInt(theme.colors.background.replace('#', ''), 16) > 0x808080;
 
@@ -89,7 +89,7 @@ const Card = ({
         break;
     }
 
-    // Bordure gradient pour glass cards
+    // Gradient border for glass cards
     if (gradient && variant === 'glass') {
       styles.position = 'relative';
       styles.overflow = 'hidden';
@@ -98,7 +98,7 @@ const Card = ({
     return styles;
   };
 
-  // Animation hover
+  // Hover animation
   const getHoverAnimation = () => {
     if (!hover) return {};
 
@@ -108,7 +108,7 @@ const Card = ({
     };
   };
 
-  // Classe pour bordure gradient
+  // Class for gradient border
   const gradientBorderClass = gradient && variant === 'glass' ? 'card-gradient-border' : '';
 
   return (
@@ -125,7 +125,7 @@ const Card = ({
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       {...props}
     >
-      {/* Bordure gradient overlay */}
+      {/* Gradient border overlay */}
       {gradient && variant === 'glass' && (
         <div
           className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -142,7 +142,7 @@ const Card = ({
         />
       )}
 
-      {/* Contenu */}
+      {/* Content */}
       <div className="relative z-10">
         {children}
       </div>
@@ -150,10 +150,10 @@ const Card = ({
   );
 };
 
-// Sous-composants pour une meilleure organisation
+// Sub-components for better organization
 
 /**
- * Card.Header - En-tête de carte
+ * Card.Header - Card header
  */
 Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
   return (
@@ -198,7 +198,7 @@ Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
 };
 
 /**
- * Card.Body - Corps de la carte
+ * Card.Body - Card body
  */
 Card.Body = ({ className = '', children, ...props }) => {
   return (
@@ -209,7 +209,7 @@ Card.Body = ({ className = '', children, ...props }) => {
 };
 
 /**
- * Card.Footer - Pied de carte
+ * Card.Footer - Card footer
  */
 Card.Footer = ({ className = '', children, ...props }) => {
   return (

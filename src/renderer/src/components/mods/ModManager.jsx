@@ -121,9 +121,9 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
     }
   }, [gameId, filterInstalledModsForGame, t]);
 
-  // Reload on gameId change (seulement si confirmé online)
+  // Reload on gameId change (only if confirmed online)
   useEffect(() => {
-    // Skip si pas encore vérifié (null) ou offline (false)
+    // Skip if not yet verified (null) or offline (false)
     if (isOnline !== true) {
       setLoading(false);
       return;

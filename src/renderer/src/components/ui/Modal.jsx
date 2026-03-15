@@ -3,20 +3,20 @@ import { FiX } from "react-icons/fi";
 import Button from "./Button";
 
 /**
- * Modal Component - Système de design Drathos
+ * Modal Component - Drathos design system
  *
- * Composant modal de base avec glassmorphism et animations.
+ * Base modal component with glassmorphism and animations.
  *
- * @param {boolean} isOpen - État ouvert/fermé
- * @param {Function} onClose - Callback à la fermeture
- * @param {string} title - Titre du modal
- * @param {React.ReactNode} icon - Icône dans le header
- * @param {string} size - Taille: 'sm', 'md', 'lg', 'xl'
- * @param {boolean} closeOnBackdrop - Fermer en cliquant sur le backdrop
- * @param {boolean} showCloseButton - Afficher le bouton X
- * @param {React.ReactNode} children - Contenu du modal
- * @param {React.ReactNode} footer - Contenu du footer
- * @param {string} className - Classes CSS additionnelles
+ * @param {boolean} isOpen - Open/closed state
+ * @param {Function} onClose - Close callback
+ * @param {string} title - Modal title
+ * @param {React.ReactNode} icon - Icon in the header
+ * @param {string} size - Size: 'sm', 'md', 'lg', 'xl'
+ * @param {boolean} closeOnBackdrop - Close when clicking the backdrop
+ * @param {boolean} showCloseButton - Show the X button
+ * @param {React.ReactNode} children - Modal content
+ * @param {React.ReactNode} footer - Footer content
+ * @param {string} className - Additional CSS classes
  */
 const Modal = ({
   isOpen = false,
@@ -31,7 +31,7 @@ const Modal = ({
   className = '',
   ...props
 }) => {
-  // Tailles
+  // Sizes
   const sizes = {
     sm: 'max-w-md',
     md: 'max-w-2xl',
@@ -93,7 +93,7 @@ const Modal = ({
                 style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
               >
                 <div className="flex items-center gap-4">
-                  {/* Icône */}
+                  {/* Icon */}
                   {icon && (
                     <div
                       className="flex items-center justify-center w-12 h-12 rounded-xl"
@@ -106,7 +106,7 @@ const Modal = ({
                     </div>
                   )}
 
-                  {/* Titre */}
+                  {/* Title */}
                   {title && (
                     <h2
                       id="modal-title"
@@ -118,7 +118,7 @@ const Modal = ({
                   )}
                 </div>
 
-                {/* Bouton fermer */}
+                {/* Close button */}
                 {showCloseButton && (
                   <Button
                     variant="ghost"

@@ -18,7 +18,7 @@ const ICONS = [
 const MOSAIC_INDICES = [0, 1, 2, 3];
 const DEFAULT_FORM = { name: "", description: "", icon: "FaFolder" };
 
-const CollectionForm = ({ formData, setFormData, t }) => (
+const CollectionForm = ({ formData, setFormData, disabled, t }) => (
   <div className="space-y-3">
     <input
       type="text"
@@ -26,7 +26,8 @@ const CollectionForm = ({ formData, setFormData, t }) => (
       onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
       placeholder={t("collections.namePlaceholder")}
       autoFocus
-      className="w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-primary"
+      disabled={disabled}
+      className="w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
       style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}
     />
     <input
@@ -34,7 +35,8 @@ const CollectionForm = ({ formData, setFormData, t }) => (
       value={formData.description}
       onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
       placeholder={t("collections.descriptionPlaceholder")}
-      className="w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-primary"
+      disabled={disabled}
+      className="w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
       style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}
     />
     <div className="flex flex-wrap gap-1.5">
@@ -76,6 +78,8 @@ const Collections = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [collectionToDelete, setCollectionToDelete] = useState(null);
+  const [gameToRemove, setGameToRemove] = useState(null); // { id, name }
+  const [showRemoveGameModal, setShowRemoveGameModal] = useState(false);
   const [editingCollection, setEditingCollection] = useState(null);
   const [formData, setFormData] = useState({ name: "", description: "", icon: "FaFolder" });
   const [saving, setSaving] = useState(false);
@@ -149,14 +153,27 @@ const Collections = () => {
       if (selectedCollection?._id === collectionToDelete._id) setSelectedCollection(null);
       setShowDeleteModal(false);
       setCollectionToDelete(null);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   }, [collectionToDelete, selectedCollection?._id, deleteCollection]);
 
   const handleRemoveGame = useCallback(async (gameId) => {
     if (!selectedCollection) return;
-    try { await removeGamesFromCollection(selectedCollection._id, [gameId]); }
-    catch (e) { console.error(e); }
+    await removeGamesFromCollection(selectedCollection._id, [gameId]);
   }, [selectedCollection, removeGamesFromCollection]);
+
+  const handleConfirmRemoveGame = useCallback(async () => {
+    if (!gameToRemove) return;
+    try {
+      await handleRemoveGame(gameToRemove.id);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setShowRemoveGameModal(false);
+      setGameToRemove(null);
+    }
+  }, [gameToRemove, handleRemoveGame]);
 
   const emptyStateBg = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)";
   const mosaicPlaceholderBg = isLight ? "#d1d5db" : "#374151";
@@ -178,7 +195,7 @@ const Collections = () => {
           </>
         }
       >
-        <CollectionForm formData={formData} setFormData={setFormData} t={t} />
+        <CollectionForm formData={formData} setFormData={setFormData} disabled={saving} t={t} />
       </Modal>
       <DeleteConfirmModal
         isOpen={showDeleteModal}
@@ -186,6 +203,13 @@ const Collections = () => {
         onConfirm={handleDelete}
         title={t("collections.deleteTitle")}
         message={t("collections.deleteMessage", { name: collectionToDelete?.name })}
+      />
+      <DeleteConfirmModal
+        isOpen={showRemoveGameModal}
+        onClose={() => { setShowRemoveGameModal(false); setGameToRemove(null); }}
+        onConfirm={handleConfirmRemoveGame}
+        title={t("collections.confirmRemoveGame")}
+        message={t("collections.confirmRemoveGameMessage", { game: gameToRemove?.name, collection: selectedCollection?.name })}
       />
     </>
   );
@@ -254,12 +278,14 @@ const Collections = () => {
               <button
                 onClick={(e) => handleEdit(selectedCollection, e)}
                 className="p-2 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors"
+                aria-label={t("collections.edit")}
               >
                 <FiEdit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => handleDeleteClick(selectedCollection, e)}
                 className="p-2 rounded-lg text-white bg-white/10 hover:bg-red-500/70 transition-colors"
+                aria-label={t("collections.delete")}
               >
                 <FiTrash2 className="w-4 h-4" />
               </button>
@@ -313,10 +339,10 @@ const Collections = () => {
                         {/* Hover overlay */}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200" />
                         <button
-                          onClick={() => handleRemoveGame(gameId)}
+                          onClick={() => { setGameToRemove({ id: gameId, name: game.name }); setShowRemoveGameModal(true); }}
                           className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
                           style={{ background: "rgba(0,0,0,0.75)", color: "white" }}
-                          aria-label="Remove from collection"
+                          aria-label={t("collections.remove")}
                         >
                           <FiX className="w-3.5 h-3.5" />
                         </button>
@@ -480,7 +506,7 @@ const Collections = () => {
                           onClick={(e) => handleEdit(col, e)}
                           className="p-1.5 rounded-lg text-white transition-colors hover:scale-110"
                           style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-                          aria-label="Edit"
+                          aria-label={t("collections.edit")}
                         >
                           <FiEdit2 className="w-3.5 h-3.5" />
                         </button>
@@ -488,7 +514,7 @@ const Collections = () => {
                           onClick={(e) => handleDeleteClick(col, e)}
                           className="p-1.5 rounded-lg text-white transition-colors hover:bg-red-500 hover:scale-110"
                           style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-                          aria-label="Delete"
+                          aria-label={t("collections.delete")}
                         >
                           <FiTrash2 className="w-3.5 h-3.5" />
                         </button>

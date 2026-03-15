@@ -71,7 +71,9 @@
     "mods": "Mods",
     "clearData": "Effacer les Données",
     "serverOnline": "Serveur Connecté",
-    "serverOffline": "Serveur Hors Ligne"
+    "serverOffline": "Serveur Hors Ligne",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu"
   },
   "games": {
     "title": "Bibliothèque de Jeux",
@@ -357,6 +359,9 @@
     "noDownloadsYet": "Aucun Téléchargement",
     "noDownloadsDesc": "Vos téléchargements apparaîtront ici une fois que vous installez des jeux",
     "loadingDiskSpace": "Chargement de l'espace disque...",
+    "diskSpaceUnavailable": "Données d'espace disque indisponibles",
+    "lowDiskWarning": "Espace disque insuffisant",
+    "lowDiskWarningDesc": "Seulement {{free}} Go restants — le téléchargement risque d'échouer",
     "noLocationSelected": "Aucun emplacement de téléchargement sélectionné",
     "configure": "Configurer",
     "backgroundInfo": "Les téléchargements continuent en arrière-plan même si vous fermez cette page",

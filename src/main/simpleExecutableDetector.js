@@ -5,16 +5,16 @@ import path from "path";
 
 export class SimpleExecutableDetector {
   /**
-   * Trouve tous les fichiers .exe dans un dossier et ses sous-dossiers
-   * @param {string} gamePath - Chemin vers le dossier du jeu
-   * @param {string} gameName - Nom du jeu (pour scoring)
-   * @returns {Promise<string|null>} Chemin relatif vers le meilleur exécutable
+   * Finds all .exe files in a folder and its subfolders
+   * @param {string} gamePath - Path to the game folder
+   * @param {string} gameName - Game name (for scoring)
+   * @returns {Promise<string|null>} Relative path to the best executable
    */
   async getBestExecutable(gamePath, gameName = "") {
     try {
       console.log(`[SimpleDetector] Recherche dans: ${gamePath}`);
 
-      // Vérifier l'existence de manière asynchrone
+      // Check existence asynchronously
       try {
         await fs.promises.access(gamePath);
       } catch {
@@ -28,7 +28,7 @@ export class SimpleExecutableDetector {
         return null;
       }
 
-      // Trier par pertinence
+      // Sort by relevance
       const scored = this.scoreExecutables(executables, gameName);
       const best = scored[0];
 
@@ -47,10 +47,10 @@ export class SimpleExecutableDetector {
   }
 
   /**
-   * Vérifie si un fichier est un exécutable selon la plateforme
-   * @param {string} fileName - Nom du fichier
-   * @param {object} stats - Stats du fichier
-   * @returns {boolean} True si le fichier est un exécutable
+   * Checks if a file is an executable according to the platform
+   * @param {string} fileName - File name
+   * @param {object} stats - File stats
+   * @returns {boolean} True if the file is an executable
    */
   isExecutableFile(fileName, stats) {
     const platform = process.platform;
@@ -61,14 +61,14 @@ export class SimpleExecutableDetector {
         return lower.endsWith('.exe') || lower.endsWith('.bat') || lower.endsWith('.cmd');
 
       case 'linux':
-        // Sur Linux: .sh, .run, .bin, .AppImage, ou fichiers avec permissions exécutables
+        // On Linux: .sh, .run, .bin, .AppImage, or files with executable permissions
         const hasExecutableExtension = lower.endsWith('.sh') || lower.endsWith('.run') ||
                                        lower.endsWith('.bin') || lower.endsWith('.appimage');
         const hasExecutablePermission = stats && (stats.mode & 0o111) !== 0;
         return hasExecutableExtension || hasExecutablePermission;
 
       case 'darwin':
-        // Sur macOS: .app (bundle), .command, .sh
+        // On macOS: .app (bundle), .command, .sh
         return fileName.endsWith('.app') || lower.endsWith('.command') || lower.endsWith('.sh');
 
       default:
@@ -77,16 +77,16 @@ export class SimpleExecutableDetector {
   }
 
   /**
-   * Recherche récursive de tous les exécutables (version asynchrone multiplateforme)
-   * @param {string} currentPath - Dossier actuel à scanner
-   * @param {string} basePath - Dossier racine pour calculer le chemin relatif
-   * @param {number} depth - Profondeur actuelle (limite à 3 niveaux)
-   * @returns {Promise<Array>} Liste des exécutables trouvés
+   * Recursive search for all executables (async cross-platform version)
+   * @param {string} currentPath - Current folder to scan
+   * @param {string} basePath - Root folder for calculating relative path
+   * @param {number} depth - Current depth (limited to 3 levels)
+   * @returns {Promise<Array>} List of executables found
    */
   async findExecutables(currentPath, basePath, depth = 0) {
     const executables = [];
 
-    // Limiter la profondeur pour éviter des scans trop longs
+    // Limit depth to avoid overly long scans
     if (depth > 3) {
       return executables;
     }
@@ -94,7 +94,7 @@ export class SimpleExecutableDetector {
     try {
       const items = await fs.promises.readdir(currentPath);
 
-      // Traiter les items en parallèle pour de meilleures performances
+      // Process items in parallel for better performance
       await Promise.all(
         items.map(async (item) => {
           const itemPath = path.join(currentPath, item);
@@ -103,7 +103,7 @@ export class SimpleExecutableDetector {
             const stats = await fs.promises.stat(itemPath);
 
             if (stats.isFile() && this.isExecutableFile(item, stats)) {
-              // Calculer le chemin relatif depuis le dossier de base
+              // Calculate the relative path from the base folder
               const relativePath = path.relative(basePath, itemPath);
 
               executables.push({
@@ -119,7 +119,7 @@ export class SimpleExecutableDetector {
 
               console.log(`[SimpleDetector] Trouvé: ${relativePath}`);
             } else if (stats.isDirectory() && !this.shouldIgnoreDirectory(item)) {
-              // Recherche récursive dans les sous-dossiers
+              // Recursive search in subfolders
               const subExecutables = await this.findExecutables(
                 itemPath,
                 basePath,
@@ -128,7 +128,7 @@ export class SimpleExecutableDetector {
               executables.push(...subExecutables);
             }
           } catch (statError) {
-            // Ignorer les erreurs de fichiers inaccessibles
+            // Ignore errors for inaccessible files
             console.warn(
               `[SimpleDetector] Impossible d'accéder à ${itemPath}:`,
               statError.message
@@ -147,9 +147,9 @@ export class SimpleExecutableDetector {
   }
 
   /**
-   * Vérifie si un dossier doit être ignoré
-   * @param {string} dirName - Nom du dossier
-   * @returns {boolean} True si le dossier doit être ignoré
+   * Checks if a folder should be ignored
+   * @param {string} dirName - Folder name
+   * @returns {boolean} True if the folder should be ignored
    */
   shouldIgnoreDirectory(dirName) {
     const ignoredDirs = [
@@ -175,10 +175,10 @@ export class SimpleExecutableDetector {
   }
 
   /**
-   * Attribue un score de pertinence à chaque exécutable
-   * @param {Array} executables - Liste des exécutables
-   * @param {string} gameName - Nom du jeu
-   * @returns {Array} Exécutables triés par score
+   * Assigns a relevance score to each executable
+   * @param {Array} executables - List of executables
+   * @param {string} gameName - Game name
+   * @returns {Array} Executables sorted by score
    */
   scoreExecutables(executables, gameName) {
     const gameNameClean = gameName.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -191,13 +191,13 @@ export class SimpleExecutableDetector {
       exec.score = 0;
       exec.reasons = [];
 
-      // Bonus si le nom du fichier correspond au nom du jeu
+      // Bonus if the file name matches the game name
       if (gameNameClean && fileNameClean.includes(gameNameClean)) {
         exec.score += 100;
         exec.reasons.push("Nom du jeu dans le fichier");
       }
 
-      // Bonus pour les noms d'exécutables courants
+      // Bonus for common executable names
       const commonNames = ["game", "main", "launcher", "start", "run", "play"];
       for (const name of commonNames) {
         if (fileNameClean.includes(name)) {
@@ -207,7 +207,7 @@ export class SimpleExecutableDetector {
         }
       }
 
-      // Bonus pour les gros fichiers (probablement le jeu principal)
+      // Bonus for large files (likely the main game)
       if (exec.size > 50 * 1024 * 1024) {
         // 50MB+
         exec.score += 30;
@@ -218,16 +218,16 @@ export class SimpleExecutableDetector {
         exec.reasons.push("Fichier de taille moyenne");
       }
 
-      // Malus pour la profondeur (privilégier les fichiers proches de la racine)
+      // Penalty for depth (prefer files closer to the root)
       exec.score -= exec.depth * 5;
 
-      // Bonus pour être à la racine
+      // Bonus for being at the root
       if (exec.depth === 0) {
         exec.score += 25;
         exec.reasons.push("Dossier racine");
       }
 
-      // Malus pour certains mots-clés
+      // Penalty for certain keywords
       const penaltyWords = [
         "uninstall",
         "setup",
@@ -245,15 +245,15 @@ export class SimpleExecutableDetector {
       }
     }
 
-    // Trier par score décroissant
+    // Sort by descending score
     return executables.sort((a, b) => b.score - a.score);
   }
 
   /**
-   * Liste tous les exécutables trouvés (pour debug)
-   * @param {string} gamePath - Chemin vers le dossier du jeu
-   * @param {string} gameName - Nom du jeu
-   * @returns {Promise<Array>} Liste de tous les exécutables
+   * Lists all executables found (for debugging)
+   * @param {string} gamePath - Path to the game folder
+   * @param {string} gameName - Game name
+   * @returns {Promise<Array>} List of all executables
    */
   async listAllExecutables(gamePath, gameName = "") {
     try {

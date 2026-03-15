@@ -16,7 +16,7 @@ export class ExtractionEngine {
     // Get the path to embedded 7z binary
     let binPath = sevenBin.path7za;
 
-    // En production, remplacer app.asar par app.asar.unpacked
+    // In production, replace app.asar with app.asar.unpacked
     if (
       binPath.includes("app.asar") &&
       !binPath.includes("app.asar.unpacked")
@@ -145,7 +145,7 @@ export class ExtractionEngine {
                 }
               })
               .on("close", () => {
-                // ✅ FIX: Si le stream se ferme sans finish/error
+                // ✅ FIX: If the stream closes without finish/error
                 if (!resolved) {
                   resolved = true;
                   cleanup();
@@ -190,11 +190,11 @@ export class ExtractionEngine {
     return new Promise((resolve, reject) => {
       const extract = tar.extract();
       let extractedCount = 0;
-      let totalFiles = 0; // ✅ FIX: Compté pendant l'extraction au lieu d'une passe séparée
+      let totalFiles = 0; // ✅ FIX: Counted during extraction instead of a separate pass
 
       // Single pass: extract and count simultaneously
       extract.on("entry", async (header, stream, next) => {
-        totalFiles++; // Compte au fur et à mesure
+        totalFiles++; // Count as we go
         const outputPath = path.join(extractPath, header.name);
 
         try {

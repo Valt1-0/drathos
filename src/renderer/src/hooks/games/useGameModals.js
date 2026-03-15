@@ -63,13 +63,13 @@ export const useGameModals = () => {
 
   // Delete game modal handlers
   const openDeleteGameModal = (game, user, isInstalled) => {
-    // Vérifier les permissions
+    // Check permissions
     if (!user || user.role !== "admin") {
       alert("❌ Accès refusé - Admin uniquement");
       return;
     }
 
-    // Vérifier qu'il n'y a pas d'installation active
+    // Check that there is no active installation
     if (isInstalled(game._id)) {
       alert("❌ Impossible - Le jeu est installé. Désinstallez-le d'abord.");
       return;

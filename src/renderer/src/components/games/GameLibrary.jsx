@@ -6,7 +6,7 @@ import { SearchBar } from "../ui";
 import GameFilters from "./GameFilters";
 import { useConnection } from "../../contexts/connectionContext";
 
-// Composant GameRow extrait et mémorisé pour optimiser les performances
+// GameRow component extracted and memoized to optimize performance
 const STATUS_DOTS = {
   backlog: 'bg-primary',
   inProgress: 'bg-warning',
@@ -99,7 +99,7 @@ const GameRow = memo(({
             )}
           </div>
 
-          {/* Info du jeu */}
+          {/* Game info */}
           <div className="flex-1 min-w-0">
             <h3 className={`font-medium truncate text-sm mb-0.5 ${
               isSelected ? "text-text" : "text-text"
@@ -115,7 +115,7 @@ const GameRow = memo(({
               )}
             </h3>
 
-            {/* Statut */}
+            {/* Status */}
             <div className="flex items-center gap-1.5 text-xs">
               {stats && stats.totalPlayTime && stats.totalPlayTime !== "< 1 minute" && !stats.totalPlayTime.includes("NaN") && (
                 <div className="flex items-center gap-1 text-text-secondary">
@@ -161,7 +161,7 @@ const GameRow = memo(({
             </div>
           </div>
 
-          {/* Indicateur de sélection */}
+          {/* Selection indicator */}
           {isSelected && (
             <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-l"></div>
           )}
@@ -406,7 +406,7 @@ const GameLibrary = ({
     [queue]
   );
 
-  // Wrapper pour GameRow pour react-window (extrait les données de l'index)
+  // Wrapper for GameRow for react-window (extracts data from index)
   const VirtualGameRow = useCallback(({ index, style }) => {
     const game = filteredGames[index];
     const key = game.igdbId || game._id;
@@ -481,8 +481,7 @@ const GameLibrary = ({
               height: user?.role === "admin" ? `calc(100vh - 460px)` : `calc(100vh - 400px)`
             }}
           >
-            {/* Fallback: limit to 30 items to avoid DOM explosion */}
-            {filteredGames.slice(0, 30).map((game) => {
+            {filteredGames.map((game) => {
               const key = game.igdbId || game._id;
               const count = versionCounts.get(key) || 1;
 
@@ -507,11 +506,6 @@ const GameLibrary = ({
                 />
               );
             })}
-            {filteredGames.length > 30 && (
-              <div className="text-center py-4 text-text-secondary text-sm">
-                +{filteredGames.length - 30} {t('games.more')}
-              </div>
-            )}
           </div>
         )}
       </div>

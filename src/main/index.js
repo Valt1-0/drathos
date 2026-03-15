@@ -44,7 +44,7 @@ if (process.env.NODE_ENV !== "production") {
 const buildIcon = () => {
   if (process.platform === "linux" && fs.existsSync(iconPathLinux)) return iconPathLinux;
 
-  // Windows + macOS : nativeImage multi-résolution avec icon.png
+  // Windows + macOS: multi-resolution nativeImage with icon.png
   const img = nativeImage.createEmpty();
   if (fs.existsSync(iconPathPng)) img.addRepresentation({ scaleFactor: 1.0, dataURL: nativeImage.createFromPath(iconPathPng).toDataURL() });
   if (fs.existsSync(iconPath2x))  img.addRepresentation({ scaleFactor: 2.0, dataURL: nativeImage.createFromPath(iconPath2x).toDataURL() });
@@ -228,7 +228,7 @@ const doCleanupAndExit = () => {
 };
 
 // macOS: clicking X hides the window (app stays in dock) — only quit via Cmd+Q or tray
-// Win/Linux: tray "Quitter" → app.quit() → before-quit fires before window close events
+// Win/Linux: tray "Quit" → app.quit() → before-quit fires before window close events
 app.on("before-quit", doCleanupAndExit);
 
 // === CRASH REPORTING ===

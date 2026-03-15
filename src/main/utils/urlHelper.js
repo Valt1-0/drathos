@@ -5,7 +5,7 @@ export const buildServerUrl = (serverAddress, path = '', protocol = null) => {
   }
   if (protocol) return `${protocol}://${serverAddress}${path}`;
 
-  // Détection intelligente : HTTPS pour domaines, HTTP pour IPs
+  // Smart detection: HTTPS for domains, HTTP for IPs
   const addressWithoutPort = serverAddress.split(':')[0];
   const isDomain = /[a-zA-Z]/.test(addressWithoutPort);
   const defaultProtocol = isDomain ? 'https' : 'http';

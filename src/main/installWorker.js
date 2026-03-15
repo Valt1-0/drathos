@@ -53,5 +53,5 @@ async function runInstallation() {
   }
 }
 
-// Démarrer l'installation
+// Start the installation
 runInstallation();
