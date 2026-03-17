@@ -467,6 +467,8 @@
     "notifications": "Notifications",
     "notificationsDesc": "Notifications de la bibliothèque",
     "notificationsInfo": "Recevoir une notification quand un nouveau jeu est ajouté à la bibliothèque par un autre utilisateur.",
+    "launchAtStartup": "Lancer au démarrage",
+    "launchAtStartupDesc": "Démarrer Drathos automatiquement à la connexion",
     "selfSignedCerts": "Autoriser les certificats auto-signés",
     "selfSignedCertsDesc": "Connexions HTTPS à votre serveur",
     "selfSignedCertsInfo": "Activez cette option si votre serveur self-hosted utilise un certificat auto-signé ou privé (ex. pas Let's Encrypt). Désactivez-la si votre serveur possède un certificat public valide pour activer la vérification SSL."

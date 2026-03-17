@@ -67,10 +67,6 @@ export class SimpleExecutableDetector {
         const hasExecutablePermission = stats && (stats.mode & 0o111) !== 0;
         return hasExecutableExtension || hasExecutablePermission;
 
-      case 'darwin':
-        // On macOS: .app (bundle), .command, .sh
-        return fileName.endsWith('.app') || lower.endsWith('.command') || lower.endsWith('.sh');
-
       default:
         return false;
     }

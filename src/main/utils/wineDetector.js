@@ -61,20 +61,13 @@ export class WineDetector {
     const platform = process.platform;
     const isExe = executablePath.toLowerCase().endsWith(".exe");
 
-    return (platform === "darwin" || platform === "linux") && isExe;
+    return platform === "linux" && isExe;
   }
 
   getWineInstallInstructions() {
     const platform = process.platform;
 
-    if (platform === "darwin") {
-      return {
-        platform: "macOS",
-        method: "Homebrew",
-        command: "brew install --cask wine-stable",
-        url: "https://wiki.winehq.org/MacOS",
-      };
-    } else if (platform === "linux") {
+    if (platform === "linux") {
       return {
         platform: "Linux",
         method: "Package Manager",

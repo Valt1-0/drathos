@@ -10,11 +10,10 @@ import sevenBin from "7zip-bin";
 const EXECUTABLE_PATTERNS = {
   windows: [".exe", ".bat", ".cmd"],
   linux: [".sh", ".run", ".bin", ".AppImage"],
-  mac: [".app", ".command"],
 };
 
 const ALL_EXTENSIONS = Object.values(EXECUTABLE_PATTERNS).flat();
-const PLATFORM_MAP = { win32: "windows", linux: "linux", darwin: "mac" };
+const PLATFORM_MAP = { win32: "windows", linux: "linux" };
 
 const get7zipPath = () => {
   let p = sevenBin.path7za;

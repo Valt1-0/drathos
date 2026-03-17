@@ -22,6 +22,7 @@ import {
   FiCamera,
   FiUpload,
   FiBell,
+  FiPower,
 } from "react-icons/fi";
 import { SearchBar } from "../components/ui";
 import GB from "country-flag-icons/react/3x2/GB";
@@ -57,6 +58,7 @@ const SettingsPage = () => {
   const [activeCategory, setActiveCategory] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
   const [allowSelfSignedCerts, setAllowSelfSignedCerts] = useState(true);
+  const [openAtLogin, setOpenAtLogin] = useState(false);
 
   // Image Cache States
   const [cacheSize, setCacheSize] = useState(0);
@@ -227,6 +229,9 @@ const SettingsPage = () => {
 
       const selfSigned = await window.store.get("allowSelfSignedCerts");
       setAllowSelfSignedCerts(selfSigned ?? true);
+
+      const loginItem = await window.api.app.getLoginItem();
+      setOpenAtLogin(loginItem ?? false);
 
       // Get image cache size
       try {
@@ -660,6 +665,28 @@ const SettingsPage = () => {
                         {t('settings.notificationsInfo')}
                       </p>
                     </Card.Body>
+                  </Card>
+
+                  {/* Launch at startup Card */}
+                  <Card variant="glass" hover>
+                    <div className="flex items-center justify-between mb-6 px-6 pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20">
+                          <FiPower className="text-2xl text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold" style={{ color: 'var(--app-text)' }}>{t('settings.launchAtStartup')}</h3>
+                          <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.launchAtStartupDesc')}</p>
+                        </div>
+                      </div>
+                      <Toggle
+                        checked={openAtLogin}
+                        onChange={(v) => {
+                          setOpenAtLogin(v);
+                          window.api.app.setLoginItem(v);
+                        }}
+                      />
+                    </div>
                   </Card>
 
                   {/* Self-signed certificates Card */}

@@ -160,6 +160,12 @@ const api = {
   createShortcut: ({ gameName, gamePath, executable }) =>
     ipcRenderer.invoke("createShortcut", { gameName, gamePath, executable }),
 
+  // App-level settings
+  app: {
+    getLoginItem: () => ipcRenderer.invoke("app:getLoginItem"),
+    setLoginItem: (openAtLogin) => ipcRenderer.invoke("app:setLoginItem", openAtLogin),
+  },
+
   // Window controls
   windowMinimize: () => ipcRenderer.send("window-minimize"),
   windowMaximize: () => ipcRenderer.send("window-maximize"),

@@ -7,7 +7,6 @@ const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 const EXECUTABLE_EXT = {
   win32: [".exe", ".bat", ".cmd"],
   linux: [".sh", ".run", ".bin", ".appimage"],
-  darwin: [".app", ".command", ".sh"],
 };
 
 export const isValidSender = (frame) => {

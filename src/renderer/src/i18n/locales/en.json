@@ -467,6 +467,8 @@
     "notifications": "Notifications",
     "notificationsDesc": "Game library notifications",
     "notificationsInfo": "Receive a notification when a new game is added to the library by another user.",
+    "launchAtStartup": "Launch at startup",
+    "launchAtStartupDesc": "Start Drathos automatically when you log in",
     "selfSignedCerts": "Allow self-signed certificates",
     "selfSignedCertsDesc": "HTTPS connections to your server",
     "selfSignedCertsInfo": "Enable this if your self-hosted server uses a self-signed or private certificate (e.g. not issued by Let's Encrypt). Disable it if your server has a valid public certificate to enforce SSL verification."

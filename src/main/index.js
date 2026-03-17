@@ -40,6 +40,25 @@ if (process.env.NODE_ENV !== "production") {
   process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 }
 
+// === SINGLE INSTANCE LOCK ===
+// Enforced in production only — dev allows multiple instances (Vite HMR, hot reload).
+// Quit immediately if another instance is already running; focus existing window instead.
+if (!is.dev) {
+  const gotInstanceLock = app.requestSingleInstanceLock();
+  if (!gotInstanceLock) app.exit(0);
+}
+
+let mainWindow = null;
+
+const focusMainWindow = () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+};
+
+app.on("second-instance", () => focusMainWindow());
+
 // === ICON SETUP ===
 const buildIcon = () => {
   if (process.platform === "linux" && fs.existsSync(iconPathLinux)) return iconPathLinux;
@@ -172,8 +191,10 @@ const setupSecurity = () => {
   });
 };
 
-// === SHORTCUTS ===
+// === SHORTCUTS (dev only) ===
 const setupShortcuts = () => {
+  if (!is.dev) return;
+
   globalShortcut.register("CommandOrControl+Shift+R", () => {
     BrowserWindow.getFocusedWindow()?.webContents.reloadIgnoringCache();
   });
@@ -213,23 +234,22 @@ const setupTray = (mainWindow) => {
 };
 
 // === CLEANUP ===
-// Skips Chromium renderer session flush for instant exit.
-// Two paths call this:
-//   - Win/Linux: mainWindow "close" event (user clicks X)
-//   - All platforms: "before-quit" (tray quit / Cmd+Q on macOS / app.quit())
-const doCleanupAndExit = () => {
+// Guard against double-cleanup (close event + before-quit can both fire).
+let isExiting = false;
+
+const doCleanup = () => {
+  if (isExiting) return;
+  isExiting = true;
   terminateAllWorkers();
   getGameLauncher().cleanup();
   getAutoUpdateManager()?.cleanup();
   crashReporter.cleanup();
   memoryManager.cleanup();
   globalShortcut.unregisterAll();
-  process.exit(0);
 };
 
-// macOS: clicking X hides the window (app stays in dock) — only quit via Cmd+Q or tray
-// Win/Linux: tray "Quit" → app.quit() → before-quit fires before window close events
-app.on("before-quit", doCleanupAndExit);
+// Tray "Quit" → app.quit() → before-quit fires before window close events
+app.on("before-quit", doCleanup);
 
 // === CRASH REPORTING ===
 Menu.setApplicationMenu(null);
@@ -255,7 +275,6 @@ app.whenReady().then(async () => {
 
   app.setName("Drathos");
   electronApp.setAppUserModelId("com.drathos.app");
-
   setupCSP();
   setupSecurity();
   setupShortcuts();
@@ -268,14 +287,17 @@ app.whenReady().then(async () => {
   const splash = new SplashWindow(icon);
   splash.create();
 
-  const mainWindow = createWindow();
+  mainWindow = createWindow();
   memoryManager.initialize();
 
   const autoUpdateManager = new AutoUpdateManager();
   autoUpdateManager.setMainWindow(mainWindow);
   setAutoUpdateManager(autoUpdateManager);
 
-  await new Promise((r) => setTimeout(r, 2000));
+  await Promise.all([
+    new Promise((r) => mainWindow.webContents.once("did-finish-load", r)),
+    new Promise((r) => setTimeout(r, 1000)),
+  ]);
   splash.close();
 
   if (!mainWindow.isDestroyed()) mainWindow.show();
@@ -293,12 +315,11 @@ app.whenReady().then(async () => {
   autoUpdateManager.startPeriodicCheck(120);
   setupTray(mainWindow);
 
-  // Win/Linux: exit immediately on window close, skip Chromium renderer cleanup delay
-  if (process.platform !== "darwin") {
-    mainWindow.on("close", doCleanupAndExit);
-  }
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  // User clicks X → cleanup then let Electron quit normally
+  // Guard prevents re-entry if app.quit() triggers close again
+  mainWindow.on("close", () => {
+    if (isExiting) return;
+    doCleanup();
+    app.quit();
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Game management IPC handlers
  */
-import { ipcMain } from "electron";
+import { ipcMain, BrowserWindow } from "electron";
 import { Worker } from "node:worker_threads";
 import fs from "fs";
 import path from "path";
@@ -14,7 +14,21 @@ import uninstallWorkerPath from "../uninstallWorker.js?modulePath";
 
 const gameLauncher = new GameLauncher();
 const activeWorkers = new Map();
+const downloadProgressByGame = new Map();
 let detector = null;
+
+// Update the taskbar progress bar based on active downloads.
+// Shows average progress across all active downloads; clears when none remain.
+const syncTaskbarProgress = () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (!win) return;
+  if (downloadProgressByGame.size === 0) {
+    win.setProgressBar(-1);
+    return;
+  }
+  const avg = [...downloadProgressByGame.values()].reduce((a, b) => a + b, 0) / downloadProgressByGame.size;
+  win.setProgressBar(avg / 100);
+};
 
 const getDetector = () => {
   if (!detector) detector = new SimpleExecutableDetector();
@@ -53,6 +67,15 @@ export const registerGameHandlers = () => {
         if (data.type === "store-set") { store.set(data.key, data.value); return; }
 
         event.sender.send("downloadProgress", { id: serverGame._id, ...data });
+
+        // Taskbar progress bar
+        const done = ["completed", "cancelled", "failed"].includes(data.stage?.toLowerCase());
+        if (done) {
+          downloadProgressByGame.delete(serverGame._id);
+        } else if (typeof data.progress === "number") {
+          downloadProgressByGame.set(serverGame._id, data.progress);
+        }
+        syncTaskbarProgress();
 
         if (data.stage === "Completed" || data.stage === "completed") {
           if (data.cacheData) {
