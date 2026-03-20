@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { shell, BrowserWindow } from "electron";
 import { wineDetector } from "./utils/wineDetector.js";
+import { validateAndResolvePath } from "./app/validation.js";
 
 const execAsync = promisify(exec);
 
@@ -83,7 +84,12 @@ export class GameLauncher {
       }
     }
 
-    const executablePath = path.join(gamePath, executableName);
+    let executablePath;
+    try {
+      executablePath = validateAndResolvePath(gamePath, executableName);
+    } catch {
+      return { success: false, error: "Chemin d'exécutable invalide ou en dehors du dossier du jeu" };
+    }
 
     if (!fs.existsSync(executablePath)) {
       return {

@@ -13,7 +13,7 @@ import {
   session,
   globalShortcut,
 } from "electron";
-import { join } from "path";
+import { join, resolve } from "path";
 import fs from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import iconPathPng from "../../resources/icon.png?asset";
@@ -60,14 +60,33 @@ const focusMainWindow = () => {
 app.on("second-instance", () => focusMainWindow());
 
 // === ICON SETUP ===
-const buildIcon = () => {
-  if (process.platform === "linux" && fs.existsSync(iconPathLinux)) return iconPathLinux;
+// In packaged apps, ?asset paths may point inside the asar where fs.existsSync fails.
+// Fall back to process.resourcesPath which is always the real unpacked resources folder.
+const resolveIconPath = (assetPath, filename) => {
+  if (fs.existsSync(assetPath)) return assetPath;
+  const fallback = resolve(process.resourcesPath ?? "", filename);
+  return fs.existsSync(fallback) ? fallback : null;
+};
 
-  // Windows + macOS: multi-resolution nativeImage with icon.png
+const buildIcon = () => {
+  if (process.platform === "linux") {
+    const p = resolveIconPath(iconPathLinux, "icon_linux_512.png");
+    return p ?? undefined;
+  }
+
+  // Windows + macOS: multi-resolution nativeImage
   const img = nativeImage.createEmpty();
-  if (fs.existsSync(iconPathPng)) img.addRepresentation({ scaleFactor: 1.0, dataURL: nativeImage.createFromPath(iconPathPng).toDataURL() });
-  if (fs.existsSync(iconPath2x))  img.addRepresentation({ scaleFactor: 2.0, dataURL: nativeImage.createFromPath(iconPath2x).toDataURL() });
-  if (fs.existsSync(iconPath3x))  img.addRepresentation({ scaleFactor: 3.0, dataURL: nativeImage.createFromPath(iconPath3x).toDataURL() });
+  const add = (scale, assetPath, filename) => {
+    const p = resolveIconPath(assetPath, filename);
+    if (p) {
+      try {
+        img.addRepresentation({ scaleFactor: scale, dataURL: nativeImage.createFromPath(p).toDataURL() });
+      } catch {}
+    }
+  };
+  add(1.0, iconPathPng, "icon.png");
+  add(2.0, iconPath2x, "icon@2x.png");
+  add(3.0, iconPath3x, "icon@3x.png");
   return img.isEmpty() ? undefined : img;
 };
 
@@ -98,11 +117,6 @@ const createWindow = () => {
 
   if (is.dev) mainWindow.webContents.openDevTools();
 
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (isSafeForExternalOpen(url)) setImmediate(() => shell.openExternal(url));
-    return { action: "deny" };
-  });
-
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
   } else {
@@ -114,7 +128,8 @@ const createWindow = () => {
 
 // === CSP CONFIGURATION ===
 const setupCSP = () => {
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+  const appSession = session.fromPartition("persist:drathos");
+  appSession.webRequest.onHeadersReceived((details, callback) => {
     const serverAddress = store.get("serverAddress", "");
 
     const csp = is.dev
@@ -128,8 +143,8 @@ const setupCSP = () => {
           const backendHttps = clean ? `https://${clean}` : "";
           return (
             `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; ` +
-            `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps} http: https:; font-src 'self' data:; ` +
-            `connect-src 'self' ${igdb} ${backendHttp} ${backendHttps} http: https:; object-src 'none'; ` +
+            `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps}; font-src 'self' data:; ` +
+            `connect-src 'self' http: https: ws: wss:; object-src 'none'; ` +
             `base-uri 'self'; form-action 'self'; frame-ancestors 'none';`
           );
         })();
@@ -149,10 +164,12 @@ const setupCSP = () => {
 
 // === SECURITY SETUP ===
 const setupSecurity = () => {
+  const appSession = session.fromPartition("persist:drathos");
+
   // Allow self-signed certificates for the configured self-hosted backend.
   // Only bypasses cert validation for requests matching the server address —
   // external URLs (IGDB, etc.) are still validated normally.
-  session.defaultSession.on("certificate-error", (event, _webContents, url, _error, _cert, callback) => {
+  appSession.on("certificate-error", (event, _webContents, url, _error, _cert, callback) => {
     const serverAddress = store.get("serverAddress", "");
     try {
       const serverHostname = new URL(serverAddress.startsWith("http") ? serverAddress : `https://${serverAddress}`).hostname;
@@ -166,10 +183,16 @@ const setupSecurity = () => {
     callback(false);
   });
 
-  session.defaultSession.setPermissionRequestHandler(
+  appSession.setPermissionRequestHandler(
     (webContents, permission, callback) => {
-      const { protocol } = new URL(webContents.getURL());
-      callback(protocol === "file:" && permission === "notifications");
+      const url = webContents.getURL();
+      try {
+        const { protocol, hostname } = new URL(url);
+        const isLocal = protocol === "file:" || (is.dev && (hostname === "localhost" || hostname === "127.0.0.1"));
+        callback(isLocal && permission === "notifications");
+      } catch {
+        callback(false);
+      }
     },
   );
 
@@ -206,6 +229,10 @@ const setupShortcuts = () => {
 
 // === TRAY SETUP ===
 const setupTray = (mainWindow) => {
+  if (!icon) {
+    logger.warn("[App] Icône non trouvée, tray désactivé");
+    return null;
+  }
   const tray = new Tray(icon);
   tray.setToolTip("Drathos");
 
@@ -248,8 +275,12 @@ const doCleanup = () => {
   globalShortcut.unregisterAll();
 };
 
-// Tray "Quit" → app.quit() → before-quit fires before window close events
-app.on("before-quit", doCleanup);
+// Tray "Quit" → doCleanup + exit direct
+app.on("before-quit", (event) => {
+  event.preventDefault();
+  doCleanup();
+  app.exit(0);
+});
 
 // === CRASH REPORTING ===
 Menu.setApplicationMenu(null);
@@ -288,16 +319,66 @@ app.whenReady().then(async () => {
   splash.create();
 
   mainWindow = createWindow();
+
+  // Helper to (re)load the renderer — used for retries on startup failure
+  const loadRenderer = () =>
+    is.dev && process.env["ELECTRON_RENDERER_URL"]
+      ? mainWindow.webContents.loadURL(process.env["ELECTRON_RENDERER_URL"])
+      : mainWindow.webContents.loadFile(join(__dirname, "../renderer/index.html"));
+
+  // Wait for a successful did-finish-load, retrying once on did-fail-load.
+  // Handles the cold-start race (GPU not yet ready at Windows login) where the
+  // renderer fails to load on first attempt but succeeds immediately after retry.
+  const waitForRenderer = () =>
+    new Promise((resolve) => {
+      let attempts = 0;
+      const fallback = setTimeout(resolve, 10_000); // Safety: never hang more than 10s
+      const onLoad = () => {
+        clearTimeout(fallback);
+        mainWindow.webContents.off("did-fail-load", onFail);
+        resolve();
+      };
+      const onFail = (_, code) => {
+        if (code === -3) return; // ERR_ABORTED — normal during SPA navigation, ignore
+        mainWindow.webContents.off("did-finish-load", onLoad);
+        logger.warn("[App] Renderer failed to load, retrying...", { code, attempt: ++attempts });
+        if (attempts <= 1) {
+          setTimeout(() => {
+            if (mainWindow.isDestroyed()) { clearTimeout(fallback); resolve(); return; }
+            mainWindow.webContents.once("did-finish-load", onLoad);
+            mainWindow.webContents.once("did-fail-load", onFail);
+            loadRenderer();
+          }, 800);
+        } else {
+          clearTimeout(fallback);
+          resolve(); // Give up after 1 retry
+        }
+      };
+      mainWindow.webContents.once("did-finish-load", onLoad);
+      mainWindow.webContents.once("did-fail-load", onFail);
+    });
+
+  mainWindow.webContents.on("render-process-gone", (_, details) => {
+    logger.error("[App] Renderer crashed", details);
+    // Reload after renderer crash — common on first cold start (GPU initialization)
+    setTimeout(() => {
+      if (!mainWindow.isDestroyed()) loadRenderer();
+    }, 500);
+  });
+  mainWindow.webContents.on("did-fail-load", (_, code, desc, url) => {
+    if (code !== -3) logger.error("[App] Renderer failed to load", { code, desc, url });
+  });
+  mainWindow.webContents.on("console-message", (event) => {
+    if (event.level >= 2) logger.error("[Renderer]", { message: event.message, line: event.line, sourceId: event.sourceId });
+  });
+
   memoryManager.initialize();
 
   const autoUpdateManager = new AutoUpdateManager();
   autoUpdateManager.setMainWindow(mainWindow);
   setAutoUpdateManager(autoUpdateManager);
 
-  await Promise.all([
-    new Promise((r) => mainWindow.webContents.once("did-finish-load", r)),
-    new Promise((r) => setTimeout(r, 1000)),
-  ]);
+  await Promise.all([waitForRenderer(), new Promise((r) => setTimeout(r, 1000))]);
   splash.close();
 
   if (!mainWindow.isDestroyed()) mainWindow.show();
@@ -320,6 +401,6 @@ app.whenReady().then(async () => {
   mainWindow.on("close", () => {
     if (isExiting) return;
     doCleanup();
-    app.quit();
+    app.exit(0);
   });
 });

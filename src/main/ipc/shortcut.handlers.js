@@ -1,9 +1,6 @@
-import { ipcMain, app } from "electron";
-import { exec } from "child_process";
+import { ipcMain, app, shell } from "electron";
 import fs from "fs";
 import path from "path";
-
-const escapePsString = (s) => s.replace(/'/g, "''");
 
 export const registerShortcutHandlers = () => {
   ipcMain.handle("createShortcut", async (_event, { gameName, gamePath, executable }) => {
@@ -12,17 +9,15 @@ export const registerShortcutHandlers = () => {
       const execPath = path.join(gamePath, executable);
 
       if (process.platform === "win32") {
+        // Use Electron's native shell.writeShortcutLink — no shell escaping needed
         const shortcutPath = path.join(desktop, `${gameName}.lnk`);
-        const esc = escapePsString;
-        const ps = `$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('${esc(shortcutPath)}'); $sc.TargetPath = '${esc(execPath)}'; $sc.WorkingDirectory = '${esc(gamePath)}'; $sc.Save()`;
-
-        await new Promise((resolve, reject) => {
-          exec(
-            `powershell -NoProfile -NonInteractive -Command "${ps}"`,
-            { windowsHide: true },
-            (err) => (err ? reject(err) : resolve())
-          );
+        const success = shell.writeShortcutLink(shortcutPath, "create", {
+          target: execPath,
+          cwd: gamePath,
+          icon: execPath,
+          iconIndex: 0,
         });
+        if (!success) throw new Error("shell.writeShortcutLink returned false");
       } else {
         const desktopFile = path.join(desktop, `${gameName}.desktop`);
         const content = [

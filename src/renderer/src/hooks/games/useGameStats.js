@@ -101,12 +101,13 @@ export const useGameStats = () => {
       processStatsQueue();
     };
 
+    let unsub;
     if (window.api.onSaveGameStats) {
-      window.api.onSaveGameStats(handleSaveStats);
+      unsub = window.api.onSaveGameStats(handleSaveStats);
     }
 
     return () => {
-      // Cleanup listener
+      unsub?.();
     };
   }, []);
 

@@ -15,10 +15,11 @@ export const DownloadProvider = ({ children }) => {
 
   // Single IPC listener for all downloads — mounted once
   useEffect(() => {
-    window.api.onDownloadProgress((data) => {
+    const unsub = window.api.onDownloadProgress((data) => {
       const cb = downloadCallbacksRef.current.get(data.id);
       if (cb) cb(data);
     });
+    return unsub;
   }, []);
 
   // Updated on every render so callbacks always have the latest version

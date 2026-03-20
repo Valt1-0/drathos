@@ -2,11 +2,12 @@
  * Statistics and disk space IPC handlers
  */
 import { ipcMain } from "electron";
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import store from "../store.js";
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export const registerStatsHandlers = () => {
   ipcMain.handle("save-local-stats", async (_, { gameId, sessionData }) => {
@@ -58,7 +59,7 @@ export const registerStatsHandlers = () => {
         freeBytes = parseInt(freeMatch[1]);
         totalBytes = parseInt(sizeMatch[1]);
       } else {
-        const { stdout } = await execAsync(`df -k "${installPath}"`);
+        const { stdout } = await execFileAsync("df", ["-k", installPath]);
         const parts = stdout.trim().split("\n")[1]?.split(/\s+/);
         if (!parts) throw new Error("Cannot parse disk info");
         totalBytes = parseInt(parts[1]) * 1024;

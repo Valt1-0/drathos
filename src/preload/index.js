@@ -11,8 +11,9 @@ const api = {
   installGame: (game) =>
     ipcRenderer.invoke("installGame", { serverGame: game }),
   onDownloadProgress: (callback) => {
-    ipcRenderer.removeAllListeners("downloadProgress");
-    ipcRenderer.on("downloadProgress", (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on("downloadProgress", listener);
+    return () => ipcRenderer.removeListener("downloadProgress", listener);
   },
   cancelDownload: (gameId) => ipcRenderer.invoke("cancelDownload", { gameId }),
   pauseDownload: (gameId) => ipcRenderer.invoke("pauseDownload", { gameId }),
@@ -22,8 +23,9 @@ const api = {
     ipcRenderer.invoke("launchGame", { gameData, installedPath }),
   getActiveGames: () => ipcRenderer.invoke("getActiveGames"),
   onGameStatusChanged: (callback) => {
-    ipcRenderer.removeAllListeners("gameStatusChanged");
-    ipcRenderer.on("gameStatusChanged", (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on("gameStatusChanged", listener);
+    return () => ipcRenderer.removeListener("gameStatusChanged", listener);
   },
   listGameFiles: (gameId) => ipcRenderer.invoke("listGameFiles", gameId),
   configureExecutable: (gameId, config) =>
@@ -74,8 +76,9 @@ const api = {
 
   // Listen to uninstall progress
   onUninstallProgress: (callback) => {
-    ipcRenderer.removeAllListeners("uninstallProgress");
-    ipcRenderer.on("uninstallProgress", (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on("uninstallProgress", listener);
+    return () => ipcRenderer.removeListener("uninstallProgress", listener);
   },
 
   // Get the size of a game
@@ -86,10 +89,9 @@ const api = {
   getDiskSpace: () => ipcRenderer.invoke("getDiskSpace"),
 
   onSaveGameStats: (callback) => {
-    ipcRenderer.removeAllListeners("save-game-stats");
-    ipcRenderer.on("save-game-stats", (_event, data) => {
-      callback(data);
-    });
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on("save-game-stats", listener);
+    return () => ipcRenderer.removeListener("save-game-stats", listener);
   },
 
   saveLocalStats: (data) => ipcRenderer.invoke("save-local-stats", data),
@@ -129,30 +131,36 @@ const api = {
       ipcRenderer.invoke("updater:getStatus"),
     skipVersion: ({ version }) =>
       ipcRenderer.invoke("updater:skipVersion", { version }),
-    // Event listeners for update events
+    // Event listeners for update events — each returns an unsubscribe function
     onChecking: (callback) => {
-      ipcRenderer.removeAllListeners("updater:checking");
-      ipcRenderer.on("updater:checking", (_event) => callback());
+      const listener = () => callback();
+      ipcRenderer.on("updater:checking", listener);
+      return () => ipcRenderer.removeListener("updater:checking", listener);
     },
     onUpdateAvailable: (callback) => {
-      ipcRenderer.removeAllListeners("updater:update-available");
-      ipcRenderer.on("updater:update-available", (_event, data) => callback(data));
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("updater:update-available", listener);
+      return () => ipcRenderer.removeListener("updater:update-available", listener);
     },
     onUpdateNotAvailable: (callback) => {
-      ipcRenderer.removeAllListeners("updater:update-not-available");
-      ipcRenderer.on("updater:update-not-available", (_event, data) => callback(data));
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("updater:update-not-available", listener);
+      return () => ipcRenderer.removeListener("updater:update-not-available", listener);
     },
     onDownloadProgress: (callback) => {
-      ipcRenderer.removeAllListeners("updater:download-progress");
-      ipcRenderer.on("updater:download-progress", (_event, data) => callback(data));
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("updater:download-progress", listener);
+      return () => ipcRenderer.removeListener("updater:download-progress", listener);
     },
     onUpdateDownloaded: (callback) => {
-      ipcRenderer.removeAllListeners("updater:update-downloaded");
-      ipcRenderer.on("updater:update-downloaded", (_event, data) => callback(data));
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("updater:update-downloaded", listener);
+      return () => ipcRenderer.removeListener("updater:update-downloaded", listener);
     },
     onError: (callback) => {
-      ipcRenderer.removeAllListeners("updater:error");
-      ipcRenderer.on("updater:error", (_event, data) => callback(data));
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("updater:error", listener);
+      return () => ipcRenderer.removeListener("updater:error", listener);
     },
   },
 
@@ -189,11 +197,9 @@ const api = {
     deleteModFile: ({ modId }) =>
       ipcRenderer.invoke("mod:deleteFile", { modId }),
     onDownloadProgress: (callback) => {
-      ipcRenderer.removeAllListeners("mod:downloadProgress");
-      ipcRenderer.on("mod:downloadProgress", (_event, data) => callback(data));
-    },
-    removeDownloadProgressListener: () => {
-      ipcRenderer.removeAllListeners("mod:downloadProgress");
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("mod:downloadProgress", listener);
+      return () => ipcRenderer.removeListener("mod:downloadProgress", listener);
     },
   },
 };

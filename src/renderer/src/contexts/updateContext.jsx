@@ -24,17 +24,17 @@ export const UpdateProvider = ({ children }) => {
   useEffect(() => {
     if (!window.api?.updater) return;
 
-    // Checking
+    const unsubs = [];
+
     if (window.api.updater.onChecking) {
-      window.api.updater.onChecking(() => {
+      unsubs.push(window.api.updater.onChecking(() => {
         setUpdateStatus('checking');
         setError(null);
-      });
+      }));
     }
 
-    // Update available
     if (window.api.updater.onUpdateAvailable) {
-      window.api.updater.onUpdateAvailable((data) => {
+      unsubs.push(window.api.updater.onUpdateAvailable((data) => {
         setUpdateStatus('available');
         setUpdateInfo(data);
         setShowUpdateModal(true);
@@ -42,48 +42,46 @@ export const UpdateProvider = ({ children }) => {
           description: t('update.version', { version: data.version }),
           duration: 5000,
         });
-      });
+      }));
     }
 
-    // No update
     if (window.api.updater.onUpdateNotAvailable) {
-      window.api.updater.onUpdateNotAvailable(() => {
+      unsubs.push(window.api.updater.onUpdateNotAvailable(() => {
         setUpdateStatus('idle');
         setUpdateInfo(null);
-      });
+      }));
     }
 
-    // Download progress
     if (window.api.updater.onDownloadProgress) {
-      window.api.updater.onDownloadProgress((data) => {
+      unsubs.push(window.api.updater.onDownloadProgress((data) => {
         setUpdateStatus('downloading');
         setDownloadProgress(data);
-      });
+      }));
     }
 
-    // Downloaded
     if (window.api.updater.onUpdateDownloaded) {
-      window.api.updater.onUpdateDownloaded((data) => {
+      unsubs.push(window.api.updater.onUpdateDownloaded(() => {
         setUpdateStatus('downloaded');
         setShowUpdateModal(true);
         toast.success(t('update.ready'), {
           description: t('settings.updateRestartToInstall'),
           duration: 10000,
         });
-      });
+      }));
     }
 
-    // Error
     if (window.api.updater.onError) {
-      window.api.updater.onError((data) => {
+      unsubs.push(window.api.updater.onError((data) => {
         setUpdateStatus('error');
         setError(data.message);
         toast.error(t('update.error'), {
           description: data.message || t('common.error'),
           duration: 5000,
         });
-      });
+      }));
     }
+
+    return () => unsubs.forEach((fn) => fn?.());
   }, []);
 
   // Check for updates manually

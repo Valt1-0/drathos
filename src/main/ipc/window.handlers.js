@@ -2,6 +2,7 @@
  * Window control IPC handlers
  */
 import { ipcMain, BrowserWindow } from "electron";
+import { is } from "@electron-toolkit/utils";
 
 export const registerWindowHandlers = () => {
   const getWindow = () => BrowserWindow.getFocusedWindow();
@@ -17,7 +18,9 @@ export const registerWindowHandlers = () => {
 
   ipcMain.handle("window-is-maximized", () => getWindow()?.isMaximized() ?? false);
 
-  ipcMain.on("window-toggle-devtools", () => getWindow()?.webContents.toggleDevTools());
+  ipcMain.on("window-toggle-devtools", () => {
+    if (is.dev) getWindow()?.webContents.toggleDevTools();
+  });
 
   ipcMain.on("reload-app", () => getWindow()?.webContents.reloadIgnoringCache());
 };

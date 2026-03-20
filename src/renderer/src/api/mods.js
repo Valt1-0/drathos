@@ -128,18 +128,12 @@ export const installMod = async (modId, gameId, onProgress = null) => {
   const installedGames = await window.store.get("installedGamesCache") || {};
   if (!installedGames[gameId]) throw new Error('Game not installed. Install the game first.');
 
-  // Track if listener was added for proper cleanup
-  let listenerAdded = false;
+  let unsubProgress;
   if (onProgress && window.api.mods.onDownloadProgress) {
-    window.api.mods.onDownloadProgress((data) => data.modId === modId && onProgress(data));
-    listenerAdded = true;
+    unsubProgress = window.api.mods.onDownloadProgress((data) => data.modId === modId && onProgress(data));
   }
 
-  const cleanup = () => {
-    if (listenerAdded && window.api.mods.removeDownloadProgressListener) {
-      window.api.mods.removeDownloadProgressListener();
-    }
-  };
+  const cleanup = () => unsubProgress?.();
 
   try {
     const downloadResult = await window.api.mods.downloadMod({ modId, gameId });
