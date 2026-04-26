@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { useUpload } from "../contexts/uploadContext";
 import { useTheme } from "../contexts/themeContext";
 import {
@@ -158,7 +158,13 @@ const UploadNotification = () => {
                   {t('upload.queueMessage')}
                 </p>
                 {queueInfo && (
-                  <p className={`text-xs mt-2 ${getTextClass('secondary')}`} dangerouslySetInnerHTML={{ __html: t('upload.queueStats', { active: queueInfo.active, queued: queueInfo.queued }) }} />
+                  <p className={`text-xs mt-2 ${getTextClass('secondary')}`}>
+                    <Trans
+                      i18nKey="upload.queueStats"
+                      values={{ active: queueInfo.active, queued: queueInfo.queued }}
+                      components={{ strong: <strong /> }}
+                    />
+                  </p>
                 )}
               </div>
             )}

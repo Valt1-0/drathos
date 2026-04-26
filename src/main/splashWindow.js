@@ -38,10 +38,12 @@ export class SplashWindow {
       this.window.loadFile(join(__dirname, '../renderer/splash.html'));
     }
 
-    // Show when ready
+    // Show when ready — guard against race where close() fires before this callback
     this.window.once('ready-to-show', () => {
-      this.window.show();
-      logger.info('[Splash] Window shown');
+      if (this.window && !this.window.isDestroyed()) {
+        this.window.show();
+        logger.info('[Splash] Window shown');
+      }
     });
 
     return this.window;

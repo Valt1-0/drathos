@@ -19,7 +19,8 @@
     "minimize": "Réduire",
     "maximize": "Agrandir",
     "restore": "Restaurer",
-    "clearSearch": "Effacer la recherche"
+    "clearSearch": "Effacer la recherche",
+    "understood": "Compris"
   },
   "home": {
     "loadingHub": "Chargement de votre hub de jeux...",
@@ -97,6 +98,9 @@
     "pleaseWait": "Veuillez patienter...",
     "retry": "Réessayer",
     "refreshActiveGamesError": "Échec de l'actualisation du statut des jeux actifs",
+    "deleteInstalledError": "Impossible de supprimer — le jeu est installé. Désinstallez-le d'abord.",
+    "offlineUninstallTitle": "Serveur non disponible",
+    "offlineUninstallMessage": "\"{{gameName}}\" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.",
     "cannotLaunchTitle": "Impossible de Lancer le Jeu",
     "cannotLaunchPendingSync": "a été désinstallé mais la synchronisation avec le serveur est en attente. Veuillez vous reconnecter pour terminer la synchronisation.",
     "gameNotFoundTitle": "Jeu Non Trouvé",
@@ -134,8 +138,10 @@
     "emptyLibraryAdmin": "Ajoutez votre premier jeu pour commencer !",
     "gamesCount": "{{count}} jeux",
     "installedCount": "{{count}} installés",
-    "selectGame": "Sélectionnez un jeu",
-    "selectGameDesc": "Choisissez un jeu dans la liste pour voir ses détails",
+    "expandedView": "Vue étendue",
+    "compactView": "Vue compacte",
+    "selectGame": "Aucun jeu sélectionné",
+    "selectGameDesc": "Choisissez un titre dans la bibliothèque pour explorer ses détails.",
     "noGenre": "Aucun genre",
     "about": "À propos",
     "noDescription": "Aucune description disponible.",
@@ -555,12 +561,27 @@
       "noExecutables": "Aucun exécutable trouvé automatiquement",
       "executablesFound": "exécutable(s) trouvé(s)",
       "clearSelection": "Effacer la Sélection",
+      "noResults": "Aucun jeu trouvé pour \"{{query}}\"",
       "publicGame": "Jeu Public",
       "privateGame": "Jeu Privé",
       "publicDesc": "Visible par tous les utilisateurs",
       "privateDesc": "Visible uniquement par vous",
+      "multiplayerGame": "Jeu Multijoueur",
+      "singlePlayerGame": "Jeu Solo",
+      "multiplayerDesc": "Supporte le mode multijoueur",
+      "singlePlayerDesc": "Solo uniquement",
+      "connectionType": "Type de Connexion",
+      "maxPlayers": "Joueurs Maximum",
+      "gameModes": "Modes de Jeu",
       "upload": "Télécharger",
-      "back": "Retour"
+      "back": "Retour",
+      "errorSelectGame": "Veuillez sélectionner un jeu et un fichier",
+      "errorVersionRequired": "La version est requise",
+      "errorInvalidVersion": "Format de version invalide. Utilisez le format : 1.0.0",
+      "errorScanArchive": "Erreur lors de l'analyse de l'archive",
+      "errorSelectFile": "Erreur lors de la sélection du fichier",
+      "uploadFailed": "Erreur lors de l'ajout du jeu",
+      "uploadPrepFailed": "Erreur lors de la préparation de l'upload"
     },
     "wine": {
       "title": "Wine Requis",
@@ -600,6 +621,12 @@
       "required": "*"
     }
   },
+  "gameStats": {
+    "savedLocally": "Statistiques sauvegardées localement",
+    "savedLocallyDesc": "Session de {{duration}} sera synchronisée à la reconnexion",
+    "saveFailed": "Échec de la sauvegarde des statistiques",
+    "saveFailedDesc": "Impossible d'enregistrer les données de session"
+  },
   "update": {
     "ready": "Mise à jour prête",
     "downloading": "Téléchargement...",
@@ -617,7 +644,9 @@
     "restartNow": "Redémarrer maintenant",
     "later": "Plus tard",
     "error": "Une erreur s'est produite lors de la vérification ou du téléchargement de la mise à jour.",
-    "close": "Fermer"
+    "close": "Fermer",
+    "versionIgnored": "Version ignorée",
+    "versionIgnoredDesc": "La version {{version}} a été ignorée"
   },
   "upload": {
     "queued": "Upload en file d'attente",

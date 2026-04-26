@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { getInstalledGames } from "../api/installedGames";
 import { gamesCache } from "../utils/gamesCache";
+import logger from "../services/logger";
 
 const DownloadContext = createContext();
 
@@ -69,7 +70,7 @@ export const DownloadProvider = ({ children }) => {
             const installed = await getInstalledGames();
             gamesCache.set({ installedGames: installed });
           } catch (err) {
-            console.warn("[DownloadQueue] Could not refresh installed games:", err);
+            logger.warn("[DownloadQueue] Could not refresh installed games:", err);
           }
 
           // Start the next item in the queue
@@ -84,7 +85,7 @@ export const DownloadProvider = ({ children }) => {
     });
 
     window.api.installGame(game).catch((error) => {
-      console.error("[DownloadQueue] Installation error:", error);
+      logger.error("[DownloadQueue] Installation error:", error);
       downloadCallbacksRef.current.delete(game._id);
       setDownloads((prev) => prev.filter((dl) => dl.id !== downloadId));
 

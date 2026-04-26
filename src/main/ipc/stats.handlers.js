@@ -2,11 +2,10 @@
  * Statistics and disk space IPC handlers
  */
 import { ipcMain } from "electron";
-import { exec, execFile } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import store from "../store.js";
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 export const registerStatsHandlers = () => {
@@ -41,18 +40,20 @@ export const registerStatsHandlers = () => {
     }
   });
 
-  ipcMain.handle("getDiskSpace", async () => {
+  ipcMain.handle("getDiskSpace", async (_, path) => {
     try {
-      const installPath = store.get("downloadPath");
-      if (!installPath) return { success: false, error: "Install path not configured" };
+      const installPath = path || store.get("downloadPath");
+      if (!installPath) return { success: false, notConfigured: true, error: "Install path not configured" };
 
       let freeBytes, totalBytes;
 
       if (process.platform === "win32") {
-        const drive = installPath.split(":")[0] + ":";
-        const { stdout } = await execAsync(
-          `wmic logicaldisk where "DeviceID='${drive}'" get FreeSpace,Size /value`
-        );
+        const driveLetter = installPath.charAt(0);
+        if (!/^[a-zA-Z]$/.test(driveLetter)) throw new Error("Invalid drive letter");
+        const drive = driveLetter.toUpperCase() + ":";
+        const { stdout } = await execFileAsync("wmic", [
+          "logicaldisk", "where", `DeviceID='${drive}'`, "get", "FreeSpace,Size", "/value"
+        ]);
         const freeMatch = stdout.match(/FreeSpace=(\d+)/);
         const sizeMatch = stdout.match(/Size=(\d+)/);
         if (!freeMatch || !sizeMatch) throw new Error("Cannot parse disk info");

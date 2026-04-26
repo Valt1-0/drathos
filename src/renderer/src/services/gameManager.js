@@ -1,4 +1,5 @@
 // drathos/src/renderer/src/api/gameManager.js
+import logger from './logger.js';
 
 /**
  * Simplified API for game management
@@ -6,7 +7,7 @@
 class GameManager {
   constructor() {
     this.statusListeners = new Map(); // Map<gameId, callback[]>
-    this.uninstallListeners = new Map(); // Map<gameId, callback[]> - NOUVEAU
+    this.uninstallListeners = new Map(); // Map<gameId, callback[]>
     this.setupEventListeners();
   }
 
@@ -16,27 +17,27 @@ class GameManager {
   setupEventListeners() {
     // Listen for game status changes
     window.api.onGameStatusChanged((status) => {
-      console.log(`[GameManager] 📡 Event reçu: ${status.gameId} - ${status.status}`);
+      logger.debug(`[GameManager] Event received: ${status.gameId} - ${status.status}`);
 
       // Call listeners for this specific gameId
       const listeners = this.statusListeners.get(status.gameId) || [];
-      console.log(`[GameManager] Listeners spécifiques pour ${status.gameId}: ${listeners.length}`);
+      logger.debug(`[GameManager] Specific listeners for ${status.gameId}: ${listeners.length}`);
       listeners.forEach((callback) => {
         try {
           callback(status);
         } catch (error) {
-          console.error("Erreur dans le callback de statut:", error);
+          logger.error("Error in status callback", error);
         }
       });
 
       // Also call global listeners (wildcard "*")
       const globalListeners = this.statusListeners.get("*") || [];
-      console.log(`[GameManager] Listeners globaux (*): ${globalListeners.length}`);
+      logger.debug(`[GameManager] Global listeners (*): ${globalListeners.length}`);
       globalListeners.forEach((callback) => {
         try {
           callback(status);
         } catch (error) {
-          console.error("Erreur dans le callback de statut global:", error);
+          logger.error("Error in global status callback", error);
         }
       });
     });
@@ -49,7 +50,7 @@ class GameManager {
         try {
           callback(progress);
         } catch (error) {
-          console.error("Erreur dans le callback de désinstallation:", error);
+          logger.error("Error in uninstall callback", error);
         }
       });
 
@@ -59,7 +60,7 @@ class GameManager {
         try {
           callback(progress);
         } catch (error) {
-          console.error("Erreur dans le callback de désinstallation global:", error);
+          logger.error("Error in global uninstall callback", error);
         }
       });
     });
@@ -81,15 +82,13 @@ class GameManager {
     onStatusChange = null
   ) {
     try {
-      console.log(`[GameManager] Lancement de ${gameId}...`);
+      logger.info(`[GameManager] Launching ${gameId}...`);
 
       // Automatic executable detection if needed
       let finalExecutableName = executableName;
 
       if (!finalExecutableName) {
-        console.log(
-          `[GameManager] Détection automatique de l'exécutable pour ${gameName}...`
-        );
+        logger.info(`[GameManager] Auto-detecting executable for ${gameName}...`);
 
         const detection = await window.api.getBestExecutable({
           gamePath,
@@ -97,11 +96,11 @@ class GameManager {
         });
 
         if (!detection.success || !detection.executable) {
-          throw new Error("Impossible de détecter l'exécutable du jeu");
+          throw new Error("Could not detect game executable");
         }
 
         finalExecutableName = detection.executable;
-        console.log(`[GameManager] Exécutable détecté: ${finalExecutableName}`);
+        logger.info(`[GameManager] Executable detected: ${finalExecutableName}`);
       }
 
       // Add the callback if provided
@@ -117,13 +116,10 @@ class GameManager {
         gameName,
       });
 
-      console.log(`[GameManager] Résultat du lancement:`, result);
+      logger.info(`[GameManager] Launch result: ${JSON.stringify(result)}`);
       return result;
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors du lancement de ${gameId}:`,
-        error
-      );
+      logger.error(`[GameManager] Error launching ${gameId}`, error);
       return {
         success: false,
         error: error.message,
@@ -141,7 +137,7 @@ class GameManager {
       const result = await window.api.detectExecutables({ gamePath, gameName });
       return result.success ? result.executables : [];
     } catch (error) {
-      console.error("[GameManager] Erreur lors de la détection:", error);
+      logger.error("[GameManager] Error detecting executables", error);
       return [];
     }
   }
@@ -156,10 +152,7 @@ class GameManager {
       const result = await window.api.getBestExecutable({ gamePath, gameName });
       return result.success ? result.executable : null;
     } catch (error) {
-      console.error(
-        "[GameManager] Erreur lors de la détection du meilleur exécutable:",
-        error
-      );
+      logger.error("[GameManager] Error detecting best executable", error);
       return null;
     }
   }
@@ -173,7 +166,7 @@ class GameManager {
       const result = await window.api.listGameDirectory(gamePath);
       return result.success ? result.items : [];
     } catch (error) {
-      console.error("[GameManager] Erreur lors du listage:", error);
+      logger.error("[GameManager] Error listing game directory", error);
       return [];
     }
   }
@@ -186,10 +179,7 @@ class GameManager {
     try {
       return await window.api.isGameRunning(gameId);
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors de la vérification de ${gameId}:`,
-        error
-      );
+      logger.error(`[GameManager] Error checking if game is running: ${gameId}`, error);
       return false;
     }
   }
@@ -201,10 +191,7 @@ class GameManager {
     try {
       return await window.api.getActiveGames();
     } catch (error) {
-      console.error(
-        "[GameManager] Erreur lors de la récupération des jeux actifs:",
-        error
-      );
+      logger.error("[GameManager] Error retrieving active games", error);
       return [];
     }
   }
@@ -217,10 +204,7 @@ class GameManager {
     try {
       return await window.api.openGameFolder(gamePath);
     } catch (error) {
-      console.error(
-        "[GameManager] Erreur lors de l'ouverture du dossier:",
-        error
-      );
+      logger.error("[GameManager] Error opening game folder", error);
       return { success: false, error: error.message };
     }
   }
@@ -233,10 +217,7 @@ class GameManager {
     try {
       return await window.api.getGameProcess(gameId);
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors de la récupération du processus ${gameId}:`,
-        error
-      );
+      logger.error(`[GameManager] Error retrieving process for ${gameId}`, error);
       return null;
     }
   }
@@ -310,7 +291,7 @@ class GameManager {
    */
   async stopGame(gameId, force = false) {
     try {
-      console.log(`[GameManager] 🛑 Arrêt de ${gameId} (force: ${force})`);
+      logger.info(`[GameManager] Stopping ${gameId} (force: ${force})`);
 
       const result = await window.api.stopGame({ gameId, force });
 
@@ -321,10 +302,7 @@ class GameManager {
 
       return result;
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors de l'arrêt de ${gameId}:`,
-        error
-      );
+      logger.error(`[GameManager] Error stopping ${gameId}`, error);
       return {
         success: false,
         error: error.message,
@@ -337,7 +315,7 @@ class GameManager {
    */
   async forceStopGame(gameId) {
     try {
-      console.log(`[GameManager] ⚡ Arrêt forcé de ${gameId}`);
+      logger.info(`[GameManager] Force stopping ${gameId}`);
 
       const result = await window.api.forceStopGame({ gameId });
 
@@ -347,10 +325,7 @@ class GameManager {
 
       return result;
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors de l'arrêt forcé de ${gameId}:`,
-        error
-      );
+      logger.error(`[GameManager] Error force stopping ${gameId}`, error);
       return {
         success: false,
         error: error.message,
@@ -363,7 +338,7 @@ class GameManager {
    */
   async uninstallGame(gameId, gamePath, gameName, onProgress = null) {
     try {
-      console.log(`[GameManager] 🗑️ Désinstallation de ${gameName}...`);
+      logger.info(`[GameManager] Uninstalling ${gameName}...`);
 
       // Add the progress listener if provided
       if (onProgress) {
@@ -376,7 +351,7 @@ class GameManager {
         gameName,
       });
 
-      console.log(`[GameManager] Résultat désinstallation:`, result);
+      logger.info(`[GameManager] Uninstall result: ${JSON.stringify(result)}`);
 
       // Clean up all listeners for this game
       this.removeStatusListeners(gameId);
@@ -384,10 +359,7 @@ class GameManager {
 
       return result;
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur lors de la désinstallation de ${gameName}:`,
-        error
-      );
+      logger.error(`[GameManager] Error uninstalling ${gameName}`, error);
       return {
         success: false,
         error: error.message,
@@ -402,10 +374,7 @@ class GameManager {
     try {
       return await window.api.canUninstallGame({ gameId, gamePath });
     } catch (error) {
-      console.error(
-        `[GameManager] Erreur vérification désinstallation:`,
-        error
-      );
+      logger.error(`[GameManager] Error checking uninstall eligibility`, error);
       return { canUninstall: false, reason: error.message };
     }
   }
@@ -418,7 +387,7 @@ class GameManager {
     try {
       return await window.api.getGameSize({ gamePath });
     } catch (error) {
-      console.error(`[GameManager] Erreur calcul taille:`, error);
+      logger.error(`[GameManager] Error calculating game size`, error);
       return { success: false, error: error.message };
     }
   }
@@ -433,6 +402,19 @@ class GameManager {
       this.uninstallListeners.set(gameId, []);
     }
     this.uninstallListeners.get(gameId).push(callback);
+  }
+
+  /**
+   * Removes a specific uninstall listener for a game
+   * @param {string} gameId - Game ID
+   * @param {Function} callback - Function to remove
+   */
+  removeUninstallListener(gameId, callback) {
+    const listeners = this.uninstallListeners.get(gameId);
+    if (listeners) {
+      const index = listeners.indexOf(callback);
+      if (index > -1) listeners.splice(index, 1);
+    }
   }
 
   /**

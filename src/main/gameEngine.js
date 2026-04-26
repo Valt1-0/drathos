@@ -6,6 +6,7 @@ import https from "https";
 import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
 import { buildServerUrl } from "./utils/urlHelper.js";
+import logger from "./utils/logger.js";
 
 export class GameEngine {
   constructor() {
@@ -60,10 +61,10 @@ export class GameEngine {
     const gameId = serverGame._id;
 
     try {
-      console.log(`[GameEngine] Installation: ${serverGame.name}`);
+      logger.info(`[GameEngine] Installation: ${serverGame.name}`);
 
       if (!serverGame._id || !serverGame.zipFileName) {
-        throw new Error("Données du jeu invalides");
+        throw new Error("Invalid game data");
       }
 
       this.initializeFromStore(store, sendProgress, gameId);
@@ -72,16 +73,13 @@ export class GameEngine {
       const extractPath = await this.extractGameFile(filePath, serverGame);
       await this.finalizeInstallation(filePath, extractPath, serverGame);
 
-      console.log(`[GameEngine] Installation réussie: ${serverGame.name}`);
+      logger.info(`[GameEngine] Installation successful: ${serverGame.name}`);
 
       this.cleanupDownload(gameId);
 
       return { success: true, path: extractPath };
     } catch (error) {
-      console.error(
-        `[GameEngine] Installation échouée: ${serverGame.name}`,
-        error
-      );
+      logger.error(`[GameEngine] Installation failed: ${serverGame.name}`, error);
 
       if (error.message === "CANCELLED") {
         this.sendProgress({
@@ -330,7 +328,7 @@ export class GameEngine {
         const downloadedSize = fs.statSync(filePath).size;
         if (downloadedSize !== totalSize) {
           throw new Error(
-            `Fichier incomplet: ${downloadedSize} octets reçus sur ${totalSize} attendus`
+            `Incomplete file: ${downloadedSize} bytes received out of ${totalSize} expected`
           );
         }
       }
@@ -339,7 +337,7 @@ export class GameEngine {
     } catch (error) {
       if (error.message === "CANCELLED") throw error;
 
-      console.error(`[GameEngine] Erreur de téléchargement:`, error.message);
+      logger.error(`[GameEngine] Download error: ${error.message}`);
 
       try { if (fileStream) fileStream.destroy(); } catch {}
 
@@ -348,7 +346,7 @@ export class GameEngine {
         try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
       }
 
-      throw new Error(`Erreur de téléchargement: ${error.message}`);
+      throw new Error(`Download error: ${error.message}`);
     }
   }
 
@@ -373,7 +371,7 @@ export class GameEngine {
       throw new Error("CANCELLED");
     }
 
-    console.log(`[GameEngine] Extraction vers: ${extractPath}`);
+    logger.info(`[GameEngine] Extraction vers: ${extractPath}`);
 
     if (!fs.existsSync(extractPath)) {
       fs.mkdirSync(extractPath, { recursive: true });
@@ -415,7 +413,7 @@ export class GameEngine {
         return result;
       } else {
         throw new Error(
-          `Format non supporté: ${fileExtension}. Formats supportés: ${extractionEngine.getSupportedFormats().join(", ")}`
+          `Unsupported format: ${fileExtension}. Supported formats: ${extractionEngine.getSupportedFormats().join(", ")}`
         );
       }
     } catch (error) {
@@ -423,7 +421,7 @@ export class GameEngine {
         this.cleanupFiles(filePath, extractPath);
         throw error;
       }
-      console.error(`[GameEngine] Extraction failed:`, error.message);
+      logger.error(`[GameEngine] Extraction failed: ${error.message}`);
       throw new Error(`Erreur d'extraction: ${error.message}`);
     }
   }
@@ -438,7 +436,7 @@ export class GameEngine {
       throw new Error("CANCELLED");
     }
 
-    console.log(`[GameEngine] Finalisation: ${serverGame.name}...`);
+    logger.info(`[GameEngine] Finalisation: ${serverGame.name}...`);
 
     this.sendProgress({
       id: gameId,
@@ -450,7 +448,7 @@ export class GameEngine {
     try {
       await fs.promises.unlink(filePath);
     } catch (err) {
-      console.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
+      logger.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
     }
 
     // Calculate the installed size (in MB)
@@ -458,9 +456,9 @@ export class GameEngine {
     try {
       const sizeBytes = await this.calculateDirSize(extractPath);
       installSizeMB = Math.round(sizeBytes / (1024 * 1024));
-      console.log(`[GameEngine] Taille installée: ${installSizeMB} MB`);
+      logger.info(`[GameEngine] Installed size: ${installSizeMB} MB`);
     } catch (err) {
-      console.warn(`[GameEngine] Impossible de calculer la taille installée: ${err.message}`);
+      logger.warn(`[GameEngine] Could not calculate installed size: ${err.message}`);
     }
 
     const decoded = jwtDecode(this.userToken);
@@ -550,7 +548,7 @@ export class GameEngine {
       avgSpeed: metrics.avgSpeed / (1024 * 1024), // MB/s
       finalPath: extractPath,
       cacheData,
-      message: "Installation terminée !",
+      message: "Installation complete!",
     });
   }
 

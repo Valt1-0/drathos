@@ -24,7 +24,7 @@ export const checkServerStatus = async (serverAddress, autoDetect = true) => {
     const data = await response.json();
     return {
       online: false,
-      error: `Le serveur a répondu avec le statut: ${response.status}`,
+      error: `Server responded with status: ${response.status}`,
       uptime: data.uptime,
       protocol,
     };

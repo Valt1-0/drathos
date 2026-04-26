@@ -6,6 +6,7 @@ import {
   FiAlertTriangle,
   FiHardDrive,
 } from "react-icons/fi";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 const formatSize = (gameSize) => {
   if (!gameSize) return null;
@@ -17,6 +18,7 @@ const formatSize = (gameSize) => {
 
 const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
   const { t } = useTranslation();
+  const containerRef = useFocusTrap(isOpen && !!game);
 
   if (!isOpen || !game) return null;
 
@@ -25,6 +27,9 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <motion.div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
@@ -35,6 +40,7 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-lg bg-surface hover:bg-surface/80 transition-all duration-300 group"
+              aria-label={t('common.close')}
             >
               <FiX className="text-xl text-text-secondary group-hover:text-text" />
             </button>

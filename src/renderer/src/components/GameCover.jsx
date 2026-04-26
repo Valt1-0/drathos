@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import imageCacheService from "../services/imageCacheService";
+import logger from "../services/logger";
 
 const optimizeIGDBImageUrl = (url, size = "cover_small") => {
   if (!url) return "";
@@ -78,7 +79,7 @@ const GameCover = ({
         setImageSrc(cachedImageUrl);
         setIsLoading(false);
       } catch (error) {
-        console.error("Erreur lors du chargement de l'image:", error);
+        logger.warn(`[GameCover] Erreur lors du chargement de l'image: ${error.message}`);
         setImageSrc(optimizedUrl);
         setIsLoading(false);
       }

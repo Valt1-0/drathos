@@ -1,28 +1,76 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { FiChevronDown, FiUsers, FiX, FiArrowUp, FiArrowDown, FiFilter } from "react-icons/fi";
+import { FiChevronDown, FiUsers, FiX, FiArrowUp, FiArrowDown, FiFilter, FiClock, FiTag } from "react-icons/fi";
 
-const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount }) => {
+const dropdownStyle = { border: "1px solid var(--app-border)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" };
+
+// Shared dropdown component used by both sidebar and toolbar variants
+const FilterDropdown = React.forwardRef(({ triggerContent, isOpen, onToggle, options, activeValue, onSelect, className = "", minWidth = "min-w-35", dotKey = null }, ref) => {
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          isOpen ? "bg-surface ring-1 ring-primary text-text" : "bg-background-secondary text-text-secondary hover:bg-surface hover:text-text"
+        }`}
+        style={{ border: "1px solid var(--app-border)" }}
+      >
+        {triggerContent}
+        <FiChevronDown className="w-3 h-3 shrink-0 transition-transform duration-200" style={{ transform: isOpen ? "rotate(180deg)" : undefined }} />
+      </button>
+      {isOpen && (
+        <div className={`absolute top-full left-0 mt-1 rounded-lg overflow-hidden z-50 py-0.5 bg-background-secondary ${minWidth}`} style={dropdownStyle}>
+          {options.map((opt) => {
+            const active = activeValue === opt.value;
+            return (
+              <button key={opt.value} onClick={() => onSelect(opt.value)}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${active ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-surface hover:text-text"}`}
+              >
+                {opt.icon && <span className="opacity-50 shrink-0">{opt.icon}</span>}
+                {dotKey && (opt[dotKey]
+                  ? <div className={`w-2 h-2 rounded-full shrink-0 ${opt[dotKey]}`} />
+                  : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />
+                )}
+                <span className="font-medium">{opt.label}</span>
+                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+});
+FilterDropdown.displayName = 'FilterDropdown';
+
+const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, variant = "sidebar" }) => {
   const { t } = useTranslation();
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
-  const [genresOpen, setGenresOpen] = useState(true);
+  const [genresOpen, setGenresOpen] = useState(variant === "sidebar");
   const [sortOpen, setSortOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [userStatusOpen, setUserStatusOpen] = useState(false);
+  const [toolbarGenresOpen, setToolbarGenresOpen] = useState(false);
   const sortRef = useRef(null);
   const statusRef = useRef(null);
   const userStatusRef = useRef(null);
+  const toolbarGenresRef = useRef(null);
+  const toolbarMoreRef = useRef(null);
 
   useEffect(() => {
-    if (!sortOpen && !statusOpen && !userStatusOpen) return;
+    if (!sortOpen && !statusOpen && !userStatusOpen && !toolbarGenresOpen && !moreFiltersOpen) return;
     const handler = (e) => {
       if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
       if (statusRef.current && !statusRef.current.contains(e.target)) setStatusOpen(false);
       if (userStatusRef.current && !userStatusRef.current.contains(e.target)) setUserStatusOpen(false);
+      if (toolbarGenresRef.current && !toolbarGenresRef.current.contains(e.target)) setToolbarGenresOpen(false);
+      if (toolbarMoreRef.current && !toolbarMoreRef.current.contains(e.target)) setMfOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [sortOpen, userStatusOpen]);
+  }, [sortOpen, statusOpen, userStatusOpen, toolbarGenresOpen, moreFiltersOpen]);
+
+  const [mfOpen, setMfOpen] = useState(false);
 
   const update = (key, value) => onFiltersChange({ ...filters, [key]: value });
 
@@ -87,99 +135,215 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount })
     filters.userStatusFilter && filters.userStatusFilter !== "all",
   ].filter(Boolean).length;
 
-  const dropdownStyle = { border: "1px solid var(--app-border)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" };
 
+  // ── Toolbar variant (expanded mode) ──────────────────────────────────────
+  if (variant === "toolbar") {
+    const moreActiveCount = [
+      filters.showOnlyMultiplayer,
+      filters.playtimeRange !== "all",
+      filters.userStatusFilter && filters.userStatusFilter !== "all",
+    ].filter(Boolean).length;
+
+    const pillBase = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap";
+    const pillIdle = `${pillBase} bg-background-secondary text-text-secondary hover:bg-surface hover:text-text`;
+    const pillActive = `${pillBase} bg-primary/15 text-primary ring-1 ring-primary/30`;
+
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap overflow-visible">
+
+        {/* Sort */}
+        <FilterDropdown
+          ref={sortRef}
+          triggerContent={<span className="flex items-center gap-1.5">{currentSort.icon && <span className="opacity-60">{currentSort.icon}</span>}<span>{currentSort.label}</span></span>}
+          isOpen={sortOpen}
+          onToggle={() => { setSortOpen(!sortOpen); setStatusOpen(false); setToolbarGenresOpen(false); setMfOpen(false); }}
+          options={sortOptions}
+          activeValue={filters.sortBy}
+          onSelect={(v) => { update("sortBy", v); setSortOpen(false); }}
+          minWidth="min-w-35"
+        />
+
+        {/* Status */}
+        <FilterDropdown
+          ref={statusRef}
+          triggerContent={<span className="flex items-center gap-1.5">{currentStatus.dot ? <div className={`w-2 h-2 rounded-full shrink-0 ${currentStatus.dot}`} /> : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />}<span>{currentStatus.label}</span></span>}
+          isOpen={statusOpen}
+          onToggle={() => { setStatusOpen(!statusOpen); setSortOpen(false); setToolbarGenresOpen(false); setMfOpen(false); }}
+          options={statusOptions}
+          activeValue={filters.statusFilter}
+          onSelect={(v) => { update("statusFilter", v); setStatusOpen(false); }}
+          dotKey="dot"
+          minWidth="min-w-35"
+        />
+
+        {/* Genres */}
+        {allGenres.length > 0 && (
+          <div ref={toolbarGenresRef} className="relative">
+            <button
+              onClick={() => { setToolbarGenresOpen(!toolbarGenresOpen); setSortOpen(false); setStatusOpen(false); setMfOpen(false); }}
+              className={filters.selectedGenres.length > 0 ? pillActive : pillIdle}
+              style={{ border: "1px solid var(--app-border)" }}
+            >
+              <FiTag className="w-3 h-3 opacity-60" />
+              <span>{t("games.genres").replace(":", "")}</span>
+              {filters.selectedGenres.length > 0 && (
+                <span className="px-1 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-bold leading-none">
+                  {filters.selectedGenres.length}
+                </span>
+              )}
+              <FiChevronDown className="w-3 h-3 opacity-50" style={{ transform: toolbarGenresOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+            </button>
+            {toolbarGenresOpen && (
+              <div className="absolute top-full left-0 mt-1 rounded-lg z-50 p-2.5 bg-background-secondary min-w-55 max-w-xs" style={dropdownStyle}>
+                <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-surface">
+                  {allGenres.map((genre) => {
+                    const active = filters.selectedGenres.includes(genre);
+                    return (
+                      <button key={genre} onClick={() => toggleGenre(genre)}
+                        className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${active ? "bg-primary/15 text-primary ring-1 ring-primary/30" : "bg-surface text-text-secondary hover:text-text"}`}
+                      >
+                        {genre}
+                      </button>
+                    );
+                  })}
+                </div>
+                {filters.selectedGenres.length > 0 && (
+                  <button onClick={() => update("selectedGenres", [])} className="mt-2 flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors">
+                    <FiX className="w-3 h-3" />{t("games.resetFilters")}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* More filters (multiplayer, user status, playtime) */}
+        <div ref={toolbarMoreRef} className="relative">
+          <button
+            onClick={() => { setMfOpen(!mfOpen); setSortOpen(false); setStatusOpen(false); setToolbarGenresOpen(false); }}
+            className={moreActiveCount > 0 ? pillActive : pillIdle}
+            style={{ border: "1px solid var(--app-border)" }}
+          >
+            <FiFilter className="w-3 h-3 opacity-60" />
+            <span>{t("games.moreFilters")}</span>
+            {moreActiveCount > 0 && (
+              <span className="px-1 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-bold leading-none">
+                {moreActiveCount}
+              </span>
+            )}
+          </button>
+          {mfOpen && (
+            <div className="absolute top-full left-0 mt-1 rounded-lg z-50 p-3 bg-background-secondary min-w-55 space-y-3" style={dropdownStyle}>
+
+              {/* Multiplayer */}
+              <button
+                onClick={() => update("showOnlyMultiplayer", !filters.showOnlyMultiplayer)}
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.showOnlyMultiplayer ? "bg-secondary/15 text-secondary ring-1 ring-secondary/30" : "bg-surface/60 text-text-secondary hover:text-text"}`}
+                style={{ border: "1px solid var(--app-border)" }}
+              >
+                <FiUsers className="w-3.5 h-3.5 shrink-0" />
+                {t("games.multiplayer")}
+                <div className={`ml-auto relative w-7 h-3.5 rounded-full transition-colors duration-200 shrink-0 ${filters.showOnlyMultiplayer ? "bg-secondary" : "bg-surface"}`}
+                  style={!filters.showOnlyMultiplayer ? { border: "1.5px solid var(--app-border)" } : {}}>
+                  <div className="absolute w-2.5 h-2.5 bg-white rounded-full shadow transition-all duration-200"
+                    style={{ top: "50%", transform: `translateY(-50%) translateX(${filters.showOnlyMultiplayer ? "13px" : "1px"})` }} />
+                </div>
+              </button>
+
+              {/* User status */}
+              <div ref={userStatusRef} className="relative">
+                <p className="text-xs text-text-secondary mb-1 font-medium">{t("games.userStatusLabel")}</p>
+                <button
+                  onClick={() => setUserStatusOpen(!userStatusOpen)}
+                  className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${userStatusOpen ? "bg-surface ring-1 ring-primary" : "bg-surface/60 hover:bg-surface"}`}
+                  style={{ border: "1px solid var(--app-border)" }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {currentUserStatus.dot ? <div className={`w-2 h-2 rounded-full shrink-0 ${currentUserStatus.dot}`} /> : <div className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />}
+                    <span className={currentUserStatus.value !== "all" ? "text-text" : "text-text-secondary"}>{currentUserStatus.label}</span>
+                  </span>
+                  <FiChevronDown className="w-3 h-3 text-text-secondary shrink-0" style={{ transform: userStatusOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+                </button>
+                {userStatusOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-60 py-0.5 bg-background-secondary" style={dropdownStyle}>
+                    {userStatusOptions.map((opt) => {
+                      const active = (filters.userStatusFilter || "all") === opt.value;
+                      return (
+                        <button key={opt.value} onClick={() => { update("userStatusFilter", opt.value); setUserStatusOpen(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${active ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-surface hover:text-text"}`}
+                        >
+                          {opt.dot ? <div className={`w-2 h-2 rounded-full shrink-0 ${opt.dot}`} /> : <div className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />}
+                          <span className="font-medium">{opt.label}</span>
+                          {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Playtime */}
+              <div>
+                <p className="text-xs text-text-secondary mb-1 font-medium flex items-center gap-1">
+                  <FiClock className="w-3 h-3" />{t("games.playtime")}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {playtimeOptions.map((opt) => {
+                    const active = filters.playtimeRange === opt.value;
+                    return (
+                      <button key={opt.value} onClick={() => update("playtimeRange", opt.value)}
+                        className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${active ? "bg-primary/15 text-primary ring-1 ring-primary/30" : "bg-surface text-text-secondary hover:text-text"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Reset */}
+        {activeFilterCount > 0 && (
+          <button onClick={resetFilters} className="flex items-center gap-1 px-2 py-1.5 text-xs text-primary hover:text-primary/70 transition-colors">
+            <FiX className="w-3 h-3" />
+            <span>{t("games.resetFilters")}</span>
+            <span className="opacity-60">({activeFilterCount})</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Sidebar variant (default) ─────────────────────────────────────────────
   return (
     <div className="space-y-2">
 
       {/* Sort */}
-      <div ref={sortRef} className="relative">
-        <button
-          onClick={() => { setSortOpen(!sortOpen); setStatusOpen(false); setUserStatusOpen(false); }}
-          className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-            sortOpen ? "bg-surface ring-1 ring-primary text-text" : "bg-background-secondary text-text-secondary hover:bg-surface hover:text-text"
-          }`}
-          style={{ border: "1px solid var(--app-border)" }}
-        >
-          <span className="flex items-center gap-1.5 truncate">
-            {currentSort.icon && <span className="opacity-50 shrink-0">{currentSort.icon}</span>}
-            <span className="truncate">{currentSort.label}</span>
-          </span>
-          <FiChevronDown
-            className="w-3 h-3 shrink-0 transition-transform duration-200"
-            style={{ transform: sortOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-          />
-        </button>
-        {sortOpen && (
-          <div
-            className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-[9999] py-0.5 bg-background-secondary"
-            style={dropdownStyle}
-          >
-            {sortOptions.map((opt) => {
-              const active = filters.sortBy === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => { update("sortBy", opt.value); setSortOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
-                    active ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-surface hover:text-text"
-                  }`}
-                >
-                  {opt.icon && <span className="opacity-50 shrink-0">{opt.icon}</span>}
-                  <span className="font-medium">{opt.label}</span>
-                  {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <FilterDropdown
+        ref={sortRef}
+        triggerContent={<span className="flex items-center gap-1.5 truncate">{currentSort.icon && <span className="opacity-50 shrink-0">{currentSort.icon}</span>}<span className="truncate">{currentSort.label}</span></span>}
+        isOpen={sortOpen}
+        onToggle={() => { setSortOpen(!sortOpen); setStatusOpen(false); setUserStatusOpen(false); }}
+        options={sortOptions}
+        activeValue={filters.sortBy}
+        onSelect={(v) => { update("sortBy", v); setSortOpen(false); }}
+        minWidth="left-0 right-0"
+      />
 
-      {/* Status — dropdown */}
-      <div ref={statusRef} className="relative">
-        <button
-          onClick={() => { setStatusOpen(!statusOpen); setSortOpen(false); }}
-          className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-            statusOpen ? "bg-surface ring-1 ring-primary text-text" : "bg-background-secondary text-text-secondary hover:bg-surface hover:text-text"
-          }`}
-          style={{ border: "1px solid var(--app-border)" }}
-        >
-          <span className="flex items-center gap-1.5 truncate">
-            {currentStatus.dot
-              ? <div className={`w-2 h-2 rounded-full shrink-0 ${currentStatus.dot}`} />
-              : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />
-            }
-            <span className={filters.statusFilter !== "all" ? "text-primary" : ""}>{currentStatus.label}</span>
-          </span>
-          <FiChevronDown
-            className="w-3 h-3 shrink-0 transition-transform duration-200"
-            style={{ transform: statusOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-          />
-        </button>
-        {statusOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-[9999] py-0.5 bg-background-secondary" style={dropdownStyle}>
-            {statusOptions.map((opt) => {
-              const active = filters.statusFilter === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => { update("statusFilter", opt.value); setStatusOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
-                    active ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-surface hover:text-text"
-                  }`}
-                >
-                  {opt.dot
-                    ? <div className={`w-2 h-2 rounded-full shrink-0 ${opt.dot}`} />
-                    : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />
-                  }
-                  <span className="font-medium">{opt.label}</span>
-                  {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* Status */}
+      <FilterDropdown
+        ref={statusRef}
+        triggerContent={<span className="flex items-center gap-1.5 truncate">{currentStatus.dot ? <div className={`w-2 h-2 rounded-full shrink-0 ${currentStatus.dot}`} /> : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />}<span className={filters.statusFilter !== "all" ? "text-primary" : ""}>{currentStatus.label}</span></span>}
+        isOpen={statusOpen}
+        onToggle={() => { setStatusOpen(!statusOpen); setSortOpen(false); }}
+        options={statusOptions}
+        activeValue={filters.statusFilter}
+        onSelect={(v) => { update("statusFilter", v); setStatusOpen(false); }}
+        dotKey="dot"
+        minWidth="left-0 right-0"
+      />
 
       {/* Genres */}
       {allGenres.length > 0 && (
@@ -297,7 +461,7 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount })
             </button>
             {userStatusOpen && (
               <div
-                className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-[9999] py-0.5 bg-background-secondary"
+                className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-50 py-0.5 bg-background-secondary"
                 style={dropdownStyle}
               >
                 {userStatusOptions.map((opt) => {
@@ -315,7 +479,7 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount })
                         : <div className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />
                       }
                       <span className="font-medium">{opt.label}</span>
-                      {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                      {active && <span className="ml-auto mr-0.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
                     </button>
                   );
                 })}

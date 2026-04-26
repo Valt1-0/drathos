@@ -10,6 +10,7 @@ import { GameLauncher } from "../gameLauncher.js";
 import { SimpleExecutableDetector } from "../simpleExecutableDetector.js";
 import { isValidSender, isExecutableFile } from "../app/security.js";
 import workerPath from "../installWorker.js?modulePath";
+import logger from "../utils/logger.js";
 import uninstallWorkerPath from "../uninstallWorker.js?modulePath";
 
 const gameLauncher = new GameLauncher();
@@ -65,6 +66,7 @@ export const registerGameHandlers = () => {
 
       worker.on("message", (data) => {
         if (data.type === "store-set") { store.set(data.key, data.value); return; }
+        if (data.type === "log") { logger[data.level]?.(`[Worker] ${data.message}`); return; }
 
         event.sender.send("downloadProgress", { id: serverGame._id, ...data });
 
@@ -228,7 +230,8 @@ export const registerGameHandlers = () => {
         },
       });
 
-      worker.on("message", (data) => {
+      worker.on("message", async (data) => {
+        if (data.type === "log") { logger[data.level]?.(`[Worker] ${data.message}`); return; }
         event.sender.send("uninstallProgress", { id: gameId, ...data });
 
         if (data.stage === "uninstalled") {
@@ -236,8 +239,8 @@ export const registerGameHandlers = () => {
           const installedMods = store.get("installedMods") || {};
           if (installedMods[gameId]) {
             for (const [modId, modInfo] of Object.entries(installedMods[gameId])) {
-              if (modInfo?.path && fs.existsSync(modInfo.path)) {
-                fs.rmSync(modInfo.path, { recursive: true, force: true });
+              if (modInfo?.path) {
+                await fs.promises.rm(modInfo.path, { recursive: true, force: true }).catch(() => {});
               }
             }
             delete installedMods[gameId];
@@ -277,30 +280,47 @@ export const registerGameHandlers = () => {
   ipcMain.handle("getGameSize", async (_, { gamePath }) => {
     try {
       await fs.promises.access(gamePath);
-      const size = await calculateDirectorySize(gamePath);
+      const counter = { files: 0, truncated: false };
+      const size = await calculateDirectorySize(gamePath, 0, counter);
+      if (counter.truncated) logger.warn(`[getGameSize] Size truncated at ${DIR_SIZE_MAX_FILES} files for ${gamePath}`);
       return { success: true, sizeBytes: size, sizeMB: Math.round(size / (1024 * 1024)),
-        sizeGB: Math.round((size / (1024 ** 3)) * 10) / 10 };
+        sizeGB: Math.round((size / (1024 ** 3)) * 10) / 10, truncated: counter.truncated };
     } catch {
       return { success: false, error: "Directory not found" };
     }
   });
 };
 
-async function calculateDirectorySize(dirPath) {
+const DIR_SIZE_MAX_DEPTH = 12;
+const DIR_SIZE_MAX_FILES = 50_000;
+
+async function calculateDirectorySize(dirPath, depth = 0, counter = { files: 0, truncated: false }) {
+  if (depth > DIR_SIZE_MAX_DEPTH || counter.files >= DIR_SIZE_MAX_FILES) {
+    counter.truncated = true;
+    return 0;
+  }
   try {
     const items = await fs.promises.readdir(dirPath);
     const sizes = await Promise.all(items.map(async (item) => {
+      if (counter.files >= DIR_SIZE_MAX_FILES) {
+        counter.truncated = true;
+        return 0;
+      }
       try {
         const itemPath = path.join(dirPath, item);
         const stats = await fs.promises.stat(itemPath);
-        return stats.isDirectory() ? await calculateDirectorySize(itemPath) : stats.size;
+        if (stats.isDirectory()) {
+          return calculateDirectorySize(itemPath, depth + 1, counter);
+        }
+        counter.files++;
+        return stats.size;
       } catch {
         return 0;
       }
     }));
     return sizes.reduce((sum, s) => sum + s, 0);
   } catch (err) {
-    console.warn(`[getGameSize] Cannot read directory ${dirPath}:`, err.message);
+    logger.warn(`[getGameSize] Cannot read directory ${dirPath}: ${err.message}`);
     return 0;
   }
 }

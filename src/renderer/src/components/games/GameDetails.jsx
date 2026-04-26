@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../contexts/themeContext";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   FiBarChart2,
@@ -39,8 +39,9 @@ const STATUS_CONFIG = {
   dropped:    { dot: 'bg-red-400',   bg: 'bg-red-400/15',  border: 'border-red-400/30',  text: 'text-red-400'   },
 };
 
-const GameStatusSelector = ({ gameId, gameStatus, onSetStatus }) => {
-  const { t } = useTranslation();
+// Shared portal dropdown logic — position tracking + click-outside
+// align: 'left' anchors to left edge of button, 'right' anchors to right edge
+const usePortalDropdown = (align = 'left') => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef(null);
@@ -49,9 +50,12 @@ const GameStatusSelector = ({ gameId, gameStatus, onSetStatus }) => {
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({ top: rect.bottom + 6, left: rect.left });
+      setPosition({
+        top: rect.bottom + (align === 'right' ? 8 : 6),
+        left: align === 'right' ? rect.right - 180 : rect.left,
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, align]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -64,6 +68,13 @@ const GameStatusSelector = ({ gameId, gameStatus, onSetStatus }) => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen]);
+
+  return { isOpen, setIsOpen, position, buttonRef, dropdownRef };
+};
+
+const GameStatusSelector = ({ gameId, gameStatus, onSetStatus }) => {
+  const { t } = useTranslation();
+  const { isOpen, setIsOpen, position, buttonRef, dropdownRef } = usePortalDropdown('left');
 
   const current = gameStatus ? STATUS_CONFIG[gameStatus] : null;
 
@@ -97,7 +108,7 @@ const GameStatusSelector = ({ gameId, gameStatus, onSetStatus }) => {
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: position.top, left: position.left, zIndex: 9999 }}
+          style={{ position: 'fixed', top: position.top, left: position.left, zIndex: 'var(--z-overlay)' }}
           className="min-w-[160px] rounded-xl overflow-hidden bg-surface border border-border shadow-2xl py-1"
         >
           {options.map((opt) => {
@@ -127,42 +138,9 @@ const GameStatusSelector = ({ gameId, gameStatus, onSetStatus }) => {
 };
 
 const VersionSelector = ({ currentVersion, versions, onSelectVersion }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef(null);
-  const dropdownRef = useRef(null);
+  const { isOpen, setIsOpen, position, buttonRef, dropdownRef } = usePortalDropdown('right');
   const { getTextClass } = useTheme();
   const { t } = useTranslation();
-
-  // Update dropdown position when opening
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 8,
-        left: rect.right - 180, // Align to right edge
-      });
-    }
-  }, [isOpen]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
 
   return (
     <>
@@ -197,7 +175,7 @@ const VersionSelector = ({ currentVersion, versions, onSelectVersion }) => {
               position: 'fixed',
               top: `${position.top}px`,
               left: `${position.left}px`,
-              zIndex: 9999,
+              zIndex: 'var(--z-overlay)',
             }}
             className="min-w-[180px] rounded-xl overflow-hidden bg-surface border border-border shadow-2xl backdrop-blur-xl"
           >
@@ -347,36 +325,79 @@ const GameDetails = ({
   const { isLight, getTextClass } = useTheme();
 
   // Calculate game versions
-  const gameVersions = game && game.igdbId
-    ? allGames
-        .filter(g => g.igdbId === game.igdbId)
-        .sort((a, b) => (b.version || '').localeCompare(a.version || '', undefined, { numeric: true, sensitivity: 'base' }))
-    : [];
+  const gameVersions = useMemo(() => {
+    if (!game?.igdbId) return [];
+    return allGames
+      .filter(g => g.igdbId === game.igdbId)
+      .sort((a, b) => (b.version || '').localeCompare(a.version || '', undefined, { numeric: true, sensitivity: 'base' }));
+  }, [game?.igdbId, allGames]);
 
   const hasMultipleVersions = gameVersions.length > 1;
 
+  // Rating display — extracted from JSX to avoid IIFE anti-pattern
+  const ratingEl = game?.rating > 0 ? (() => {
+    const normalizedRating = game.rating > 10 ? game.rating / 10 : game.rating;
+    const displayRating = normalizedRating.toFixed(1);
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md backdrop-blur-sm border bg-gradient-to-r from-warning/20 to-warning/10 border-warning/30">
+        <div className="flex items-center gap-0.5">
+          {[...Array(5)].map((_, index) => {
+            const fillPercentage = Math.min(Math.max((normalizedRating / 2) - index, 0), 1);
+            return (
+              <div key={index} className="relative w-3 h-3">
+                <FiStar className="absolute inset-0 w-3 h-3 text-warning/30" />
+                {fillPercentage > 0 && (
+                  <div className="absolute inset-0 overflow-hidden" style={{ width: `${fillPercentage * 100}%` }}>
+                    <FiStar className="w-3 h-3 text-warning fill-warning" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <span className="text-warning font-bold text-xs">{displayRating}</span>
+        <span className={`text-[10px] font-medium ${getTextClass('secondary')}`}>/ 10</span>
+      </div>
+    );
+  })() : null;
+
   if (!game) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+      <div className="flex-1 flex items-center justify-center bg-background relative overflow-hidden">
+        {/* Dot grid */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: 'radial-gradient(circle, var(--app-primary) 1.5px, transparent 1.5px)',
+          backgroundSize: '28px 28px',
+          opacity: 0.18,
+        }} />
+        {/* Radial vignette to fade the grid at edges */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 60% 55% at 50% 50%, transparent 0%, var(--app-background) 100%)',
+        }} />
+
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-md"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          className="relative flex flex-col items-center text-center gap-5"
         >
-          <div className="w-24 h-24 rounded-2xl bg-surface border border-border flex items-center justify-center mx-auto mb-6">
-            <div className="text-5xl">🎮</div>
+          {/* Icon with soft glow */}
+          <div className="relative flex items-center justify-center">
+            <div className="absolute w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'var(--app-primary)' }} />
+            <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center" style={{
+              background: 'var(--app-backgroundSecondary)',
+              border: '1px solid var(--app-border)',
+              boxShadow: '0 0 0 6px color-mix(in srgb, var(--app-primary) 8%, transparent)',
+            }}>
+              <FiMonitor className="text-2xl" style={{ color: 'var(--app-primary)' }} />
+            </div>
           </div>
-          <h2 className={`text-2xl font-bold mb-3 ${getTextClass('primary')}`}>
-            {t('games.selectGame')}
-          </h2>
-          <p className={`text-base ${getTextClass('secondary')}`}>
-            {t('games.selectGameDesc')}
-          </p>
-          <div className="mt-6 flex items-center justify-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" style={{ animationDelay: '0.2s' }} />
-            <div className="w-2 h-2 rounded-full bg-accent animate-pulse" style={{ animationDelay: '0.4s' }} />
+
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-base font-semibold text-text">{t('games.selectGame')}</h2>
+            <p className="text-sm text-text-secondary max-w-52 leading-relaxed">{t('games.selectGameDesc')}</p>
           </div>
+
         </motion.div>
       </div>
     );
@@ -451,6 +472,7 @@ const GameDetails = ({
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
                   className={`text-3xl sm:text-4xl font-black truncate ${getTextClass('primary')} drop-shadow-lg`}
+                  title={game.name}
                   style={{
                     textShadow: isLight
                       ? '0 2px 10px rgba(0,0,0,0.1)'
@@ -515,44 +537,7 @@ const GameDetails = ({
                   )}
 
                   {/* Enhanced Rating Display */}
-                  {game.rating > 0 && (() => {
-                    // Normalize rating to 0-10 scale (handle both 0-10 and 0-100 scales)
-                    const normalizedRating = game.rating > 10 ? game.rating / 10 : game.rating;
-                    const displayRating = normalizedRating.toFixed(1);
-
-                    return (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md backdrop-blur-sm border bg-gradient-to-r from-warning/20 to-warning/10 border-warning/30">
-                        {/* Star Rating Visual */}
-                        <div className="flex items-center gap-0.5">
-                          {[...Array(5)].map((_, index) => {
-                            const fillPercentage = Math.min(Math.max((normalizedRating / 2) - index, 0), 1);
-                            return (
-                              <div key={index} className="relative w-3 h-3">
-                                {/* Background star (empty) */}
-                                <FiStar className="absolute inset-0 w-3 h-3 text-warning/30" />
-                                {/* Filled star */}
-                                {fillPercentage > 0 && (
-                                  <div
-                                    className="absolute inset-0 overflow-hidden"
-                                    style={{ width: `${fillPercentage * 100}%` }}
-                                  >
-                                    <FiStar className="w-3 h-3 text-warning fill-warning" />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {/* Numeric Score */}
-                        <span className="text-warning font-bold text-xs">
-                          {displayRating}
-                        </span>
-                        <span className={`text-[10px] font-medium ${getTextClass('secondary')}`}>
-                          / 10
-                        </span>
-                      </div>
-                    );
-                  })()}
+                  {ratingEl}
 
                   {/* Shortcut button */}
                   {isInstalled && onCreateShortcut && (
@@ -762,7 +747,7 @@ const ActionButtons = ({
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-2 rounded-full overflow-hidden bg-background-secondary">
+        <div className="w-full h-2 rounded-full overflow-hidden bg-surface/50">
           <motion.div
             className="h-full rounded-full bg-gradient-primary"
             initial={{ width: 0 }}
@@ -802,7 +787,7 @@ const ActionButtons = ({
           onClick={() => onInstall(game)}
           disabled={isQueued}
           aria-label={isQueued ? t('games.inQueue') : t('games.installGame')}
-          className={`group relative overflow-hidden rounded-xl p-4 border transition-all duration-300 ${
+          className={`group relative overflow-hidden rounded-xl p-3.5 border transition-all duration-300 ${
             user?.role === "admin" ? "sm:col-span-1" : "sm:col-span-2"
           } ${
             isQueued
@@ -832,7 +817,7 @@ const ActionButtons = ({
           <button
             onClick={() => onDeleteFromServer(game)}
             aria-label={t('games.deleteFromServerBtn')}
-            className="group relative overflow-hidden rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02] bg-surface border-border hover:border-error/50 hover:shadow-error"
+            className="group relative overflow-hidden rounded-xl p-3.5 border transition-all duration-300 hover:scale-[1.02] bg-surface border-border hover:border-error/50 hover:shadow-error"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-error/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10 text-center">
@@ -963,7 +948,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
       {/* Collapsible Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2.5 p-4 hover:bg-primary/5 transition-colors"
+        className="w-full flex items-center justify-between gap-2.5 p-4 hover:bg-primary/10 transition-colors duration-200"
       >
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-secondary/20">
@@ -1015,7 +1000,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
             <div className={`text-xl font-bold mb-1.5 ${getTextClass('primary')}`}>
               {stats.totalPlayTime || "0h 0m"}
             </div>
-            <div className="h-1 rounded-full overflow-hidden bg-background-secondary">
+            <div className="h-1 rounded-full overflow-hidden bg-surface/50">
               <div className="h-full bg-gradient-primary rounded-full w-3/4" />
             </div>
           </div>
@@ -1035,7 +1020,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
             <div className={`text-xl font-bold mb-1.5 ${getTextClass('primary')}`}>
               {stats.totalSessions || 0}
             </div>
-            <div className="h-1 rounded-full overflow-hidden bg-background-secondary">
+            <div className="h-1 rounded-full overflow-hidden bg-surface/50">
               <div className="h-full rounded-full w-2/3 bg-gradient-secondary" />
             </div>
           </div>
@@ -1055,7 +1040,7 @@ const GameStatistics = ({ stats, isPlaying }) => {
             <div className={`text-xl font-bold mb-1.5 ${getTextClass('primary')}`}>
               {stats.averageSessionTime || "0h 0m"}
             </div>
-            <div className="h-1 rounded-full overflow-hidden bg-background-secondary">
+            <div className="h-1 rounded-full overflow-hidden bg-surface/50">
               <div className="h-full rounded-full w-1/2 bg-accent" />
             </div>
           </div>
@@ -1153,10 +1138,10 @@ const GameInformation = ({
             <Icon className="text-base" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] font-medium mb-0.5 ${getTextClass('secondary')}`}>
+            <p className={`text-[11px] font-medium mb-0.5 leading-snug ${getTextClass('secondary')}`}>
               {label}
             </p>
-            <p className={`text-xs font-semibold truncate ${getTextClass('primary')}`}>
+            <p className={`text-sm font-semibold truncate leading-snug ${getTextClass('primary')}`}>
               {value}
             </p>
           </div>

@@ -1,9 +1,11 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as collectionsAPI from '../api/collections';
 import { useAuth } from './authContext';
 import { useConnection } from './connectionContext';
 import { toast } from 'sonner';
+import logger from '../services/logger';
+import { storeGet, storeSet } from '../utils/storeClient';
 
 const CollectionsContext = createContext();
 
@@ -12,9 +14,16 @@ export const CollectionsProvider = ({ children }) => {
   const [collections, setCollections] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [selectedCollection, setSelectedCollection] = useState(null);
   const { user } = useAuth();
   const { isOnline } = useConnection();
+
+  // Refs keep the latest values accessible inside callbacks without adding
+  // them to dependency arrays — avoids recreating fetchCollections on every
+  // auth/connection state change.
+  const isOnlineRef = useRef(isOnline);
+  isOnlineRef.current = isOnline;
+  const userRef = useRef(user);
+  userRef.current = user;
 
   // ==================== LAZY LOADING ====================
 
@@ -24,47 +33,47 @@ export const CollectionsProvider = ({ children }) => {
     setLoading(true);
 
     // Load from cache first
-    const cached = await window.store.get('collectionsCache');
+    const cached = await storeGet('collectionsCache');
     if (cached?.custom) {
       setCollections(cached.custom);
     }
 
     // Sync with backend if online
-    if (isOnline && user) {
+    if (isOnlineRef.current && userRef.current) {
       try {
         const data = await collectionsAPI.getUserCollections();
         if (data) {
           setCollections(data);
-          await window.store.set('collectionsCache', {
+          await storeSet('collectionsCache', {
             custom: data,
             lastSync: Date.now()
           });
         }
       } catch (error) {
-        console.error('[Collections] Failed to sync:', error);
+        logger.error('[Collections] Failed to sync:', error);
       }
     }
 
     setLoading(false);
     setInitialized(true);
-  }, [initialized, loading, isOnline, user]);
+  }, [initialized, loading]);
 
   const syncCollections = useCallback(async () => {
-    if (!isOnline || !user) return;
+    if (!isOnlineRef.current || !userRef.current) return;
 
     try {
       const data = await collectionsAPI.getUserCollections();
       if (data) {
         setCollections(data);
-        await window.store.set('collectionsCache', {
+        await storeSet('collectionsCache', {
           custom: data,
           lastSync: Date.now()
         });
       }
     } catch (error) {
-      console.error('[Collections] Failed to sync collections:', error);
+      logger.error('[Collections] Failed to sync collections:', error);
     }
-  }, [isOnline, user]);
+  }, []);
 
   // ==================== CRUD OPERATIONS ====================
 
@@ -73,7 +82,6 @@ export const CollectionsProvider = ({ children }) => {
       const response = await collectionsAPI.createCollection(collectionData);
       if (response.collection) {
         setCollections(prev => [...prev, response.collection]);
-        await syncCollections();
         toast.success(t('collections.createSuccess'));
         return response.collection;
       }
@@ -81,7 +89,7 @@ export const CollectionsProvider = ({ children }) => {
       toast.error(error.message || t('collections.createError'));
       throw error;
     }
-  }, [syncCollections, t]);
+  }, [t]);
 
   const updateCollection = useCallback(async (collectionId, updateData) => {
     try {
@@ -90,7 +98,6 @@ export const CollectionsProvider = ({ children }) => {
         setCollections(prev =>
           prev.map(col => col._id === collectionId ? response.collection : col)
         );
-        await syncCollections();
         toast.success(t('collections.updateSuccess'));
         return response.collection;
       }
@@ -98,24 +105,18 @@ export const CollectionsProvider = ({ children }) => {
       toast.error(error.message || t('collections.updateError'));
       throw error;
     }
-  }, [syncCollections, t]);
+  }, [t]);
 
   const deleteCollection = useCallback(async (collectionId) => {
     try {
       await collectionsAPI.deleteCollection(collectionId);
       setCollections(prev => prev.filter(col => col._id !== collectionId));
-
-      if (selectedCollection?._id === collectionId) {
-        setSelectedCollection(null);
-      }
-
-      await syncCollections();
       toast.success(t('collections.deleteSuccess'));
     } catch (error) {
       toast.error(error.message || t('collections.deleteError'));
       throw error;
     }
-  }, [selectedCollection, syncCollections, t]);
+  }, [t]);
 
   // ==================== GAMES MANAGEMENT ====================
 
@@ -126,7 +127,6 @@ export const CollectionsProvider = ({ children }) => {
         setCollections(prev =>
           prev.map(col => col._id === collectionId ? response.collection : col)
         );
-        await syncCollections();
         toast.success(t('collections.gamesAdded', { count: gameIds.length }));
         return response.collection;
       }
@@ -134,7 +134,7 @@ export const CollectionsProvider = ({ children }) => {
       toast.error(error.message || t('collections.addGamesError'));
       throw error;
     }
-  }, [syncCollections, t]);
+  }, [t]);
 
   const removeGamesFromCollection = useCallback(async (collectionId, gameIds) => {
     try {
@@ -143,7 +143,6 @@ export const CollectionsProvider = ({ children }) => {
         setCollections(prev =>
           prev.map(col => col._id === collectionId ? response.collection : col)
         );
-        await syncCollections();
         toast.success(t('collections.gamesRemoved', { count: gameIds.length }));
         return response.collection;
       }
@@ -151,7 +150,7 @@ export const CollectionsProvider = ({ children }) => {
       toast.error(error.message || t('collections.removeGamesError'));
       throw error;
     }
-  }, [syncCollections, t]);
+  }, [t]);
 
   // ==================== CONTEXT VALUE ====================
 
@@ -160,8 +159,6 @@ export const CollectionsProvider = ({ children }) => {
       collections,
       loading,
       initialized,
-      selectedCollection,
-      setSelectedCollection,
       fetchCollections,
       createCollection,
       updateCollection,
@@ -174,7 +171,6 @@ export const CollectionsProvider = ({ children }) => {
       collections,
       loading,
       initialized,
-      selectedCollection,
       fetchCollections,
       createCollection,
       updateCollection,

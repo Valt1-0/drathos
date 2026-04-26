@@ -136,6 +136,7 @@ const Drawer = ({ children }) => {
                 key={index}
                 to={isDisabled ? "#" : item.path}
                 aria-current={isActive ? "page" : undefined}
+                aria-label={item.label}
                 className={isDisabled ? "pointer-events-none" : ""}
                 title={isDisabled ? t('nav.serverOffline') : undefined}
               >
@@ -168,9 +169,11 @@ const Drawer = ({ children }) => {
                   )}
 
                   <div className={`flex items-center py-3 transition-all duration-200 ${
-                    isOpen ? "px-4" : "justify-center"
+                    isOpen ? "px-4" : "justify-center px-2"
                   }`}>
-                    <div className="relative">
+                    <motion.div
+                      className="relative shrink-0"
+                    >
                       <div
                         className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-all duration-200 ${
                           isActive
@@ -187,7 +190,7 @@ const Drawer = ({ children }) => {
                           {pendingSyncs}
                         </div>
                       )}
-                    </div>
+                    </motion.div>
 
                     <AnimatePresence>
                       {isOpen && (
@@ -239,7 +242,7 @@ const Drawer = ({ children }) => {
             aria-label={t('nav.clearData')}
             className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-error/30 hover:border-error"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-error/10 to-transparent transition-opacity duration-300 group-hover:from-error/20" />
+            <div className="absolute inset-0 bg-linear-to-r from-error/10 to-transparent transition-opacity duration-300 group-hover:from-error/20" />
             <motion.div
               className="relative flex items-center py-3"
               animate={{
@@ -281,7 +284,7 @@ const Drawer = ({ children }) => {
               }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5" />
+              <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-secondary/5" />
               <motion.div
                 className="relative flex items-center"
                 animate={{

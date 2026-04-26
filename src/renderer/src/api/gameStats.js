@@ -2,6 +2,7 @@
 
 import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
+import logger from "../services/logger";
 
 
 /**
@@ -74,7 +75,7 @@ export async function getLocalStats(gameId) {
   try {
     return await window.api.getLocalStats({ gameId });
   } catch (error) {
-    console.debug("[API] Failed to read local stats:", error.message);
+    logger.debug("[API] Failed to read local stats:", error.message);
     return null;
   }
 }
@@ -89,7 +90,7 @@ export async function saveLocalStats(gameId, sessionData) {
   try {
     return await window.api.saveLocalStats({ gameId, sessionData });
   } catch (error) {
-    console.debug("[API] Failed to save local stats:", error.message);
+    logger.debug("[API] Failed to save local stats:", error.message);
     throw error;
   }
 }

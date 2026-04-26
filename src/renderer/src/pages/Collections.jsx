@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
+import logger from "../services/logger";
 import { FiPlus, FiEdit2, FiTrash2, FiX, FiArrowLeft, FiGrid } from "react-icons/fi";
-import * as Icons from "react-icons/fa";
+import { FaFolder, FaStar, FaHeart, FaFire, FaGamepad, FaTrophy, FaRocket, FaGem, FaBookmark, FaCrown, FaFolderOpen } from "react-icons/fa";
 import { useCollections } from "../contexts/collectionsContext";
 import { useTheme } from "../contexts/themeContext";
 import AddGamesToCollectionModal from "../components/modals/AddGamesToCollectionModal";
@@ -10,10 +11,12 @@ import DeleteConfirmModal from "../components/modals/DeleteConfirmModal";
 import GameCover from "../components/GameCover";
 import { SearchBar, Modal, Button } from "../components/ui";
 
-const ICONS = [
-  "FaFolder", "FaStar", "FaHeart", "FaFire", "FaGamepad",
-  "FaTrophy", "FaRocket", "FaGem", "FaBookmark", "FaCrown",
-];
+const FA_ICONS = {
+  FaFolder, FaStar, FaHeart, FaFire, FaGamepad,
+  FaTrophy, FaRocket, FaGem, FaBookmark, FaCrown,
+};
+
+const ICONS = Object.keys(FA_ICONS);
 
 const MOSAIC_INDICES = [0, 1, 2, 3];
 const DEFAULT_FORM = { name: "", description: "", icon: "FaFolder" };
@@ -41,7 +44,7 @@ const CollectionForm = ({ formData, setFormData, disabled, t }) => (
     />
     <div className="flex flex-wrap gap-1.5">
       {ICONS.map((iconName) => {
-        const IconComp = Icons[iconName];
+        const IconComp = FA_ICONS[iconName];
         const selected = formData.icon === iconName;
         return (
           <button
@@ -88,7 +91,7 @@ const Collections = () => {
   const filteredCollections = useMemo(() => {
     if (!collections) return [];
     if (!searchQuery.trim()) return collections;
-    return collections.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return collections.filter((c) => c.name?.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [collections, searchQuery]);
 
   const totalGames = useMemo(
@@ -134,7 +137,7 @@ const Collections = () => {
       }
       setShowCreateModal(false);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setSaving(false);
     }
@@ -154,7 +157,7 @@ const Collections = () => {
       setShowDeleteModal(false);
       setCollectionToDelete(null);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   }, [collectionToDelete, selectedCollection?._id, deleteCollection]);
 
@@ -168,7 +171,7 @@ const Collections = () => {
     try {
       await handleRemoveGame(gameToRemove.id);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setShowRemoveGameModal(false);
       setGameToRemove(null);
@@ -231,7 +234,7 @@ const Collections = () => {
 
   // Detail view
   if (selectedCollection) {
-    const SelectedIcon = Icons[selectedCollection.icon] || Icons.FaFolder;
+    const SelectedIcon = FA_ICONS[selectedCollection.icon] || FaFolder;
 
     return (
       <>
@@ -362,7 +365,7 @@ const Collections = () => {
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
                   style={{ background: emptyStateBg }}
                 >
-                  <Icons.FaGamepad className="w-9 h-9" style={{ color: "var(--app-textSecondary)" }} />
+                  <FaGamepad className="w-9 h-9" style={{ color: "var(--app-textSecondary)" }} />
                 </motion.div>
                 <p className="text-lg font-medium mb-2" style={{ color: "var(--app-text)" }}>{t("collections.noGamesInCollection")}</p>
                 <p className="text-sm mb-6" style={{ color: "var(--app-textSecondary)" }}>{t("collections.addGamesToStart")}</p>
@@ -405,7 +408,7 @@ const Collections = () => {
                   <>
                     <span style={{ color: "var(--app-border)" }}>•</span>
                     <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--app-textSecondary)" }}>
-                      <Icons.FaGamepad className="w-3 h-3" />
+                      <FaGamepad className="w-3 h-3" />
                       {totalGames} {t("collections.games")}
                     </span>
                   </>
@@ -433,7 +436,7 @@ const Collections = () => {
           {filteredCollections.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {filteredCollections.map((col, index) => {
-                const Icon = Icons[col.icon] || Icons.FaFolder;
+                const Icon = FA_ICONS[col.icon] || FaFolder;
                 const games = col.games || [];
                 const gamesPreview = games.slice(0, 4);
                 const gamesCount = games.length;
@@ -581,7 +584,7 @@ const Collections = () => {
                 className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6"
                 style={{ background: emptyStateBg }}
               >
-                <Icons.FaFolderOpen className="w-12 h-12" style={{ color: "var(--app-textSecondary)" }} />
+                <FaFolderOpen className="w-12 h-12" style={{ color: "var(--app-textSecondary)" }} />
               </motion.div>
               <h2 className="text-xl font-bold mb-2" style={{ color: "var(--app-text)" }}>
                 {searchQuery ? t("collections.noResults") : t("collections.emptyState")}

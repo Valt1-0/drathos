@@ -1,10 +1,12 @@
-import React, { useMemo, useCallback, useState, useEffect, memo } from "react";
+import { useMemo, useCallback, useState, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { FiClock, FiTrash2, FiPlus, FiLayers, FiDownload, FiWifiOff, FiPackage, FiFilter, FiList } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiClock, FiTrash2, FiPlus, FiLayers, FiDownload, FiWifiOff, FiPackage, FiFilter, FiList, FiGrid } from "react-icons/fi";
 import GameCover from "../GameCover";
 import { SearchBar } from "../ui";
 import GameFilters from "./GameFilters";
 import { useConnection } from "../../contexts/connectionContext";
+import { storeGet } from "../../utils/storeClient";
 
 // GameRow component extracted and memoized to optimize performance
 const STATUS_DOTS = {
@@ -59,7 +61,7 @@ const GameRow = memo(({
       >
         <div className="flex items-center gap-2.5">
           {/* Cover compact */}
-          <div className="relative w-12 h-12 bg-surface rounded-md flex-shrink-0 overflow-hidden">
+          <div className="relative w-12 h-12 rounded-md shrink-0 overflow-hidden bg-linear-to-br from-surface to-background animate-pulse">
             <GameCover
               src={game.coverUrl}
               alt={game.name}
@@ -106,7 +108,7 @@ const GameRow = memo(({
             }`}>
               {game.name}
               {(versionCount && versionCount > 1) && (
-                <span className="inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 rounded bg-accent/20 border border-accent/30 align-middle">
+                <span className="inline-flex items-center gap-0.5 ml-1.5 px-1.5 py-0.5 rounded bg-accent/20 border border-accent/30 align-middle -mt-0.5">
                   <FiLayers className="w-2.5 h-2.5 text-accent" />
                   <span className="text-[10px] font-bold text-accent leading-none">
                     {versionCount}
@@ -173,17 +175,154 @@ const GameRow = memo(({
 
 GameRow.displayName = 'GameRow';
 
-const LibraryEmptyState = ({ isOnline, hasGames, hasActiveFilters, t }) => {
+const GameCard = memo(({
+  game,
+  versionCount,
+  isSelected,
+  isInstalled,
+  isGamePlaying,
+  isGameUninstalling,
+  isPendingUninstall,
+  isDownloading,
+  isQueued,
+  gameStats,
+  userStatus,
+  onSelectGame,
+  t,
+}) => {
+  if (!game) return null;
+
+  const installed = isInstalled(game._id);
+  const playing = isGamePlaying(game._id);
+  const downloading = isDownloading(game._id);
+  const queued = isQueued(game._id);
+  const uninstalling = isGameUninstalling(game._id);
+  const pending = isPendingUninstall(game._id);
+  const stats = gameStats[game._id];
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={game.name}
+      aria-selected={isSelected}
+      onClick={() => onSelectGame(game)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectGame(game); } }}
+      className={`group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 select-none ${
+        isSelected
+          ? 'ring-2 ring-primary shadow-lg scale-[1.02]'
+          : 'hover:ring-2 hover:ring-primary/40 hover:scale-[1.02]'
+      }`}
+      style={isSelected ? { boxShadow: '0 4px 20px rgba(var(--app-primary-rgb, 59,130,246), 0.25)' } : {}}
+    >
+      <div className="aspect-2/3 relative bg-surface">
+        <GameCover
+          src={game.coverUrl}
+          alt={game.name}
+          className="w-full h-full object-cover"
+          size="medium"
+        />
+
+        {/* Status badges — top right */}
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+          {playing && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              <span className="text-[10px] text-white font-semibold leading-none">{t('games.playing')}</span>
+            </div>
+          )}
+          {downloading && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-sm">
+              <FiDownload className="w-2.5 h-2.5 text-primary animate-bounce" />
+              <span className="text-[10px] text-white font-semibold leading-none">{t('downloads.stageDownloading')}</span>
+            </div>
+          )}
+          {queued && !downloading && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-sm">
+              <FiList className="w-2.5 h-2.5 text-accent" />
+              <span className="text-[10px] text-white font-semibold leading-none">{t('downloads.stageQueued')}</span>
+            </div>
+          )}
+          {(uninstalling || pending) && !downloading && !queued && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-sm">
+              <FiTrash2 className="w-2.5 h-2.5 text-warning" />
+            </div>
+          )}
+          {versionCount > 1 && (
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-sm">
+              <FiLayers className="w-2.5 h-2.5 text-accent" />
+              <span className="text-[10px] text-accent font-bold leading-none">{versionCount}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Installed dot — top left */}
+        {installed && !playing && (
+          <div
+            className="absolute top-2 left-2 w-2 h-2 rounded-full bg-success"
+            style={{ boxShadow: '0 0 6px var(--app-success)' }}
+          />
+        )}
+
+        {/* User status dot */}
+        {userStatus && STATUS_DOTS[userStatus] && !installed && (
+          <div className={`absolute top-2 left-2 w-2 h-2 rounded-full ${STATUS_DOTS[userStatus]}`} />
+        )}
+
+        {/* Bottom gradient with title + playtime */}
+        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/95 via-black/55 to-transparent pt-10 pb-3 px-3">
+          <h3 className="text-white font-bold text-sm leading-tight line-clamp-2">{game.name}</h3>
+          {stats?.totalPlayTime && stats.totalPlayTime !== '< 1 minute' && !stats.totalPlayTime.includes('NaN') && (
+            <div className="flex items-center gap-1 mt-1">
+              <FiClock className="w-3 h-3 text-white/50 shrink-0" />
+              <span className="text-white/50 text-xs">{stats.totalPlayTime}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+GameCard.displayName = 'GameCard';
+
+const GameRowSkeleton = ({ style }) => (
+  <div style={style} className="px-3 py-0.5">
+    <div className="rounded-md p-2 flex items-center gap-2.5">
+      <div className="w-12 h-12 rounded-md shrink-0 bg-surface animate-pulse" />
+      <div className="flex-1 space-y-2 min-w-0">
+        <div className="h-2.5 bg-surface rounded-full animate-pulse w-3/4" />
+        <div className="h-2 bg-surface rounded-full animate-pulse w-1/2" />
+      </div>
+    </div>
+  </div>
+);
+
+const GameCardSkeleton = ({ columnIndex, rowIndex, style }) => (
+  <div style={style} className={`pb-3 ${columnIndex === 0 ? 'pl-4' : 'pl-0'} pr-3`}>
+    <div className="w-full aspect-2/3 rounded-xl bg-surface animate-pulse" />
+  </div>
+);
+
+const LibraryEmptyState = ({ isOnline, hasGames, hasActiveFilters, onResetFilters, t }) => {
   if (hasActiveFilters) {
     return (
       <div className="h-full flex flex-col items-center justify-center px-4 py-8 text-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface">
-          <FiFilter className="text-base text-text-secondary" />
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 ring-1 ring-primary/20">
+          <FiFilter className="text-lg text-primary" />
         </div>
         <div>
-          <p className="text-sm font-medium text-text">{t('games.noGamesFound')}</p>
-          <p className="text-xs text-text-secondary mt-1">{t('games.noGamesFilterMessage')}</p>
+          <p className="text-sm font-semibold text-text">{t('games.noGamesFound')}</p>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">{t('games.noGamesFilterMessage')}</p>
         </div>
+        {onResetFilters && (
+          <button
+            onClick={onResetFilters}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors ring-1 ring-primary/20"
+          >
+            {t('games.resetFilters')}
+          </button>
+        )}
       </div>
     );
   }
@@ -191,12 +330,12 @@ const LibraryEmptyState = ({ isOnline, hasGames, hasActiveFilters, t }) => {
   if (!isOnline && !hasGames) {
     return (
       <div className="h-full flex flex-col items-center justify-center px-4 py-8 text-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface">
-          <FiWifiOff className="text-base text-text-secondary" />
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-warning/10 ring-1 ring-warning/20">
+          <FiWifiOff className="text-lg text-warning" />
         </div>
         <div>
-          <p className="text-sm font-medium text-text">{t('games.offlineNoCache')}</p>
-          <p className="text-xs text-text-secondary mt-1">{t('games.offlineNoCacheDesc')}</p>
+          <p className="text-sm font-semibold text-text">{t('games.offlineNoCache')}</p>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">{t('games.offlineNoCacheDesc')}</p>
         </div>
       </div>
     );
@@ -204,12 +343,12 @@ const LibraryEmptyState = ({ isOnline, hasGames, hasActiveFilters, t }) => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center px-4 py-8 text-center gap-3">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface">
-        <FiPackage className="text-base text-text-secondary" />
+      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-surface ring-1 ring-border">
+        <FiPackage className="text-lg text-text-secondary" />
       </div>
       <div>
-        <p className="text-sm font-medium text-text">{t('games.emptyLibrary')}</p>
-        <p className="text-xs text-text-secondary mt-1">{t('games.emptyLibraryDesc')}</p>
+        <p className="text-sm font-semibold text-text">{t('games.emptyLibrary')}</p>
+        <p className="text-xs text-text-secondary mt-1 leading-relaxed">{t('games.emptyLibraryDesc')}</p>
       </div>
     </div>
   );
@@ -235,36 +374,18 @@ const GameLibrary = ({
   user,
   onAddGame,
   getGenresArray,
+  expanded = false,
+  onToggleExpanded,
+  loading = false,
 }) => {
   const { t } = useTranslation();
   const { isOnline } = useConnection();
-  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
-  const [FixedSizeList, setFixedSizeList] = useState(null);
   const [rawStats, setRawStats] = useState({});
-
-  // Window resize + react-window loading
-  useEffect(() => {
-    let resizeTimer;
-    const onResize = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => setWindowHeight(window.innerHeight), 100);
-    };
-    window.addEventListener('resize', onResize);
-
-    import('react-window')
-      .then((module) => setFixedSizeList(() => module.FixedSizeList))
-      .catch((err) => console.warn('[GameLibrary] react-window fallback:', err));
-
-    return () => {
-      window.removeEventListener('resize', onResize);
-      clearTimeout(resizeTimer);
-    };
-  }, []);
 
   // Load raw stats (seconds) for playtime filtering
   useEffect(() => {
     const loadRawStats = async () => {
-      const cached = await window.store.get("installedGamesCache", {});
+      const cached = await storeGet("installedGamesCache", {});
       const stats = {};
       Object.entries(cached).forEach(([gameId, data]) => {
         if (data.stats) {
@@ -313,7 +434,7 @@ const GameLibrary = ({
   const filteredGames = useMemo(() => {
     const filtered = uniqueGames.filter((game) => {
       // Search
-      if (debouncedSearchTerm && !game.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) {
+      if (debouncedSearchTerm && !game.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) {
         return false;
       }
 
@@ -394,151 +515,238 @@ const GameLibrary = ({
     return count;
   }, [filters]);
 
+  const downloadingIds = useMemo(() => new Set(activeDownloads.map(dl => dl.gameId)), [activeDownloads]);
+  const queuedIds = useMemo(() => new Set(queue.map(g => g._id)), [queue]);
+
   const isGamePlaying = useCallback((gameId) => playingGames.has(gameId), [playingGames]);
   const isGameUninstalling = useCallback((gameId) => uninstallingGames.has(gameId), [uninstallingGames]);
   const isPendingUninstall = useCallback((gameId) => pendingUninstalls.has(gameId), [pendingUninstalls]);
-  const isDownloading = useCallback((gameId) =>
-    activeDownloads.some(dl => dl.gameId === gameId),
-    [activeDownloads]
-  );
-  const isQueued = useCallback((gameId) =>
-    queue.some(g => g._id === gameId),
-    [queue]
-  );
+  const isDownloading = useCallback((gameId) => downloadingIds.has(gameId), [downloadingIds]);
+  const isQueued = useCallback((gameId) => queuedIds.has(gameId), [queuedIds]);
 
-  // Wrapper for GameRow for react-window (extracts data from index)
-  const VirtualGameRow = useCallback(({ index, style }) => {
-    const game = filteredGames[index];
-    const key = game.igdbId || game._id;
-    const count = versionCounts.get(key) || 1;
+  const resetFilters = useCallback(() => {
+    onFiltersChange({
+      sortBy: 'name-asc', statusFilter: 'all', selectedGenres: [],
+      showOnlyMultiplayer: false, playtimeRange: 'all', userStatusFilter: 'all',
+    });
+  }, [onFiltersChange]);
 
-    return (
-      <GameRow
-        game={game}
-        versionCount={count}
-        style={style}
-        isSelected={selectedGameId === game._id}
-        isInstalled={isInstalled}
-        isGamePlaying={isGamePlaying}
-        isGameUninstalling={isGameUninstalling}
-        isPendingUninstall={isPendingUninstall}
-        isDownloading={isDownloading}
-        isQueued={isQueued}
-        gameStats={gameStats}
-        userStatus={gameStatuses?.[game._id] || null}
-        getGenresArray={getGenresArray}
-        onSelectGame={onSelectGame}
-        t={t}
-      />
-    );
-  }, [filteredGames, versionCounts, selectedGameId, isInstalled, isGamePlaying, isGameUninstalling, isPendingUninstall, isDownloading, isQueued, gameStats, gameStatuses, getGenresArray, onSelectGame, t]);
+
+  const sharedCardProps = {
+    isInstalled,
+    isGamePlaying,
+    isGameUninstalling,
+    isPendingUninstall,
+    isDownloading,
+    isQueued,
+    gameStats,
+    onSelectGame,
+    t,
+  };
 
   return (
-    <div className="w-56 xl:w-64 bg-background flex flex-col" style={{ borderRight: '1px solid var(--app-border)' }}>
-      <div className="p-3 xl:p-4 space-y-3">
-        <h1 className="text-lg xl:text-xl font-bold text-text">{t('nav.library')}</h1>
+    <motion.div
+      layout
+      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+      className="bg-background flex flex-col"
+      style={expanded
+        ? { flex: 1, minWidth: 0 }
+        : { width: 224, flexShrink: 0, borderRight: '1px solid var(--app-border)' }
+      }
+    >
+      {/* Header */}
+      <motion.div layout="position" className="shrink-0" style={{ borderBottom: '1px solid var(--app-border)' }}>
+        {/* Title row — always visible */}
+        <div className="flex items-center gap-2 px-4 pt-4 pb-3">
+          <motion.h1 layout="position" className="text-lg font-bold text-text shrink-0">
+            {t('nav.library')}
+          </motion.h1>
 
-        <SearchBar
-          placeholder={t('games.searchPlaceholder')}
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="text-sm"
-        />
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            <motion.button
+              layout
+              onClick={onToggleExpanded}
+              title={expanded ? t('games.compactView') : t('games.expandedView')}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-1.5 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-colors duration-150"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={expanded ? 'list' : 'grid'}
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.15 }}
+                  className="block"
+                >
+                  {expanded ? <FiList className="text-base" /> : <FiGrid className="text-base" />}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
+          </div>
+        </div>
 
-        <GameFilters
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-          allGenres={allGenres}
-          activeFilterCount={activeFilterCount}
-        />
-      </div>
+        {/* Compact mode controls */}
+        <AnimatePresence>
+          {!expanded && (
+            <motion.div
+              key="compact-controls"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.18 } }}
+              exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+              className="px-4 pb-4 space-y-2"
+            >
+              <SearchBar
+                placeholder={t('games.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="text-sm"
+              />
+              <GameFilters
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                allGenres={allGenres}
+                activeFilterCount={activeFilterCount}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="flex-1 overflow-hidden">
-        {filteredGames.length === 0 ? (
+        {/* Expanded mode toolbar */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              key="toolbar"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.18, delay: 0.05 } }}
+              exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+              className="px-4 pb-3"
+            >
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="w-64 shrink-0">
+                  <SearchBar
+                    placeholder={t('games.searchPlaceholder')}
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <GameFilters
+                  filters={filters}
+                  onFiltersChange={onFiltersChange}
+                  allGenres={allGenres}
+                  activeFilterCount={activeFilterCount}
+                  variant="toolbar"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Game list / grid */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-surface scrollbar-track-background">
+        {!loading && filteredGames.length === 0 ? (
           <LibraryEmptyState
             isOnline={isOnline}
             hasGames={games.length > 0}
-            hasActiveFilters={
-              activeFilterCount > 0 ||
-              debouncedSearchTerm.length > 0
-            }
+            hasActiveFilters={activeFilterCount > 0 || debouncedSearchTerm.length > 0}
+            onResetFilters={resetFilters}
             t={t}
           />
-        ) : FixedSizeList ? (
-          <FixedSizeList
-            height={windowHeight - (user?.role === "admin" ? 460 : 400)}
-            itemCount={filteredGames.length}
-            itemSize={64}
-            width="100%"
-            className="scrollbar-thin scrollbar-thumb-surface scrollbar-track-background"
-          >
-            {VirtualGameRow}
-          </FixedSizeList>
+        ) : expanded ? (
+          <div className="grid gap-3 p-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+            {loading
+              ? Array.from({ length: 16 }, (_, i) => <div key={i} className="aspect-2/3 rounded-xl bg-surface animate-pulse" />)
+              : filteredGames.map((game) => {
+                  const key = game.igdbId || game._id;
+                  return (
+                    <GameCard
+                      key={game._id}
+                      game={game}
+                      versionCount={versionCounts.get(key) || 1}
+                      isSelected={selectedGameId === game._id}
+                      userStatus={gameStatuses?.[game._id] || null}
+                      {...sharedCardProps}
+                    />
+                  );
+                })
+            }
+          </div>
         ) : (
-          <div
-            className="overflow-y-auto py-2"
-            style={{
-              height: user?.role === "admin" ? `calc(100vh - 460px)` : `calc(100vh - 400px)`
-            }}
-          >
-            {filteredGames.map((game) => {
-              const key = game.igdbId || game._id;
-              const count = versionCounts.get(key) || 1;
-
-              return (
-                <GameRow
-                  key={game._id}
-                  game={game}
-                  versionCount={count}
-                  style={{}}
-                  isSelected={selectedGameId === game._id}
-                  isInstalled={isInstalled}
-                  isGamePlaying={isGamePlaying}
-                  isGameUninstalling={isGameUninstalling}
-                  isPendingUninstall={isPendingUninstall}
-                  isDownloading={isDownloading}
-                  isQueued={isQueued}
-                  gameStats={gameStats}
-                  userStatus={gameStatuses?.[game._id] || null}
-                  getGenresArray={getGenresArray}
-                  onSelectGame={onSelectGame}
-                  t={t}
-                />
-              );
-            })}
+          <div>
+            {loading
+              ? Array.from({ length: 12 }, (_, i) => <GameRowSkeleton key={i} />)
+              : filteredGames.map((game) => {
+                  const key = game.igdbId || game._id;
+                  return (
+                    <GameRow
+                      key={game._id}
+                      game={game}
+                      versionCount={versionCounts.get(key) || 1}
+                      style={undefined}
+                      isSelected={selectedGameId === game._id}
+                      isInstalled={isInstalled}
+                      isGamePlaying={isGamePlaying}
+                      isGameUninstalling={isGameUninstalling}
+                      isPendingUninstall={isPendingUninstall}
+                      isDownloading={isDownloading}
+                      isQueued={isQueued}
+                      gameStats={gameStats}
+                      userStatus={gameStatuses?.[game._id] || null}
+                      getGenresArray={getGenresArray}
+                      onSelectGame={onSelectGame}
+                      t={t}
+                    />
+                  );
+                })
+            }
           </div>
         )}
       </div>
 
-      <div className="p-4 space-y-3" style={{ borderTop: '1px solid var(--app-border)' }}>
-        {user?.role === "admin" && (
-          <button
-            onClick={onAddGame}
-            className="w-full px-4 py-2.5 bg-background-secondary hover:bg-surface text-text rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 group"
-            style={{
-              border: '1px solid var(--app-border)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--app-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--app-border)';
-            }}
-          >
-            <FiPlus className="text-base group-hover:rotate-90 transition-transform duration-300" />
-            {t('games.addGame')}
-          </button>
-        )}
-
-        <div className="flex justify-between text-sm">
-          <span className="text-text-secondary">{t('games.gamesCount', { count: games.length })}</span>
-          <span className="text-success font-medium">
-            {t('games.installedCount', { count: installedGames.length })}
-          </span>
+      {/* Footer */}
+      <motion.div layout="position" className="shrink-0 px-4 py-3 flex items-center gap-3" style={{ borderTop: '1px solid var(--app-border)' }}>
+        <div className="flex items-center gap-3 flex-1 text-sm min-w-0">
+          <span className="text-text-secondary truncate">{t('games.gamesCount', { count: filteredGames.length })}</span>
+          <span className="w-px h-3 bg-border shrink-0" />
+          <span className="text-success font-medium truncate">{t('games.installedCount', { count: installedGames.length })}</span>
         </div>
-      </div>
-    </div>
+
+        {user?.role === "admin" && isOnline && (
+          <motion.button
+            layout
+            onClick={onAddGame}
+            title={!expanded ? t('games.addGame') : undefined}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ layout: { duration: 0.25, ease: [0.4, 0, 0.2, 1] } }}
+            className="shrink-0 flex items-center gap-1.5 bg-background-secondary hover:bg-surface text-text rounded-lg text-sm font-medium group overflow-hidden"
+            style={{ border: '1px solid var(--app-border)', padding: expanded ? '0.375rem 0.75rem' : '0.375rem' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--app-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--app-border)'; }}
+          >
+            <FiPlus className="text-sm shrink-0 group-hover:rotate-90 transition-transform duration-300" />
+            <AnimatePresence initial={false}>
+              {expanded && (
+                <motion.span
+                  key="label"
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  {t('games.addGame')}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        )}
+      </motion.div>
+    </motion.div>
   );
 };
 
-export default GameLibrary;
+export default memo(GameLibrary);

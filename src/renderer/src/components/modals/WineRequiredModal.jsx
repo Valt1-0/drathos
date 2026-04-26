@@ -1,6 +1,8 @@
 import { FiAlertCircle, FiExternalLink, FiTerminal } from "react-icons/fi";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
+  const containerRef = useFocusTrap(isOpen && !!instructions);
   if (!isOpen || !instructions) return null;
 
   const handleOpenUrl = () => {
@@ -13,7 +15,7 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="glass backdrop-blur-xl rounded-lg max-w-2xl w-full mx-4 p-6">
+      <div ref={containerRef} role="dialog" aria-modal="true" className="glass backdrop-blur-xl rounded-lg max-w-2xl w-full mx-4 p-6">
         <div className="flex items-start gap-4 mb-6">
           <div className="flex-shrink-0 w-12 h-12 bg-warning/20 rounded-full flex items-center justify-center">
             <FiAlertCircle className="w-6 h-6 text-warning" />

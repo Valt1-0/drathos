@@ -8,15 +8,17 @@ const useGameStatuses = () => {
   }, []);
 
   const setStatus = useCallback((gameId, status) => {
-    const next = { ...gameStatuses };
-    if (status === null) {
-      delete next[gameId];
-    } else {
-      next[gameId] = status;
-    }
-    setGameStatuses(next);
-    window.store.set("gameStatuses", next);
-  }, [gameStatuses]);
+    setGameStatuses(prev => {
+      const next = { ...prev };
+      if (status === null) {
+        delete next[gameId];
+      } else {
+        next[gameId] = status;
+      }
+      window.store.set("gameStatuses", next);
+      return next;
+    });
+  }, []);
 
   return { gameStatuses, setStatus };
 };

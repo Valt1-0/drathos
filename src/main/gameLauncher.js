@@ -1,17 +1,19 @@
-import { spawn, exec } from "child_process";
+import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { shell, BrowserWindow } from "electron";
 import { wineDetector } from "./utils/wineDetector.js";
 import { validateAndResolvePath } from "./app/validation.js";
+import logger from "./utils/logger.js";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class GameLauncher {
   constructor() {
     this.activeProcesses = new Map();
     this.sessionTrackers = new Map();
+    this.killTimers = new Map(); // force-kill fallback timers, cleared on process exit
   }
 
   /**
@@ -19,9 +21,9 @@ export class GameLauncher {
    */
   async launchGame(gameId, gamePath, executableName, onStatusChange = () => {}, store = null) {
     try {
-      console.log(`[GameLauncher] Lancement du jeu ${gameId}...`);
+      logger.info(`[GameLauncher] Launching game ${gameId}...`);
 
-      const validationResult = this._validateGameLaunch(gameId, gamePath, executableName);
+      const validationResult = await this._validateGameLaunch(gameId, gamePath, executableName);
       if (!validationResult.success) {
         throw new Error(validationResult.error);
       }
@@ -36,7 +38,7 @@ export class GameLauncher {
           throw new Error(`WINE_NOT_INSTALLED:${JSON.stringify(instructions)}`);
         }
         const version = await wineDetector.getWineVersion();
-        console.log(`[GameLauncher] Wine détecté: ${version}`);
+        logger.info(`[GameLauncher] Wine detected: ${version}`);
       }
 
       const gameProcess = await this._createGameProcess(executablePath, gamePath, needsWine);
@@ -48,10 +50,10 @@ export class GameLauncher {
       return {
         success: true,
         pid: gameProcess.pid,
-        message: `Jeu ${gameId} lancé avec succès`,
+        message: `Game ${gameId} launched successfully`,
       };
     } catch (error) {
-      console.error(`[GameLauncher] Échec du lancement de ${gameId}:`, error);
+      logger.error(`[GameLauncher] Failed to launch ${gameId}`, error);
       this.cleanupProcess(gameId);
 
       onStatusChange({
@@ -70,16 +72,16 @@ export class GameLauncher {
   /**
    * Validate game launch
    */
-  _validateGameLaunch(gameId, gamePath, executableName) {
+  async _validateGameLaunch(gameId, gamePath, executableName) {
     const existingProcess = this.activeProcesses.get(gameId);
     if (existingProcess) {
       const isActuallyRunning = existingProcess.process && !existingProcess.process.killed;
 
       if (isActuallyRunning) {
-        console.warn(`[GameLauncher] Jeu ${gameId} déjà en cours (PID: ${existingProcess.pid})`);
-        return { success: false, error: "Le jeu est déjà en cours d'exécution" };
+        logger.warn(`[GameLauncher] Game ${gameId} already running (PID: ${existingProcess.pid})`);
+        return { success: false, error: "Game is already running" };
       } else {
-        console.warn(`[GameLauncher] Processus zombie détecté pour ${gameId}, nettoyage...`);
+        logger.warn(`[GameLauncher] Zombie process detected for ${gameId}, cleaning up...`);
         this.cleanupProcess(gameId);
       }
     }
@@ -88,21 +90,20 @@ export class GameLauncher {
     try {
       executablePath = validateAndResolvePath(gamePath, executableName);
     } catch {
-      return { success: false, error: "Chemin d'exécutable invalide ou en dehors du dossier du jeu" };
+      return { success: false, error: "Invalid executable path or outside game folder" };
     }
 
-    if (!fs.existsSync(executablePath)) {
-      return {
-        success: false,
-        error: `Exécutable non trouvé : ${executablePath}`,
-      };
+    try {
+      await fs.promises.access(executablePath);
+    } catch {
+      return { success: false, error: `Executable not found: ${executablePath}` };
     }
 
-    const stats = fs.statSync(executablePath);
+    const stats = await fs.promises.stat(executablePath);
     if (!stats.isFile()) {
       return {
         success: false,
-        error: `Le chemin spécifié n'est pas un fichier : ${executablePath}`,
+        error: `Specified path is not a file: ${executablePath}`,
       };
     }
 
@@ -159,7 +160,7 @@ export class GameLauncher {
   _setupProcessEvents(gameProcess, processInfo, onStatusChange) {
     gameProcess.on("spawn", () => {
       const wineInfo = processInfo.usesWine ? " (via Wine)" : "";
-      console.log(`[GameLauncher] Jeu ${processInfo.gameId} démarré${wineInfo} (PID: ${gameProcess.pid})`);
+      logger.info(`[GameLauncher] Game ${processInfo.gameId} started${wineInfo} (PID: ${gameProcess.pid})`);
       processInfo.status = "running";
 
       this.startSessionTracking(processInfo.gameId, onStatusChange);
@@ -174,7 +175,7 @@ export class GameLauncher {
     });
 
     gameProcess.on("error", (error) => {
-      console.error(`[GameLauncher] Erreur ${processInfo.gameId}:`, error);
+      logger.error(`[GameLauncher] Process error for ${processInfo.gameId}`, error);
       this.cleanupProcess(processInfo.gameId);
 
       onStatusChange({
@@ -188,7 +189,7 @@ export class GameLauncher {
       // Guard against double-processing (exit + close can both fire)
       if (!this.activeProcesses.has(processInfo.gameId)) return;
 
-      console.log(`[GameLauncher] Jeu ${processInfo.gameId} fermé (code: ${code}, signal: ${signal})`);
+      logger.info(`[GameLauncher] Game ${processInfo.gameId} closed (code: ${code}, signal: ${signal})`);
 
       const sessionDuration = processInfo.startTime
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
@@ -213,7 +214,7 @@ export class GameLauncher {
       // Backup handler: only runs if exit didn't already clean up
       if (!this.activeProcesses.has(processInfo.gameId)) return;
 
-      console.log(`[GameLauncher] Nettoyage backup pour ${processInfo.gameId}`);
+      logger.info(`[GameLauncher] Backup cleanup for ${processInfo.gameId}`);
 
       const sessionDuration = processInfo.startTime
         ? Math.floor((Date.now() - processInfo.startTime) / 1000)
@@ -243,24 +244,24 @@ export class GameLauncher {
   _setupProcessLogging(gameProcess, gameId) {
     if (gameProcess.stdout) {
       gameProcess.stdout.on("data", (data) => {
-        console.log(`[${gameId}] ${data.toString().trim()}`);
+        logger.debug(`[${gameId}] ${data.toString().trim()}`);
       });
 
       gameProcess.stdout.on("error", (err) => {
         if (err.code !== 'EPIPE') {
-          console.warn(`[${gameId}] Erreur stdout:`, err.message);
+          logger.warn(`[${gameId}] stdout error: ${err.message}`);
         }
       });
     }
 
     if (gameProcess.stderr) {
       gameProcess.stderr.on("data", (data) => {
-        console.error(`[${gameId}] ${data.toString().trim()}`);
+        logger.warn(`[${gameId}] stderr: ${data.toString().trim()}`);
       });
 
       gameProcess.stderr.on("error", (err) => {
         if (err.code !== 'EPIPE') {
-          console.warn(`[${gameId}] Erreur stderr:`, err.message);
+          logger.warn(`[${gameId}] stderr error: ${err.message}`);
         }
       });
     }
@@ -275,33 +276,35 @@ export class GameLauncher {
     if (!processInfo) {
       return {
         success: false,
-        message: "Aucun processus actif trouvé pour ce jeu",
+        message: "No active process found for this game",
       };
     }
 
     try {
       const { process: gameProcess } = processInfo;
-      console.log(`[GameLauncher] Arrêt du jeu ${gameId} (PID: ${gameProcess.pid})`);
+      logger.info(`[GameLauncher] Stopping game ${gameId} (PID: ${gameProcess.pid})`);
 
       if (process.platform === 'win32') {
         if (force) {
           try {
             gameProcess.kill();
           } catch (err) {
-            await execAsync(`taskkill /PID ${gameProcess.pid} /F /T`);
+            await execFileAsync("taskkill", ["/PID", String(gameProcess.pid), "/F", "/T"]);
           }
         } else {
           gameProcess.kill();
 
-          setTimeout(async () => {
+          const timer = setTimeout(async () => {
+            this.killTimers.delete(gameId);
             if (this.activeProcesses.has(gameId) && !gameProcess.killed) {
               try {
-                await execAsync(`taskkill /PID ${gameProcess.pid} /F /T`);
+                await execFileAsync("taskkill", ["/PID", String(gameProcess.pid), "/F", "/T"]);
               } catch (err) {
-                console.error(`[GameLauncher] Erreur taskkill:`, err.message);
+                logger.error(`[GameLauncher] taskkill error: ${err.message}`);
               }
             }
           }, 10000);
+          this.killTimers.set(gameId, timer);
         }
       } else {
         if (force) {
@@ -309,20 +312,22 @@ export class GameLauncher {
         } else {
           gameProcess.kill("SIGTERM");
 
-          setTimeout(() => {
+          const timer = setTimeout(() => {
+            this.killTimers.delete(gameId);
             if (this.activeProcesses.has(gameId) && !gameProcess.killed) {
               gameProcess.kill("SIGKILL");
             }
           }, 10000);
+          this.killTimers.set(gameId, timer);
         }
       }
 
       return {
         success: true,
-        message: `Arrêt de ${gameId} en cours`,
+        message: `Stopping ${gameId}`,
       };
     } catch (error) {
-      console.error(`[GameLauncher] Erreur lors de l'arrêt de ${gameId}:`, error);
+      logger.error(`[GameLauncher] Error stopping ${gameId}`, error);
       return {
         success: false,
         error: error.message,
@@ -365,7 +370,7 @@ export class GameLauncher {
       const processInfo = this.activeProcesses.get(gameId);
 
       if (!processInfo) {
-        console.error(`[GameLauncher] ProcessInfo non trouvé pour ${gameId}`);
+        logger.error(`[GameLauncher] ProcessInfo not found for ${gameId}`);
         return;
       }
 
@@ -385,7 +390,7 @@ export class GameLauncher {
         });
       }
     } catch (error) {
-      console.error(`[GameLauncher] Erreur envoi stats:`, error);
+      logger.error(`[GameLauncher] Error sending stats`, error);
     }
   }
 
@@ -399,7 +404,7 @@ export class GameLauncher {
       try {
         const winePrefix = path.join(processInfo.gamePath, '.wine');
 
-        await execAsync('wineserver -k', {
+        await execFileAsync('wineserver', ['-k'], {
           env: {
             ...process.env,
             WINEPREFIX: winePrefix
@@ -417,13 +422,19 @@ export class GameLauncher {
       clearInterval(tracker);
       this.sessionTrackers.delete(gameId);
     }
+
+    const killTimer = this.killTimers.get(gameId);
+    if (killTimer) {
+      clearTimeout(killTimer);
+      this.killTimers.delete(gameId);
+    }
   }
 
   /**
    * Clean up all resources
    */
   cleanup() {
-    console.log("[GameLauncher] Nettoyage de tous les jeux actifs...");
+    logger.info("[GameLauncher] Cleaning up all active games...");
 
     this.activeProcesses.forEach((processInfo, gameId) => {
       this.stopGame(gameId, true);
@@ -432,7 +443,10 @@ export class GameLauncher {
     this.sessionTrackers.forEach((interval) => clearInterval(interval));
     this.sessionTrackers.clear();
 
-    console.log("[GameLauncher] Nettoyage terminé");
+    this.killTimers.forEach((timer) => clearTimeout(timer));
+    this.killTimers.clear();
+
+    logger.info("[GameLauncher] Cleanup complete");
   }
 
   /**
@@ -465,12 +479,13 @@ export class GameLauncher {
   /**
    * Open the game folder
    */
-  openGameFolder(gamePath) {
-    if (fs.existsSync(gamePath)) {
+  async openGameFolder(gamePath) {
+    try {
+      await fs.promises.access(gamePath);
       shell.openPath(gamePath);
       return { success: true };
-    } else {
-      return { success: false, error: "Dossier non trouvé" };
+    } catch {
+      return { success: false, error: "Folder not found" };
     }
   }
 

@@ -2,8 +2,10 @@
  * Local cache service for game images
  * Uses IndexedDB to store images as blobs
  */
+import logger from './logger.js';
 
 const DB_NAME = 'gameCoversCache';
+const MEMORY_CACHE_MAX = 300; // max entries in memory cache
 const DB_VERSION = 1;
 const STORE_NAME = 'covers';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -29,7 +31,7 @@ class ImageCacheService {
     this.initializationPromise = new Promise((resolve) => {
       // Check if IndexedDB is available
       if (!window.indexedDB) {
-        console.warn('[ImageCache] IndexedDB non disponible dans cet environnement');
+        logger.warn('[ImageCache] IndexedDB non disponible dans cet environnement');
         this.isAvailable = false;
         resolve(null);
         return;
@@ -38,8 +40,7 @@ class ImageCacheService {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.warn('[ImageCache] IndexedDB non disponible:', request.error?.message || 'Erreur inconnue');
-        console.warn('[ImageCache] Les images seront chargées directement sans cache');
+        logger.warn(`[ImageCache] IndexedDB non disponible: ${request.error?.message || 'Erreur inconnue'}`);
         this.isAvailable = false;
         this.db = null;
         resolve(null);
@@ -48,7 +49,7 @@ class ImageCacheService {
       request.onsuccess = () => {
         this.db = request.result;
         this.isAvailable = true;
-        console.log('[ImageCache] IndexedDB initialisé avec succès');
+        logger.info('[ImageCache] IndexedDB initialized successfully');
         resolve(this.db);
       };
 
@@ -87,7 +88,7 @@ class ImageCacheService {
         const request = objectStore.get(url);
 
         request.onerror = () => {
-          console.warn('[ImageCache] Erreur lors de la récupération:', request.error?.message);
+          logger.warn(`[ImageCache] Retrieval error: ${request.error?.message}`);
           resolve(null);
         };
 
@@ -114,7 +115,7 @@ class ImageCacheService {
         };
       });
     } catch (error) {
-      console.warn('[ImageCache] Exception lors de getImage:', error.message);
+      logger.warn(`[ImageCache] Exception lors de getImage: ${error.message}`);
       return null;
     }
   }
@@ -148,7 +149,7 @@ class ImageCacheService {
         const request = objectStore.put(data);
 
         request.onerror = () => {
-          console.warn('[ImageCache] Erreur lors du stockage:', request.error?.message);
+          logger.warn(`[ImageCache] Erreur lors du stockage: ${request.error?.message}`);
           resolve(); // Resolve anyway to avoid blocking
         };
 
@@ -157,7 +158,7 @@ class ImageCacheService {
         };
       });
     } catch (error) {
-      console.warn('[ImageCache] Exception lors de setImage:', error.message);
+      logger.warn(`[ImageCache] Exception lors de setImage: ${error.message}`);
       return;
     }
   }
@@ -168,7 +169,9 @@ class ImageCacheService {
    * @returns {Promise<void>}
    */
   async deleteImage(url) {
-    // Remove from the in-memory cache
+    // Revoke the blob URL before removing from memory cache
+    const cached = this.memoryCache.get(url);
+    if (cached?.blobUrl) URL.revokeObjectURL(cached.blobUrl);
     this.memoryCache.delete(url);
 
     // If IndexedDB is not available, do nothing
@@ -186,7 +189,7 @@ class ImageCacheService {
         const request = objectStore.delete(url);
 
         request.onerror = () => {
-          console.warn('[ImageCache] Erreur lors de la suppression:', request.error?.message);
+          logger.warn(`[ImageCache] Erreur lors de la suppression: ${request.error?.message}`);
           resolve(); // Resolve anyway
         };
 
@@ -195,7 +198,7 @@ class ImageCacheService {
         };
       });
     } catch (error) {
-      console.warn('[ImageCache] Exception lors de deleteImage:', error.message);
+      logger.warn(`[ImageCache] Exception lors de deleteImage: ${error.message}`);
       return;
     }
   }
@@ -220,7 +223,13 @@ class ImageCacheService {
       if (this.isAvailable) {
         const cachedUrl = await this.getImage(url);
         if (cachedUrl) {
-          // Store in memory cache for next time
+          // Store in memory cache for next time (evict oldest if over limit)
+          if (this.memoryCache.size >= MEMORY_CACHE_MAX) {
+            const oldestKey = this.memoryCache.keys().next().value;
+            const evicted = this.memoryCache.get(oldestKey);
+            if (evicted?.blobUrl) URL.revokeObjectURL(evicted.blobUrl);
+            this.memoryCache.delete(oldestKey);
+          }
           this.memoryCache.set(url, { blobUrl: cachedUrl, timestamp: Date.now() });
           return cachedUrl;
         }
@@ -240,12 +249,18 @@ class ImageCacheService {
         await this.setImage(url, blob);
       }
 
-      // 5. Store in the in-memory cache
+      // 5. Store in the in-memory cache (evict oldest if over limit)
+      if (this.memoryCache.size >= MEMORY_CACHE_MAX) {
+        const oldestKey = this.memoryCache.keys().next().value;
+        const evicted = this.memoryCache.get(oldestKey);
+        if (evicted?.blobUrl) URL.revokeObjectURL(evicted.blobUrl);
+        this.memoryCache.delete(oldestKey);
+      }
       this.memoryCache.set(url, { blobUrl, timestamp: Date.now() });
 
       return blobUrl;
     } catch (error) {
-      console.warn('[ImageCache] Erreur lors du téléchargement:', error.message);
+      logger.warn(`[ImageCache] Download error: ${error.message}`);
       // On error, return the original URL
       return url;
     }
@@ -275,7 +290,7 @@ class ImageCacheService {
         const now = Date.now();
 
         request.onerror = () => {
-          console.warn('[ImageCache] Erreur lors du nettoyage:', request.error?.message);
+          logger.warn(`[ImageCache] Erreur lors du nettoyage: ${request.error?.message}`);
           resolve(0);
         };
 
@@ -294,14 +309,14 @@ class ImageCacheService {
             cursor.continue();
           } else {
             if (deletedCount > 0) {
-              console.log(`[ImageCache] ${deletedCount} image(s) expirée(s) supprimée(s)`);
+              logger.info(`[ImageCache] ${deletedCount} expired image(s) deleted`);
             }
             resolve(deletedCount);
           }
         };
       });
     } catch (error) {
-      console.warn('[ImageCache] Exception lors de cleanExpiredImages:', error.message);
+      logger.warn(`[ImageCache] Exception lors de cleanExpiredImages: ${error.message}`);
       return 0;
     }
   }
@@ -329,17 +344,17 @@ class ImageCacheService {
         const request = objectStore.clear();
 
         request.onerror = () => {
-          console.warn('[ImageCache] Erreur lors de la suppression:', request.error?.message);
+          logger.warn(`[ImageCache] Erreur lors de la suppression: ${request.error?.message}`);
           resolve();
         };
 
         request.onsuccess = () => {
-          console.log('[ImageCache] Cache vidé avec succès');
+          logger.info('[ImageCache] Cache cleared successfully');
           resolve();
         };
       });
     } catch (error) {
-      console.warn('[ImageCache] Exception lors de clearCache:', error.message);
+      logger.warn(`[ImageCache] Exception lors de clearCache: ${error.message}`);
       return;
     }
   }
@@ -364,7 +379,7 @@ class ImageCacheService {
         const request = objectStore.count();
 
         request.onerror = () => {
-          console.warn('[ImageCache] Erreur lors du comptage:', request.error?.message);
+          logger.warn(`[ImageCache] Erreur lors du comptage: ${request.error?.message}`);
           resolve(0);
         };
 
@@ -373,7 +388,7 @@ class ImageCacheService {
         };
       });
     } catch (error) {
-      console.warn('[ImageCache] Exception lors de getCacheSize:', error.message);
+      logger.warn(`[ImageCache] Exception lors de getCacheSize: ${error.message}`);
       return 0;
     }
   }
@@ -386,7 +401,7 @@ const imageCacheService = new ImageCacheService();
 imageCacheService.initDB().then(() => {
   if (imageCacheService.isAvailable) {
     imageCacheService.cleanExpiredImages().catch(err => {
-      console.warn('[ImageCache] Erreur lors du nettoyage initial:', err.message);
+      logger.warn(`[ImageCache] Erreur lors du nettoyage initial: ${err.message}`);
     });
   }
 }).catch(() => {

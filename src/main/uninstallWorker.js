@@ -1,4 +1,4 @@
-// src/main/uninstallWorker.js - VERSION FINALE 🚀
+// src/main/uninstallWorker.js
 
 import { parentPort, workerData } from "worker_threads";
 import { UninstallEngine } from "./uninstallEngine.js";
@@ -6,8 +6,10 @@ import { UninstallEngine } from "./uninstallEngine.js";
 async function runUninstallation() {
   const uninstallEngine = new UninstallEngine();
 
+  const log = (level, message) => parentPort.postMessage({ type: "log", level, message });
+
   try {
-    console.log(`[UninstallWorker] 🗑️ Désinstallation: ${workerData.gameId}`);
+    log("info", `[UninstallWorker] Uninstalling: ${workerData.gameId}`);
 
     // Start the full uninstallation
     const result = await uninstallEngine.uninstallGame(
@@ -25,13 +27,9 @@ async function runUninstallation() {
 
     // Final result
     if (result.success) {
-      console.log(
-        `[UninstallWorker] ✅ Désinstallation réussie: ${workerData.gameId}`
-      );
+      log("info", `[UninstallWorker] Uninstall successful: ${workerData.gameId}`);
     } else {
-      console.error(
-        `[UninstallWorker] ❌ Désinstallation échouée: ${result.error}`
-      );
+      log("error", `[UninstallWorker] Uninstall failed: ${result.error}`);
       parentPort.postMessage({
         stage: "failed",
         progress: 0,
@@ -39,12 +37,12 @@ async function runUninstallation() {
       });
     }
   } catch (error) {
-    console.error("[UninstallWorker] 💥 Erreur critique:", error);
+    log("error", `[UninstallWorker] Critical error: ${error.message}`);
 
     parentPort.postMessage({
       stage: "failed",
       progress: 0,
-      error: error.message || "Erreur inconnue lors de la désinstallation",
+      error: error.message || "Unknown uninstallation error",
     });
   }
 }

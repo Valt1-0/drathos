@@ -29,8 +29,7 @@ import UpdateModal from "./components/modals/UpdateModal";
 import DownloadTray from "./components/DownloadTray";
 import ErrorBoundary from "./components/ErrorBoundary";
 import QuickLaunch from "./components/QuickLaunch";
-import { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
-import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
+import useKeyboardShortcuts, { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 
 // * Critical pages imported directly (no lazy loading)
 import Games from "./pages/Games";
@@ -90,7 +89,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Home />
+                    <ErrorBoundary>
+                      <Home />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -100,7 +101,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Games />
+                    <ErrorBoundary>
+                      <Games />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -110,7 +113,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Collections />
+                    <ErrorBoundary>
+                      <Collections />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -120,7 +125,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Download />
+                    <ErrorBoundary>
+                      <Download />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -130,7 +137,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Settings />
+                    <ErrorBoundary>
+                      <Settings />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -140,7 +149,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Mods />
+                    <ErrorBoundary>
+                      <Mods />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -150,7 +161,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <Users />
+                    <ErrorBoundary>
+                      <Users />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -160,7 +173,9 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Drawer>
-                    <UserProfile />
+                    <ErrorBoundary>
+                      <UserProfile />
+                    </ErrorBoundary>
                   </Drawer>
                 </ProtectedRoute>
               }
@@ -223,6 +238,7 @@ export default function App() {
                             position="top-right"
                             expand={true}
                             richColors
+                            visibleToasts={3}
                             closeButton={false}
                             toastOptions={{
                               duration: 4000,

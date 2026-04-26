@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiX, FiSend, FiFolder, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import logger from '../../services/logger';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const BugReportModal = ({ isOpen, onClose }) => {
+  const containerRef = useFocusTrap(isOpen);
   const { t } = useTranslation();
   const [description, setDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -91,7 +93,7 @@ const BugReportModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col backdrop-blur-xl">
+      <div ref={containerRef} role="dialog" aria-modal="true" className="glass rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col backdrop-blur-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
@@ -107,6 +109,7 @@ const BugReportModal = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="w-8 h-8 rounded-lg hover:bg-surface flex items-center justify-center transition-colors text-text-secondary hover:text-text"
             disabled={loading}
+            aria-label={t('common.close')}
           >
             <FiX className="w-5 h-5" />
           </button>

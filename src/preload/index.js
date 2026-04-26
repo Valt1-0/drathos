@@ -27,19 +27,12 @@ const api = {
     ipcRenderer.on("gameStatusChanged", listener);
     return () => ipcRenderer.removeListener("gameStatusChanged", listener);
   },
-  listGameFiles: (gameId) => ipcRenderer.invoke("listGameFiles", gameId),
-  configureExecutable: (gameId, config) =>
-    ipcRenderer.invoke("configureExecutable", { gameId, config }),
-
   // Detect all executables in a game folder
   detectExecutables: ({ gamePath, gameName }) =>
     ipcRenderer.invoke("detectExecutables", { gamePath, gameName }),
   // Get the best executable for a game
   getBestExecutable: ({ gamePath, gameName }) =>
     ipcRenderer.invoke("getBestExecutable", { gamePath, gameName }),
-  // Check if a file is executable
-  isFileExecutable: (filePath) =>
-    ipcRenderer.invoke("isFileExecutable", filePath),
   // List the contents of a game folder
   listGameDirectory: (gamePath) =>
     ipcRenderer.invoke("listGameDirectory", gamePath),
@@ -86,7 +79,7 @@ const api = {
     ipcRenderer.invoke("getGameSize", { gamePath }),
 
   // Get free disk space
-  getDiskSpace: () => ipcRenderer.invoke("getDiskSpace"),
+  getDiskSpace: (path) => ipcRenderer.invoke("getDiskSpace", path),
 
   onSaveGameStats: (callback) => {
     const listener = (_event, data) => callback(data);
@@ -211,7 +204,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld("api", api);
     contextBridge.exposeInMainWorld("store", {
-      get: (key) => ipcRenderer.invoke("store-get", key),
+      get: (key, defaultValue) => ipcRenderer.invoke("store-get", key, defaultValue),
       set: (key, value) => ipcRenderer.invoke("store-set", key, value),
       delete: (key) => ipcRenderer.invoke("store-delete", key),
       clear: () => ipcRenderer.invoke("store-clear"),
@@ -223,7 +216,7 @@ if (process.contextIsolated) {
     });
 
   } catch (error) {
-    console.error("[Preload] Erreur lors de l'exposition des APIs:", error);
+    console.error("[Preload] Error exposing APIs:", error);
   }
 } else {
   // Fallback if contextIsolation is disabled
@@ -234,5 +227,5 @@ if (process.contextIsolated) {
     delete: (key) => ipcRenderer.invoke("store-delete", key),
     clear: () => ipcRenderer.invoke("store-clear"),
   };
-  console.warn("[Preload] APIs exposées sans contextIsolation");
+  console.warn("[Preload] APIs exposed without contextIsolation");
 }

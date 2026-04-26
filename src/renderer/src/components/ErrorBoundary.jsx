@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FiAlertTriangle, FiRefreshCw, FiHome } from 'react-icons/fi';
 import { ThemeContext } from '../contexts/themeContext';
 import { useTranslation } from 'react-i18next';
+import logger from '../services/logger';
 
 class ErrorBoundaryClass extends Component {
   static contextType = ThemeContext;
@@ -20,7 +21,7 @@ class ErrorBoundaryClass extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('[ErrorBoundary] Component error:', error, errorInfo);
+    logger.error('[ErrorBoundary] Component error:', error, errorInfo);
     // Mark error so global handler in main.jsx skips it (avoid double reporting)
     try { error._handledByBoundary = true; } catch {}
     this.setState({

@@ -70,7 +70,7 @@ export const themes = {
   default: {
     id: "default",
     name: "Drathos Classic",
-    description: "Thème original",
+    description: "Original theme",
     colors: {
       primary: "#3B82F6",
       primaryHover: "#2563EB",
@@ -104,7 +104,7 @@ export const themes = {
   darkModern: {
     id: "darkModern",
     name: "Dark Modern",
-    description: "Sombre et élégant",
+    description: "Dark and elegant",
     colors: {
       primary: "#6366F1",
       primaryHover: "#4F46E5",
@@ -138,7 +138,7 @@ export const themes = {
   lightModern: {
     id: "lightModern",
     name: "Light Modern",
-    description: "Clair et raffiné",
+    description: "Light and refined",
     colors: {
       primary: "#4F46E5",
       primaryHover: "#4338CA",

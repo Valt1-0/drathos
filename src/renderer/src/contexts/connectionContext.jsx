@@ -44,15 +44,21 @@ export function ConnectionProvider({ children }) {
     checkConnection();
   }, [checkConnection]);
 
-  // Re-check immediately when the app comes back to the foreground
+  // Pause the polling interval when the window is hidden, resume + re-check when visible
   useEffect(() => {
     let lastFocusCheck = 0;
     const onVisibilityChange = () => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState === "hidden") {
+        // Pause — clear any running interval/timeout
+        clearInterval(intervalRef.current);
+        clearTimeout(intervalRef.current);
+        return;
+      }
+      // Resumed — debounce to avoid firing twice on quick focus flickers
       const now = Date.now();
       if (now - lastFocusCheck < 2000) return;
       lastFocusCheck = now;
-      checkConnection();
+      checkConnection(); // Re-check immediately; the interval effect will restart
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);

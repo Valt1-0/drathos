@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { FiAlertTriangle } from "react-icons/fi";
 import { useTheme } from "../../contexts/themeContext";
 import { Button } from "../ui";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText }) => {
+  const containerRef = useFocusTrap(isOpen);
   const { t } = useTranslation();
   const deleteText = confirmText || t('common.delete');
   const { getTextClass, isLight } = useTheme();
@@ -25,6 +27,9 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confir
 
       {/* Modal */}
       <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}

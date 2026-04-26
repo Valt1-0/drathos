@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import logger from "../services/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiUser, FiClock, FiArrowLeft, FiLock, FiWifiOff, FiShield, FiChevronDown, FiCheck } from "react-icons/fi";
 import { FaGamepad, FaPlay, FaCalendarAlt } from "react-icons/fa";
@@ -56,7 +57,7 @@ const RoleSelector = ({ currentRole, userId, currentUserId, currentUserRole, onR
       onRoleChange(newRole);
       toast.success(t('users.roleUpdated'));
     } catch (error) {
-      console.error("Failed to update role:", error);
+      logger.error("Failed to update role:", error);
       toast.error(t('users.roleUpdateError'));
     } finally {
       setLoading(false);
@@ -250,7 +251,7 @@ const UserProfile = () => {
           setError("error");
         }
       } catch (err) {
-        console.error("Error loading profile:", err);
+        logger.error("Error loading profile:", err);
         setError("error");
       } finally {
         setLoading(false);

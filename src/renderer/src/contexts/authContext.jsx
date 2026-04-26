@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 import { loginUser, registerUser } from "../api/user";
+import logger from "../services/logger";
+import { storeGet } from "../utils/storeClient";
 
 const AuthContext = createContext(null);
 
@@ -13,7 +15,7 @@ export const AuthProvider = ({ children }) => {
     const fetchToken = async () => {
       try {
         // Wait for the promise to resolve
-        const token = await window.store.get("userToken");
+        const token = await storeGet("userToken");
         if (typeof token === 'string' && token.length > 0) {
           try {
             const decoded = jwtDecode(token);
@@ -21,6 +23,7 @@ export const AuthProvider = ({ children }) => {
               window.store.delete("userToken");
             } else {
               setUser(decoded.user);
+              setIsAuthenticated(true);
             }
           } catch (error) {
             window.store.delete("userToken");
@@ -28,7 +31,7 @@ export const AuthProvider = ({ children }) => {
         }
         setLoading(false);
       } catch (error) {
-        console.error("Error retrieving token:", error);
+        logger.error("Error retrieving token:", error);
         setLoading(false);
       }
     };

@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { FiEdit2, FiTrash2, FiPlus } from "react-icons/fi";
-import * as Icons from "react-icons/fa";
+import { FaFolder, FaStar, FaHeart, FaFire, FaGamepad, FaTrophy, FaRocket, FaGem, FaBookmark, FaCrown } from "react-icons/fa";
+
+const FA_ICONS = { FaFolder, FaStar, FaHeart, FaFire, FaGamepad, FaTrophy, FaRocket, FaGem, FaBookmark, FaCrown };
 import { useTheme } from "../../contexts/themeContext";
 import { useCollections } from "../../contexts/collectionsContext";
 import DeleteConfirmModal from "../modals/DeleteConfirmModal";
@@ -13,7 +15,7 @@ const CollectionCard = ({ collection, onEdit, onAddGames }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hovered, setHovered] = useState(false);
 
-  const IconComponent = Icons[collection.icon] || Icons.FaFolder;
+  const IconComponent = FA_ICONS[collection.icon] || FaFolder;
   const games = collection.games || [];
   const previews = games.slice(0, 3);
 

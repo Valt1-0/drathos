@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { motion, AnimatePresence } from "framer-motion";
+import logger from "../../services/logger";
 import { FiX, FiUpload, FiFile, FiCheck, FiAlertCircle, FiPackage } from "react-icons/fi";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -8,16 +10,20 @@ import Card from "../ui/Card";
 import Button from "../ui/Button";
 import GameCover from "../GameCover";
 
-// Sanitize installation path to prevent security issues
+// Sanitize installation path to prevent path traversal
 function sanitizeInstallPath(input) {
-  // Remove leading/trailing slashes and whitespace
-  let sanitized = input.trim().replace(/^[/\\]+|[/\\]+$/g, '');
+  let sanitized = input.trim();
 
-  // Block path traversal
-  sanitized = sanitized.replace(/\.\./g, '');
+  // Remove absolute path indicators and leading slashes
+  sanitized = sanitized.replace(/^([a-zA-Z]:)?[/\\]+/, '');
 
-  // Remove absolute path indicators
-  sanitized = sanitized.replace(/^([a-zA-Z]:)?[/\\]/, '');
+  // Remove path traversal sequences — repeat until none remain
+  while (sanitized.includes('..')) {
+    sanitized = sanitized.replace(/\.\./g, '');
+  }
+
+  // Remove leading/trailing slashes
+  sanitized = sanitized.replace(/^[/\\]+|[/\\]+$/g, '');
 
   // Normalize consecutive slashes to single forward slash
   sanitized = sanitized.replace(/[/\\]+/g, '/');
@@ -26,6 +32,7 @@ function sanitizeInstallPath(input) {
 }
 
 const UploadModModal = ({ onClose, onSuccess }) => {
+  const containerRef = useFocusTrap(true);
   const { t } = useTranslation();
 
   const [games, setGames] = useState([]);
@@ -58,7 +65,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
       setGames(gamesList);
       setGamesLoaded(true);
     } catch (error) {
-      console.error("Error loading games:", error);
+      logger.error("Error loading games:", error);
       toast.error(t('mods.loadingError'));
     } finally{
       setLoadingGames(false);
@@ -94,7 +101,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
 
       setSelectedFile(file);
     } catch (error) {
-      console.error("Error selecting file:", error);
+      logger.error("Error selecting file:", error);
       toast.error(t('mods.fileSelectError'));
     }
   };
@@ -128,7 +135,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error("Upload error:", error);
+      logger.error("Upload error:", error);
       toast.error(`${t('mods.uploadError')}: ${error.message}`);
     } finally {
       setUploading(false);
@@ -140,6 +147,9 @@ const UploadModModal = ({ onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -159,6 +169,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
                 icon={<FiX />}
                 onClick={onClose}
                 disabled={uploading}
+                aria-label={t('common.close')}
               />
             }
           />

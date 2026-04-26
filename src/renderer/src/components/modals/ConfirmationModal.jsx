@@ -5,6 +5,7 @@ import {
   FiCheckCircle,
   FiLock,
 } from "react-icons/fi";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 const ConfirmationModal = ({
   isOpen,
@@ -21,6 +22,7 @@ const ConfirmationModal = ({
   success = false,
   showLockInfo = false,
 }) => {
+  const containerRef = useFocusTrap(isOpen);
   if (!isOpen) return null;
 
   const colorClasses = {
@@ -78,6 +80,10 @@ const ConfirmationModal = ({
 
           {/* Modal */}
           <motion.div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -90,6 +96,7 @@ const ConfirmationModal = ({
                 <button
                   onClick={onClose}
                   className="absolute top-4 right-4 z-10 p-2 rounded-full bg-surface hover:bg-surface/80 text-text-secondary hover:text-text transition-all duration-200"
+                  aria-label="Close"
                 >
                   <FiX className="text-lg" />
                 </button>
@@ -118,6 +125,7 @@ const ConfirmationModal = ({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
+                  id="modal-title"
                   className="text-2xl font-bold text-text text-center mb-4"
                 >
                   {title}

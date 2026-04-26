@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from '../../contexts/updateContext';
 import { useTheme } from '../../contexts/themeContext';
+import logger from '../../services/logger';
 import { FiDownload, FiX, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 
 export default function UpdateModal() {
@@ -19,6 +21,7 @@ export default function UpdateModal() {
   const { isLight, getTextClass, getGlassClass } = useTheme();
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const containerRef = useFocusTrap(showUpdateModal);
 
   // Auto-close the modal if the status returns to idle
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function UpdateModal() {
     try {
       await downloadAndInstall();
     } catch (error) {
-      console.error('Error downloading update:', error);
+      logger.error('Error downloading update:', error);
       setIsDownloading(false);
     }
   };
@@ -61,7 +64,7 @@ export default function UpdateModal() {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm ${isLight ? 'bg-black/30' : 'bg-black/60'}`}>
-      <div className={`relative w-full max-w-md rounded-xl shadow-2xl ${isLight ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700'} border`}>
+      <div ref={containerRef} role="dialog" aria-modal="true" className={`relative w-full max-w-md rounded-xl shadow-2xl ${isLight ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700'} border`}>
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
           <div className="flex items-center gap-3">
@@ -99,6 +102,7 @@ export default function UpdateModal() {
             <button
               onClick={handleClose}
               className={`p-1 rounded-lg transition-colors ${isLight ? 'hover:bg-gray-100' : 'hover:bg-gray-700'}`}
+              aria-label={t('common.close')}
             >
               <FiX className={`w-5 h-5 ${getTextClass('secondary')}`} />
             </button>
@@ -117,11 +121,11 @@ export default function UpdateModal() {
                 <div className={`mb-4 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-gray-800/50 border-gray-700'}`}>
                   <h3 className={`text-sm font-semibold mb-2 ${getTextClass('primary')}`}>{t('update.releaseNotes')}</h3>
                   <div className={`text-sm max-h-32 overflow-y-auto ${getTextClass('secondary')}`}>
-                    {typeof updateInfo.releaseNotes === 'string' ? (
-                      <p className="whitespace-pre-wrap">{updateInfo.releaseNotes}</p>
-                    ) : (
-                      <div dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }} />
-                    )}
+                    <p className="whitespace-pre-wrap">
+                      {typeof updateInfo.releaseNotes === 'string'
+                        ? updateInfo.releaseNotes
+                        : JSON.stringify(updateInfo.releaseNotes)}
+                    </p>
                   </div>
                 </div>
               )}

@@ -2,6 +2,7 @@ import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 import uploadManager from "../services/uploadManager";
 import { gamesCache } from "../utils/gamesCache";
+import logger from "../services/logger";
 
 export const getAllServerGames = async () => {
   try {
@@ -21,7 +22,7 @@ export const getAllServerGames = async () => {
     }
     return await response.json();
   } catch (error) {
-    console.debug("[API] Server games unavailable (offline mode)");
+    logger.debug("[API] Server games unavailable (offline mode)");
     return null;
   }
 };
@@ -83,7 +84,7 @@ export const addGameToServer = async (
 
     return result;
   } catch (error) {
-    console.error("Error adding game:", error.message);
+    logger.error(`Error adding game: ${error.message}`);
     throw error;
   }
 };
@@ -156,7 +157,7 @@ export const deleteServerGame = async (gameId) => {
 
     return await response.json();
   } catch (error) {
-    console.error("[API] Error deleting game:", error.message);
+    logger.error(`[API] Error deleting game: ${error.message}`);
     throw error;
   }
 };

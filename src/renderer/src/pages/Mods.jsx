@@ -1,5 +1,6 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import logger from "../services/logger";
 import {
   FiPlus,
   FiPackage,
@@ -78,54 +79,53 @@ const Mods = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const [mods, setMods] = useState([]);
   const [loadingMods, setLoadingMods] = useState(false);
   const [modToDelete, setModToDelete] = useState(null);
 
-  useEffect(() => {
-    // Skip if not confirmed online
-    if (isOnline !== true) {
-      setLoading(false);
-      return;
-    }
-    loadGames();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline]);
-
-  useEffect(() => {
-    if (selectedGame && isOnline === true) {
-      loadMods();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedGame, isOnline]);
-
-  const loadGames = async () => {
+  const loadGames = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const gamesList = await getAllGamesForAdmin();
       setGames(gamesList);
     } catch (error) {
-      console.error("Error loading games:", error);
-      toast.error(t("mods.loadingError"));
+      logger.error("Error loading games:", error);
+      setFetchError(error.message || t("mods.loadingError"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
-  const loadMods = async () => {
+  const loadMods = useCallback(async () => {
     if (!selectedGame) return;
     setLoadingMods(true);
     try {
       const data = await getModsForGame(selectedGame._id, { limit: 100 });
       setMods(data.mods || []);
     } catch (error) {
-      console.error("Error loading mods:", error);
+      logger.error("Error loading mods:", error);
       toast.error(t("mods.loadingError"));
     } finally {
       setLoadingMods(false);
     }
-  };
+  }, [selectedGame, t]);
+
+  useEffect(() => {
+    if (isOnline !== true) {
+      setLoading(false);
+      return;
+    }
+    loadGames();
+  }, [isOnline, loadGames]);
+
+  useEffect(() => {
+    if (selectedGame && isOnline === true) {
+      loadMods();
+    }
+  }, [selectedGame, isOnline, loadMods]);
 
   const handleUploadSuccess = () => {
     loadGames();
@@ -141,7 +141,7 @@ const Mods = () => {
       setMods((prev) => prev.filter((m) => m._id !== modToDelete._id));
       toast.success(t("mods.deletedFromServer"));
     } catch (error) {
-      console.error("Error deleting mod:", error);
+      logger.error("Error deleting mod:", error);
       toast.error(error.message || t("mods.errorDelete"));
     } finally {
       setModToDelete(null);
@@ -277,6 +277,12 @@ const Mods = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-7xl mx-auto">
+          {fetchError && !loading && (
+            <div className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+              <span className="flex-1">{fetchError}</span>
+              <button onClick={loadGames} className="underline hover:no-underline shrink-0">{t('games.retry')}</button>
+            </div>
+          )}
           {loading ? (
             <div className="text-center py-16">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
@@ -525,7 +531,7 @@ const Mods = () => {
                                         >
                                           {new Date(
                                             mod.createdAt,
-                                          ).toLocaleDateString("fr-FR")}
+                                          ).toLocaleDateString()}
                                         </span>
                                       </div>
                                     )}

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { motion, AnimatePresence } from "framer-motion";
+import logger from "../../services/logger";
 import {
   FiFolder,
   FiAlertCircle,
@@ -9,6 +11,7 @@ import {
 } from "react-icons/fi";
 
 const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
+  const containerRef = useFocusTrap(isOpen);
   const [downloadPath, setDownloadPath] = useState("");
   const [diskSpace, setDiskSpace] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -20,14 +23,14 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
       if (newPath) {
         setDownloadPath(newPath);
 
-        // Get available disk space
-        const space = await window.api.getDiskSpace();
+        // Get available disk space for the selected path
+        const space = await window.api.getDiskSpace(newPath);
         if (space.success) {
           setDiskSpace(space);
         }
       }
     } catch (error) {
-      console.error("Error selecting folder:", error);
+      logger.error("Error selecting folder:", error);
     } finally {
       setIsSelecting(false);
     }
@@ -90,6 +93,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                 <button
                   onClick={handleClose}
                   className="text-white/80 hover:text-white transition-colors"
+                  aria-label="Close"
                 >
                   <FiX className="text-2xl" />
                 </button>

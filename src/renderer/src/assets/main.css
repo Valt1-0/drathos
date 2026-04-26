@@ -88,6 +88,10 @@
   --box-shadow-primary: var(--app-shadow-primary);
   --box-shadow-secondary: var(--app-shadow-secondary);
   --box-shadow-accent: var(--app-shadow-accent);
+
+  /* Z-index layers */
+  --z-dropdown: 9999;
+  --z-overlay: 9999;
 }
 
 /* GLOBAL SCROLLBAR STYLES - Dynamic based on theme */
@@ -114,6 +118,13 @@
 * {
   user-select: none;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Allow text selection in content zones */
+p, h1, h2, h3, h4, h5, h6, span, li, td, th,
+.selectable, [data-selectable],
+.game-summary, .game-description, .error-message {
+  user-select: text;
 }
 
 img {

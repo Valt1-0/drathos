@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { applyTheme, getThemeById, isLightTheme as checkIsLightTheme } from '../config/themes';
+import logger from '../services/logger';
+import { storeGet, storeSet } from '../utils/storeClient';
 
 export const ThemeContext = createContext();
 
@@ -9,28 +11,28 @@ export const ThemeProvider = ({ children }) => {
 
   // Change theme
   const changeTheme = useCallback((themeId) => {
-    console.log('[ThemeContext] Changing theme to:', themeId);
+    logger.info('[ThemeContext] Changing theme to:', themeId);
     const newTheme = applyTheme(themeId);
     setCurrentTheme(themeId);
     setTheme(newTheme);
 
     // Save the selection
-    window.store.set('selectedTheme', themeId);
+    storeSet('selectedTheme', themeId);
   }, []);
 
   // Load the saved theme on startup
   useEffect(() => {
     const loadSavedTheme = async () => {
       try {
-        const savedTheme = await window.store.get('selectedTheme');
-        console.log('[ThemeContext] Loaded saved theme:', savedTheme);
+        const savedTheme = await storeGet('selectedTheme');
+        logger.info('[ThemeContext] Loaded saved theme:', savedTheme);
         if (savedTheme) {
           changeTheme(savedTheme);
         } else {
           changeTheme('default');
         }
       } catch (error) {
-        console.error('[ThemeContext] Error loading saved theme:', error);
+        logger.error('[ThemeContext] Error loading saved theme:', error);
         changeTheme('default');
       }
     };
@@ -44,19 +46,19 @@ export const ThemeProvider = ({ children }) => {
   }, [currentTheme]);
 
   // Get a theme color
-  const getColor = (colorKey) => {
+  const getColor = useCallback((colorKey) => {
     return theme?.colors?.[colorKey] || '#FFFFFF';
-  };
+  }, [theme]);
 
   // Get a gradient
-  const getGradient = (gradientKey) => {
+  const getGradient = useCallback((gradientKey) => {
     return theme?.gradients?.[gradientKey] || 'none';
-  };
+  }, [theme]);
 
   // Get a shadow
-  const getShadow = (shadowKey) => {
+  const getShadow = useCallback((shadowKey) => {
     return theme?.shadows?.[shadowKey] || 'none';
-  };
+  }, [theme]);
 
   // Get an appropriate text class based on the variant
   const getTextClass = useCallback((variant = 'primary') => {
@@ -86,7 +88,7 @@ export const ThemeProvider = ({ children }) => {
     return variants[variant] || variants.primary;
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     currentTheme,
     theme,
     isLight,
@@ -97,7 +99,7 @@ export const ThemeProvider = ({ children }) => {
     getTextClass,
     getGlassClass,
     getBackgroundStyle,
-  };
+  }), [currentTheme, theme, isLight, changeTheme, getColor, getGradient, getShadow, getTextClass, getGlassClass, getBackgroundStyle]);
 
   return (
     <ThemeContext.Provider value={value}>

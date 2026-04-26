@@ -2,12 +2,12 @@ import { useState, useEffect, memo } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { FaClock, FaGamepad, FaPlay, FaStar, FaPlus, FaRocket, FaFire } from "react-icons/fa";
+import logger from "../services/logger";
+import { FaClock, FaGamepad, FaPlay, FaStar, FaPlus, FaRocket } from "react-icons/fa";
 import { FiTrendingUp, FiChevronRight, FiWifiOff } from "react-icons/fi";
 import { getAllServerGames } from "../api/serverGames";
-import { getInstalledGames } from "../api/installedGames";
 import { getMergedStats, getLocalStats, formatStats as formatStatsAPI } from "../api/gameStats";
-import { gamesCache } from "../utils/gamesCache";
+import { useGamesLoader } from "../hooks/useGamesLoader";
 import AddGameModal from "../components/modals/AddGameModal";
 import GameCover from "../components/GameCover";
 import { useAuth } from "../contexts/authContext";
@@ -104,62 +104,10 @@ const Home = () => {
   const { getBackgroundStyle } = useTheme();
   const { isOnline } = useConnection();
 
+  const { games: serverGames, installedGames, loading, setGames: setServerGames } = useGamesLoader();
+
   const [stats, setStats] = useState(null);
-  const [serverGames, setServerGames] = useState([]);
-  const [installedGames, setInstalledGames] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showAddGameModal, setShowAddGameModal] = useState(false);
-
-  // Load data
-  useEffect(() => {
-    if (isOnline === null) return;
-
-    const load = async () => {
-      // 1. Load local cache (installed games)
-      const localCache = await window.store.get("installedGamesCache", {});
-      const localInstalled = Object.entries(localCache).map(([id, data]) => ({
-        _id: `installed_${id}`,
-        serverGameId: { _id: id, name: data.name, coverUrl: data.coverUrl, genres: data.genres },
-        path: data.path,
-      }));
-
-      // 2. Offline: installed games only
-      if (!isOnline) {
-        gamesCache.clear();
-        setInstalledGames(localInstalled);
-        setServerGames([]);
-        setLoading(false);
-        return;
-      }
-
-      // 3. Online + valid cache: use the cache
-      if (gamesCache.isValid()) {
-        const c = gamesCache.get();
-        setInstalledGames(c.installedGames);
-        setServerGames(c.serverGames);
-        setLoading(false);
-        return;
-      }
-
-      // 4. Online + no cache: fetch
-      setLoading(true);
-      try {
-        const [installed, games] = await Promise.all([
-          getInstalledGames(),
-          getAllServerGames()
-        ]);
-        gamesCache.set({ installedGames: installed || [], serverGames: games || [] });
-        setInstalledGames(installed || []);
-        setServerGames(games || []);
-      } catch (e) {
-        console.error("Error loading:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [isOnline]);
 
   // Load stats - use local stats if offline
   useEffect(() => {
@@ -169,10 +117,19 @@ const Home = () => {
       try {
         const gameIds = installedGames.map(g => g.serverGameId?._id).filter(Boolean);
 
-        // If offline, use only local stats
-        const allMergedStats = isOnline
-          ? await Promise.all(gameIds.map(id => getMergedStats(id)))
-          : await Promise.all(gameIds.map(id => getLocalStats(id)));
+        // If offline, use only local stats; cap concurrent requests to 3
+        const fetchFn = isOnline ? getMergedStats : getLocalStats;
+        const allMergedStats = await (async () => {
+          const results = new Array(gameIds.length);
+          let idx = 0;
+          await Promise.all(Array.from({ length: Math.min(3, gameIds.length) }, async () => {
+            while (idx < gameIds.length) {
+              const i = idx++;
+              results[i] = await fetchFn(gameIds[i]);
+            }
+          }));
+          return results;
+        })();
 
         let totalPlayTime = 0, totalSessions = 0;
         const allStats = {};
@@ -201,7 +158,7 @@ const Home = () => {
           recentGames
         });
       } catch (e) {
-        console.error("Error loading stats:", e);
+        logger.error("Error loading stats:", e);
       }
     };
     loadStats();
@@ -309,7 +266,6 @@ const Home = () => {
               <StatCard icon={<FaClock />} label={t('home.totalPlayTime')} value={`${stats.totalPlayTime}h`} color="primary" />
               <StatCard icon={<FaGamepad />} label={t('home.gamesInstalled')} value={stats.totalGames} color="secondary" />
               <StatCard icon={<FiTrendingUp />} label={t('home.totalSessions')} value={stats.totalSessions} color="success" />
-              <StatCard icon={<FaFire />} label={t('home.gamingStreak')} value={`${stats.totalGames}j`} color="warning" />
             </div>
           </motion.div>
         )}

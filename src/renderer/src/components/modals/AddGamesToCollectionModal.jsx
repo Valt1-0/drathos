@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import logger from "../../services/logger";
 import { FiX, FiSearch, FiCheck } from "react-icons/fi";
 import { useTheme } from "../../contexts/themeContext";
 import { useCollections } from "../../contexts/collectionsContext";
 import { getAllServerGames } from "../../api/serverGames";
 import { Button } from "../ui";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 const AddGamesToCollectionModal = ({ collection, onClose }) => {
+  const containerRef = useFocusTrap(true);
   const { t } = useTranslation();
   const { getTextClass, isLight } = useTheme();
   const { addGamesToCollection } = useCollections();
@@ -41,7 +44,7 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
           setGames(availableGames);
         }
       } catch (error) {
-        console.error('Failed to fetch games:', error);
+        logger.error('Failed to fetch games:', error);
       } finally {
         setLoading(false);
       }
@@ -82,7 +85,7 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
       await addGamesToCollection(collection._id, selectedGameIds);
       onClose();
     } catch (error) {
-      console.error('Failed to add games:', error);
+      logger.error('Failed to add games:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -101,6 +104,9 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
 
       {/* Modal */}
       <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -124,6 +130,7 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
                 className="p-2 rounded-lg hover:bg-surface transition-colors"
+                aria-label={t('common.close')}
               >
                 <FiX className={`text-xl ${getTextClass('secondary')}`} />
               </motion.button>

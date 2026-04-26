@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from "react";
+import { storeGet } from "../../utils/storeClient";
+import { useTranslation } from "react-i18next";
 import { formatStats as formatStatsAPI, saveLocalStats, syncStatsToServer } from "../../api/gameStats";
 import { stopGame } from "../../api/installedGames";
 import syncQueue from "../../utils/syncQueue";
 import { toast } from "sonner";
+import logger from "../../services/logger";
 
 export const useGameStats = () => {
+  const { t } = useTranslation();
   const [gameStats, setGameStats] = useState({});
   const isProcessingStats = useRef(false);
   const statsQueue = useRef([]);
@@ -12,7 +16,7 @@ export const useGameStats = () => {
   // Load initial stats from cache
   useEffect(() => {
     const loadStatsFromCache = async () => {
-      const cachedGamesObject = await window.store.get("installedGamesCache", {});
+      const cachedGamesObject = await storeGet("installedGamesCache", {});
       const stats = {};
       Object.entries(cachedGamesObject).forEach(([gameId, data]) => {
         if (data.stats) {
@@ -25,8 +29,10 @@ export const useGameStats = () => {
     loadStatsFromCache();
   }, []);
 
-  // Process stats queue sequentially
-  const processStatsQueue = async () => {
+  // Ref-stabilized processor — updated every render so it always reads the
+  // latest `t` translation function while the useEffect below stays mounted once.
+  const processStatsQueueRef = useRef(null);
+  processStatsQueueRef.current = async () => {
     if (isProcessingStats.current || statsQueue.current.length === 0) {
       return;
     }
@@ -37,7 +43,7 @@ export const useGameStats = () => {
       const data = statsQueue.current.shift();
 
       if (!data || !data.sessionData) {
-        console.error("[useGameStats] Invalid session data");
+        logger.error("[useGameStats] Invalid session data");
         continue;
       }
 
@@ -52,7 +58,7 @@ export const useGameStats = () => {
         try {
           if (saveResult.success && saveResult.stats) {
             await syncStatsToServer(data.gameId, saveResult.stats, data.sessionData.duration);
-            console.log(`[useGameStats] ✅ Stats synced successfully for ${data.gameId}`);
+            logger.info(`[useGameStats] Stats synced successfully for ${data.gameId}`);
           } else {
             await stopGame(data.gameId);
           }
@@ -61,15 +67,16 @@ export const useGameStats = () => {
             await syncQueue.enqueue(data.gameId, saveResult.stats, data.sessionData.duration);
           }
 
-          toast.info("Statistics saved locally", {
-            description: `Session of ${durationStr} will be synced when connection is restored`,
+          toast.info(t('gameStats.savedLocally'), {
+            description: t('gameStats.savedLocallyDesc', { duration: durationStr }),
             duration: 4000,
+            id: "game-stats-sync-offline",
           });
         }
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        const cachedGamesObject = await window.store.get("installedGamesCache", {});
+        const cachedGamesObject = await storeGet("installedGamesCache", {});
         const stats = {};
         Object.entries(cachedGamesObject).forEach(([gameId, gameData]) => {
           if (gameData.stats) {
@@ -78,11 +85,12 @@ export const useGameStats = () => {
         });
         setGameStats(stats);
       } catch (error) {
-        console.error("[useGameStats] Error saving stats:", error);
+        logger.error("[useGameStats] Error saving stats:", error);
 
-        toast.error("Failed to save statistics", {
-          description: "Unable to record session data",
+        toast.error(t('gameStats.saveFailed'), {
+          description: t('gameStats.saveFailedDesc'),
           duration: 5000,
+          id: "game-stats-error",
         });
       }
     }
@@ -90,15 +98,12 @@ export const useGameStats = () => {
     isProcessingStats.current = false;
   };
 
-  // Handle save game stats event
+  // Handle save game stats event — mounted once, calls via ref to avoid stale closure
   useEffect(() => {
     const handleSaveStats = async (data) => {
-      // Add to queue instead of skipping
       statsQueue.current.push(data);
-      console.log(`[useGameStats] 📝 Stats event queued (queue size: ${statsQueue.current.length})`);
-
-      // Process the queue
-      processStatsQueue();
+      logger.info(`[useGameStats] Stats event queued (queue size: ${statsQueue.current.length})`);
+      processStatsQueueRef.current();
     };
 
     let unsub;

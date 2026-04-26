@@ -19,7 +19,8 @@
     "minimize": "Minimize",
     "maximize": "Maximize",
     "restore": "Restore",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "understood": "Got it"
   },
   "home": {
     "loadingHub": "Loading your gaming hub...",
@@ -97,6 +98,9 @@
     "pleaseWait": "Please wait...",
     "retry": "Retry",
     "refreshActiveGamesError": "Failed to refresh active games status",
+    "deleteInstalledError": "Cannot delete — game is installed. Uninstall it first.",
+    "offlineUninstallTitle": "Server Unavailable",
+    "offlineUninstallMessage": "\"{{gameName}}\" has been added to the queue.\n\nThe uninstallation will be performed automatically when the server is available.",
     "cannotLaunchTitle": "Cannot Launch Game",
     "cannotLaunchPendingSync": "has been uninstalled but synchronization with the server is pending. Please reconnect to complete the synchronization.",
     "gameNotFoundTitle": "Game Not Found",
@@ -134,8 +138,10 @@
     "emptyLibraryAdmin": "Add your first game to get started!",
     "gamesCount": "{{count}} games",
     "installedCount": "{{count}} installed",
-    "selectGame": "Select a game",
-    "selectGameDesc": "Choose a game from the list to see its details",
+    "expandedView": "Expanded view",
+    "compactView": "Compact view",
+    "selectGame": "No game selected",
+    "selectGameDesc": "Pick a title from the library to explore its details.",
     "noGenre": "No genre",
     "about": "About",
     "noDescription": "No description available.",
@@ -555,12 +561,27 @@
       "noExecutables": "No executables found automatically",
       "executablesFound": "executable(s) found",
       "clearSelection": "Clear Selection",
+      "noResults": "No games found for \"{{query}}\"",
       "publicGame": "Public Game",
       "privateGame": "Private Game",
       "publicDesc": "Visible to all users",
       "privateDesc": "Visible only to you",
+      "multiplayerGame": "Multiplayer Game",
+      "singlePlayerGame": "Single Player Game",
+      "multiplayerDesc": "Supports multiplayer mode",
+      "singlePlayerDesc": "Single player only",
+      "connectionType": "Connection Type",
+      "maxPlayers": "Max Players",
+      "gameModes": "Game Modes",
       "upload": "Upload",
-      "back": "Back"
+      "back": "Back",
+      "errorSelectGame": "Please select a game and a file",
+      "errorVersionRequired": "Version is required",
+      "errorInvalidVersion": "Invalid version format. Use format like: 1.0.0",
+      "errorScanArchive": "Error scanning archive",
+      "errorSelectFile": "Error selecting file",
+      "uploadFailed": "Error adding the game",
+      "uploadPrepFailed": "Error preparing the upload"
     },
     "wine": {
       "title": "Wine Required",
@@ -600,6 +621,12 @@
       "required": "*"
     }
   },
+  "gameStats": {
+    "savedLocally": "Statistics saved locally",
+    "savedLocallyDesc": "Session of {{duration}} will be synced when connection is restored",
+    "saveFailed": "Failed to save statistics",
+    "saveFailedDesc": "Unable to record session data"
+  },
   "update": {
     "ready": "Update Ready",
     "downloading": "Downloading...",
@@ -617,7 +644,9 @@
     "restartNow": "Restart Now",
     "later": "Later",
     "error": "An error occurred while checking or downloading the update.",
-    "close": "Close"
+    "close": "Close",
+    "versionIgnored": "Version ignored",
+    "versionIgnoredDesc": "Version {{version}} has been ignored"
   },
   "upload": {
     "queued": "Upload queued",

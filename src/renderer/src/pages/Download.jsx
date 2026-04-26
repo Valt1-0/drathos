@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
+import logger from "../services/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
@@ -48,38 +49,35 @@ const Download = () => {
   });
   const [diskSpaceLoading, setDiskSpaceLoading] = useState(true);
   const [diskSpaceError, setDiskSpaceError] = useState(false);
+  const [diskSpaceNotConfigured, setDiskSpaceNotConfigured] = useState(false);
 
-  // Load disk space on mount
-  useEffect(() => {
-    const loadDiskSpace = async () => {
-      try {
-        setDiskSpaceLoading(true);
-        const result = await window.api.getDiskSpace();
-        if (result.success) {
-          setDiskSpace({
-            freeSpace: result.freeGB,
-            totalSpace: result.totalGB,
-            usedPercent: result.usedPercent,
-          });
-          setDiskSpaceError(false);
-        } else {
-          setDiskSpaceError(true);
-          toast.error(t('errors.diskSpace'));
-        }
-      } catch (error) {
-        console.error("Error loading disk space:", error);
+  const loadDiskSpace = useCallback(async () => {
+    try {
+      setDiskSpaceLoading(true);
+      const result = await window.api.getDiskSpace();
+      if (result.success) {
+        setDiskSpace({ freeSpace: result.freeGB, totalSpace: result.totalGB, usedPercent: result.usedPercent });
+        setDiskSpaceError(false);
+        setDiskSpaceNotConfigured(false);
+      } else if (result.notConfigured) {
+        setDiskSpaceNotConfigured(true);
+        setDiskSpaceError(false);
+      } else {
         setDiskSpaceError(true);
-        toast.error(t('errors.diskSpace'));
-      } finally {
-        setDiskSpaceLoading(false);
       }
-    };
+    } catch (error) {
+      logger.error("Error loading disk space", error);
+      setDiskSpaceError(true);
+    } finally {
+      setDiskSpaceLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     loadDiskSpace();
-    // Refresh disk space every 30 seconds
     const interval = setInterval(loadDiskSpace, 30000);
     return () => clearInterval(interval);
-  }, [t]);
+  }, [loadDiskSpace]);
 
   // Cancel an active download
   const handleCancelDownload = async (download) => {
@@ -88,7 +86,7 @@ const Download = () => {
       removeDownload(download.id);
       toast.info(t("downloads.cancelled", { name: download.name }));
     } catch (error) {
-      console.error("Cancel error:", error);
+      logger.error("Cancel error", error);
     }
   };
 
@@ -101,7 +99,7 @@ const Download = () => {
         await window.api.pauseDownload(download.gameId || download.id);
       }
     } catch (error) {
-      console.error("Pause/resume error:", error);
+      logger.error("Pause/resume error", error);
     }
   };
 
@@ -214,9 +212,41 @@ const Download = () => {
                     <span className="ml-3 text-text-secondary text-sm">{t('downloads.loadingDiskSpace')}</span>
                   </div>
                 ) : diskSpaceError ? (
-                  <div className="flex items-center gap-2 py-2">
-                    <FiAlertTriangle className="text-error shrink-0" />
-                    <span className="text-sm text-text-secondary">{t('downloads.diskSpaceUnavailable')}</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FiAlertTriangle className="text-error shrink-0" />
+                      <span className="text-sm text-text-secondary">{t('downloads.diskSpaceUnavailable')}</span>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={loadDiskSpace}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text transition-colors"
+                      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+                    >
+                      <FiLoader className="text-sm" />
+                      {t('common.retry')}
+                    </motion.button>
+                  </div>
+                ) : diskSpaceNotConfigured ? (
+                  <div className="space-y-3">
+                    <p className="text-text-secondary text-sm leading-relaxed">
+                      {t('downloads.noLocationSelected')}
+                    </p>
+                    <Link to="/settings">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium transition-all duration-300"
+                        style={{
+                          background: 'var(--app-gradient-button)',
+                          boxShadow: 'var(--app-shadow-primary)'
+                        }}
+                      >
+                        <FiSettings className="text-lg" />
+                        <span>{t('downloads.configure')}</span>
+                      </motion.button>
+                    </Link>
                   </div>
                 ) : diskSpace.freeSpace > 0 ? (
                   <>
@@ -328,7 +358,7 @@ const Download = () => {
                       borderColor: 'var(--app-border)',
                     }}
                   >
-                    <div className="relative w-14 h-14 bg-surface rounded-xl overflow-hidden flex-shrink-0">
+                    <div className="relative w-14 h-14 bg-surface rounded-xl overflow-hidden shrink-0">
                       <GameCover
                         src={game.coverUrl}
                         alt={game.name}
@@ -445,7 +475,7 @@ const Download = () => {
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="relative w-16 h-16 bg-surface rounded-xl overflow-hidden flex-shrink-0">
+                      <div className="relative w-16 h-16 bg-surface rounded-xl overflow-hidden shrink-0">
                         <GameCover
                           src={download.image}
                           alt="Cover"

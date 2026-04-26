@@ -1,5 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import logger from "./logger.js";
 
 const execAsync = promisify(exec);
 
@@ -27,7 +28,7 @@ export class WineDetector {
       try {
         const { stdout } = await execAsync(`which ${cmd}`);
         if (stdout.trim()) {
-          console.log(`[Wine] Wine detected: ${cmd}`);
+          logger.info(`[Wine] Wine detected: ${cmd}`);
           this.wineCommand = cmd;
           this.isChecked = true;
           return cmd;
@@ -37,7 +38,7 @@ export class WineDetector {
       }
     }
 
-    console.log("[Wine] Wine not found on system");
+    logger.info("[Wine] Wine not found on system");
     this.isChecked = true;
     return null;
   }
@@ -52,7 +53,7 @@ export class WineDetector {
       const { stdout } = await execAsync(`${wineCmd} --version`);
       return stdout.trim();
     } catch (error) {
-      console.error("[Wine] Error getting Wine version:", error.message);
+      logger.error("[Wine] Error getting Wine version:", error.message);
       return null;
     }
   }

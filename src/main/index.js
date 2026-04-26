@@ -230,7 +230,7 @@ const setupShortcuts = () => {
 // === TRAY SETUP ===
 const setupTray = (mainWindow) => {
   if (!icon) {
-    logger.warn("[App] Icône non trouvée, tray désactivé");
+    logger.warn("[App] Icon not found, tray disabled");
     return null;
   }
   const tray = new Tray(icon);
@@ -239,7 +239,7 @@ const setupTray = (mainWindow) => {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: "Ouvrir Drathos",
+        label: "Open Drathos",
         click: () => {
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
@@ -247,7 +247,7 @@ const setupTray = (mainWindow) => {
         },
       },
       { type: "separator" },
-      { label: "Quitter", click: () => app.quit() },
+      { label: "Quit", click: () => app.quit() },
     ]),
   );
 

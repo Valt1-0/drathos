@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import logger from '../services/logger';
 
 const UpdateContext = createContext();
 
@@ -41,6 +42,7 @@ export const UpdateProvider = ({ children }) => {
         toast.info(t('update.available'), {
           description: t('update.version', { version: data.version }),
           duration: 5000,
+          id: "update-available",
         });
       }));
     }
@@ -66,6 +68,7 @@ export const UpdateProvider = ({ children }) => {
         toast.success(t('update.ready'), {
           description: t('settings.updateRestartToInstall'),
           duration: 10000,
+          id: "update-ready",
         });
       }));
     }
@@ -77,6 +80,7 @@ export const UpdateProvider = ({ children }) => {
         toast.error(t('update.error'), {
           description: data.message || t('common.error'),
           duration: 5000,
+          id: "update-error",
         });
       }));
     }
@@ -98,16 +102,18 @@ export const UpdateProvider = ({ children }) => {
         toast.info(t('settings.currentVersion'), {
           description: result.currentVersion,
           duration: 4000,
+          id: "update-check-current",
         });
       }
 
       return result;
     } catch (err) {
-      console.error('[UpdateContext] Check error:', err);
+      logger.error('[UpdateContext] Check error:', err);
       setError(err.message);
       toast.error(t('common.error'), {
         description: t('update.error'),
         duration: 4000,
+        id: "update-check-error",
       });
       throw err;
     }
@@ -125,7 +131,7 @@ export const UpdateProvider = ({ children }) => {
 
       return result;
     } catch (err) {
-      console.error('[UpdateContext] Download error:', err);
+      logger.error('[UpdateContext] Download error:', err);
       setError(err.message);
       toast.error(t('common.error'), {
         description: t('update.error'),
@@ -140,7 +146,7 @@ export const UpdateProvider = ({ children }) => {
     try {
       await window.api.updater.quitAndInstall();
     } catch (err) {
-      console.error('[UpdateContext] Install error:', err);
+      logger.error('[UpdateContext] Install error:', err);
       toast.error(t('common.error'), {
         description: t('update.error'),
         duration: 4000,
@@ -156,12 +162,13 @@ export const UpdateProvider = ({ children }) => {
       setUpdateStatus('idle');
       setUpdateInfo(null);
 
-      toast.info('Version ignorée', {
-        description: `La version ${version} a été ignorée`,
+      toast.info(t('update.versionIgnored'), {
+        description: t('update.versionIgnoredDesc', { version }),
         duration: 3000,
+        id: "update-ignored",
       });
     } catch (err) {
-      console.error('[UpdateContext] Skip error:', err);
+      logger.error('[UpdateContext] Skip error:', err);
     }
   }, []);
 
@@ -176,7 +183,7 @@ export const UpdateProvider = ({ children }) => {
       }
       return result;
     } catch (err) {
-      console.error('[UpdateContext] Status error:', err);
+      logger.error('[UpdateContext] Status error:', err);
     }
   }, []);
 

@@ -197,6 +197,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
                   onClick={() => onPause(download)}
                   className="p-1.5 rounded-lg bg-warning/20 hover:bg-warning/30 transition-colors"
                   title={t("downloads.pause")}
+                  aria-label={t("downloads.pause")}
                 >
                   <FiPauseCircle className="text-warning text-lg" />
                 </motion.button>
@@ -208,6 +209,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
                   onClick={() => onPause(download)}
                   className="p-1.5 rounded-lg bg-success/20 hover:bg-success/30 transition-colors"
                   title={t("downloads.resume")}
+                  aria-label={t("downloads.resume")}
                 >
                   <FiPlayCircle className="text-success text-lg" />
                 </motion.button>
@@ -221,6 +223,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
                   onClick={() => onCancel(download)}
                   className="p-1.5 rounded-lg bg-error/20 hover:bg-error/30 transition-colors"
                   title={t("downloads.cancel")}
+                  aria-label={t("downloads.cancel")}
                 >
                   <FiX className="text-error text-lg" />
                 </motion.button>

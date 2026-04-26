@@ -63,7 +63,17 @@ const ProfileAvatar = ({
 
         if (!fullUrl || !mountedRef.current) return;
 
-        // Use imageCacheService for caching
+        // External URLs (not our backend) can't be fetched via fetch() due to CORS
+        // Use <img src> directly — it loads images without CORS restrictions
+        const isBackendRelative = profilePicture.startsWith('/');
+        if (!isBackendRelative) {
+          if (mountedRef.current) {
+            setImageUrl(fullUrl);
+            setImageError(false);
+          }
+          return;
+        }
+
         const cachedUrl = await imageCacheService.fetchAndCache(fullUrl);
 
         if (mountedRef.current) {

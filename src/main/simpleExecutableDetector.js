@@ -2,6 +2,7 @@
 
 import fs from "fs";
 import path from "path";
+import logger from "./utils/logger.js";
 
 export class SimpleExecutableDetector {
   /**
@@ -12,19 +13,19 @@ export class SimpleExecutableDetector {
    */
   async getBestExecutable(gamePath, gameName = "") {
     try {
-      console.log(`[SimpleDetector] Recherche dans: ${gamePath}`);
+      logger.debug(`[SimpleDetector] Searching in: ${gamePath}`);
 
       // Check existence asynchronously
       try {
         await fs.promises.access(gamePath);
       } catch {
-        throw new Error(`Dossier non trouvé: ${gamePath}`);
+        throw new Error(`Folder not found: ${gamePath}`);
       }
 
       const executables = await this.findExecutables(gamePath, gamePath);
 
       if (executables.length === 0) {
-        console.log("[SimpleDetector] Aucun exécutable trouvé");
+        logger.debug("[SimpleDetector] No executable found");
         return null;
       }
 
@@ -32,16 +33,14 @@ export class SimpleExecutableDetector {
       const scored = this.scoreExecutables(executables, gameName);
       const best = scored[0];
 
-      console.log(`[SimpleDetector] Meilleur exécutable: ${best.relativePath}`);
-      console.log(
-        `[SimpleDetector] Score: ${best.score}, Raisons: ${best.reasons.join(
-          ", "
-        )}`
+      logger.debug(`[SimpleDetector] Best executable: ${best.relativePath}`);
+      logger.debug(
+        `[SimpleDetector] Score: ${best.score}, Reasons: ${best.reasons.join(", ")}`
       );
 
       return best.relativePath;
     } catch (error) {
-      console.error("[SimpleDetector] Erreur:", error);
+      logger.error("[SimpleDetector] Error:", error);
       return null;
     }
   }
@@ -113,7 +112,7 @@ export class SimpleExecutableDetector {
                 reasons: [],
               });
 
-              console.log(`[SimpleDetector] Trouvé: ${relativePath}`);
+              logger.debug(`[SimpleDetector] Found: ${relativePath}`);
             } else if (stats.isDirectory() && !this.shouldIgnoreDirectory(item)) {
               // Recursive search in subfolders
               const subExecutables = await this.findExecutables(
@@ -125,18 +124,12 @@ export class SimpleExecutableDetector {
             }
           } catch (statError) {
             // Ignore errors for inaccessible files
-            console.warn(
-              `[SimpleDetector] Impossible d'accéder à ${itemPath}:`,
-              statError.message
-            );
+            logger.warn(`[SimpleDetector] Cannot access ${itemPath}: ${statError.message}`);
           }
         })
       );
     } catch (readError) {
-      console.warn(
-        `[SimpleDetector] Impossible de lire ${currentPath}:`,
-        readError.message
-      );
+      logger.warn(`[SimpleDetector] Cannot read ${currentPath}: ${readError.message}`);
     }
 
     return executables;
@@ -256,7 +249,7 @@ export class SimpleExecutableDetector {
       const executables = await this.findExecutables(gamePath, gamePath);
       return this.scoreExecutables(executables, gameName);
     } catch (error) {
-      console.error("[SimpleDetector] Erreur listage:", error);
+      logger.error("[SimpleDetector] Error listing executables:", error);
       return [];
     }
   }

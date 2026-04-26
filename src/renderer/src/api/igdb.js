@@ -1,4 +1,5 @@
 import { buildServerUrl } from "../utils/urlHelper";
+import logger from "../services/logger";
 
 // In-memory cache for IGDB search results
 const searchCache = new Map();
@@ -26,7 +27,7 @@ const getCachedResult = (query) => {
   const cached = searchCache.get(cacheKey);
 
   if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-    console.log(`[IGDB] Cache hit for "${query}"`);
+    logger.info(`[IGDB] Cache hit for "${query}"`);
     return cached.data;
   }
 
@@ -56,7 +57,7 @@ export const searchGamesFromIGDB = async (query) => {
 
     // Check if request is already in progress
     if (pendingRequests.has(cacheKey)) {
-      console.log(`[IGDB] Waiting for pending request for "${query}"`);
+      logger.info(`[IGDB] Waiting for pending request for "${query}"`);
       return await pendingRequests.get(cacheKey);
     }
 
@@ -94,7 +95,7 @@ export const searchGamesFromIGDB = async (query) => {
 
     return await requestPromise;
   } catch (error) {
-    console.error("Erreur lors de la recherche de jeux :", error.message);
+    logger.error("Erreur lors de la recherche de jeux :", error.message);
     return null;
   }
 };
@@ -104,5 +105,5 @@ export const searchGamesFromIGDB = async (query) => {
  */
 export const clearIGDBCache = () => {
   searchCache.clear();
-  console.log("[IGDB] Cache cleared");
+  logger.info("[IGDB] Cache cleared");
 };

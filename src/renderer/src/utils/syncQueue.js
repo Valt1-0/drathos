@@ -1,6 +1,7 @@
 // drathos/src/renderer/src/utils/syncQueue.js
 
 import { syncStatsToServer } from "../api/gameStats.js";
+import logger from "../services/logger.js";
 
 /**
  * Queue manager for failed syncs
@@ -23,10 +24,10 @@ class SyncQueue {
       const savedQueue = await window.store.get("syncQueue");
       if (savedQueue && Array.isArray(savedQueue)) {
         this.queue = savedQueue;
-        console.log(`[SyncQueue] ${this.queue.length} sync(s) en attente chargée(s)`);
+        logger.info(`[SyncQueue] ${this.queue.length} pending sync(s) loaded`);
       }
     } catch (error) {
-      console.error("[SyncQueue] Erreur chargement queue:", error);
+      logger.error("[SyncQueue] Error loading queue:", error);
       this.queue = [];
     }
   }
@@ -38,7 +39,7 @@ class SyncQueue {
     try {
       await window.store.set("syncQueue", this.queue);
     } catch (error) {
-      console.error("[SyncQueue] Erreur sauvegarde queue:", error);
+      logger.error("[SyncQueue] Erreur sauvegarde queue:", error);
     }
   }
 
@@ -58,7 +59,7 @@ class SyncQueue {
     this.queue.push(syncItem);
     await this.saveQueue();
 
-    console.log(`[SyncQueue] ➕ Sync ajoutée pour ${gameId} (queue: ${this.queue.length})`);
+    logger.info(`[SyncQueue] Sync added for ${gameId} (queue: ${this.queue.length})`);
 
     // Notify listeners
     this.notifyListeners();
@@ -76,7 +77,7 @@ class SyncQueue {
 
     if (this.queue.length < initialLength) {
       await this.saveQueue();
-      console.log(`[SyncQueue] ➖ Sync retirée pour ${gameId} (queue: ${this.queue.length})`);
+      logger.info(`[SyncQueue] Sync removed for ${gameId} (queue: ${this.queue.length})`);
 
       // Notify listeners
       this.notifyListeners();
@@ -93,12 +94,12 @@ class SyncQueue {
 
     this.retryInterval = setInterval(async () => {
       if (this.queue.length > 0 && !this.isProcessing) {
-        console.log(`[SyncQueue] 🔄 Retry automatique (${this.queue.length} en attente)`);
+        logger.info(`[SyncQueue] Retry automatique (${this.queue.length} en attente)`);
         await this.processQueue();
       }
     }, this.RETRY_DELAY);
 
-    console.log("[SyncQueue] ⏰ Auto-retry activé");
+    logger.info("[SyncQueue] Auto-retry enabled");
   }
 
   /**
@@ -108,7 +109,7 @@ class SyncQueue {
     if (this.retryInterval) {
       clearInterval(this.retryInterval);
       this.retryInterval = null;
-      console.log("[SyncQueue] ⏸️ Auto-retry désactivé");
+      logger.info("[SyncQueue] Auto-retry disabled");
     }
   }
 
@@ -123,7 +124,7 @@ class SyncQueue {
     this.isProcessing = true;
 
     try {
-      console.log(`[SyncQueue] 🔄 Traitement de ${this.queue.length} sync(s)...`);
+      logger.info(`[SyncQueue] Traitement de ${this.queue.length} sync(s)...`);
 
       // Copy of the queue for safe iteration
       const itemsToProcess = [...this.queue];
@@ -132,9 +133,7 @@ class SyncQueue {
         try {
           // Check the number of attempts
           if (item.attempts >= this.MAX_RETRIES) {
-            console.warn(
-              `[SyncQueue] ⚠️ Sync ${item.gameId} abandonnée (max retries atteint)`
-            );
+            logger.warn(`[SyncQueue] Sync ${item.gameId} abandoned (max retries reached)`);
             await this.dequeue(item.gameId);
             continue;
           }
@@ -146,24 +145,19 @@ class SyncQueue {
           // Attempt the sync
           await syncStatsToServer(item.gameId, item.localStats, item.sessionDuration);
 
-          console.log(
-            `[SyncQueue] ✅ Sync réussie pour ${item.gameId} (tentative ${item.attempts})`
-          );
+          logger.info(`[SyncQueue] Sync successful for ${item.gameId} (attempt ${item.attempts})`);
 
           // Remove from queue if successful
           await this.dequeue(item.gameId);
         } catch (error) {
-          console.error(
-            `[SyncQueue] ❌ Échec sync ${item.gameId} (tentative ${item.attempts}):`,
-            error.message
-          );
+          logger.error(`[SyncQueue] Échec sync ${item.gameId} (tentative ${item.attempts}): ${error.message}`);
 
           // Update the queue
           await this.saveQueue();
         }
       }
     } catch (error) {
-      console.error("[SyncQueue] ❌ Erreur traitement queue:", error);
+      logger.error("[SyncQueue] Erreur traitement queue:", error);
     } finally {
       this.isProcessing = false;
     }
@@ -183,9 +177,7 @@ class SyncQueue {
 
     if (this.queue.length < initialLength) {
       await this.saveQueue();
-      console.log(
-        `[SyncQueue] 🧹 ${initialLength - this.queue.length} sync(s) obsolète(s) supprimée(s)`
-      );
+      logger.info(`[SyncQueue] ${initialLength - this.queue.length} stale sync(s) removed`);
     }
   }
 

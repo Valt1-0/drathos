@@ -6,7 +6,9 @@ import store from "../store.js";
 import { isValidSender, isSafeForExternalOpen } from "../app/security.js";
 
 export const registerStoreHandlers = () => {
-  ipcMain.handle("store-get", (_, key) => store.get(key));
+  ipcMain.handle("store-get", (_, key, defaultValue) =>
+    defaultValue !== undefined ? store.get(key, defaultValue) : store.get(key)
+  );
   ipcMain.handle("store-set", (_, key, value) => store.set(key, value));
   ipcMain.handle("store-delete", (_, key) => store.delete(key));
   ipcMain.handle("store-clear", () => store.clear());

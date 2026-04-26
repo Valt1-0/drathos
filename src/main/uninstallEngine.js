@@ -3,6 +3,7 @@ import path from "path";
 import https from "https";
 import http from "http";
 import { buildServerUrl } from "./utils/urlHelper.js";
+import logger from "./utils/logger.js";
 
 export class UninstallEngine {
   constructor() {
@@ -23,8 +24,8 @@ export class UninstallEngine {
     };
 
     try {
-      console.log(`[UninstallEngine] 🗑️ Désinstallation: ${gameId}`);
-      console.log(`[UninstallEngine] Chemin: ${gamePath}`);
+      logger.info(`[UninstallEngine] Uninstalling: ${gameId}`);
+      logger.info(`[UninstallEngine] Path: ${gamePath}`);
 
       // Initialize
       this.serverAddress = store.get("serverAddress");
@@ -40,14 +41,12 @@ export class UninstallEngine {
         id: gameId,
         stage: "uninstalling",
         progress: 5,
-        message: "Vérifications préalables...",
+        message: "Pre-checks...",
       });
 
       // Verify that the path exists
       if (!fs.existsSync(gamePath)) {
-        console.warn(
-          `[UninstallEngine] ⚠️ Le dossier n'existe pas, suppression BDD uniquement`
-        );
+        logger.warn(`[UninstallEngine] Folder does not exist, removing from database only`);
 
         // Delete from the database only
         const dbResult = await this.removeFromDatabase(gameId);
@@ -58,12 +57,12 @@ export class UninstallEngine {
             stage: "uninstalled",
             progress: 100,
             message:
-              "Jeu supprimé de la base de données (fichiers déjà absents)",
+              "Game removed from database (files already absent)",
           });
           return { success: true, filesDeleted: false, dbDeleted: true };
         } else {
           throw new Error(
-            "Impossible de supprimer le jeu de la base de données"
+            "Could not remove game from database"
           );
         }
       }
@@ -73,7 +72,7 @@ export class UninstallEngine {
         await fs.promises.access(gamePath, fs.constants.W_OK);
       } catch (err) {
         throw new Error(
-          `Permissions insuffisantes pour supprimer: ${gamePath}`
+          `Insufficient permissions to delete: ${gamePath}`
         );
       }
 
@@ -85,14 +84,14 @@ export class UninstallEngine {
         id: gameId,
         stage: "uninstalling",
         progress: 10,
-        message: "Préparation de la suppression...",
+        message: "Preparing deletion...",
       });
 
       sendProgress({
         id: gameId,
         stage: "uninstalling",
         progress: 20,
-        message: "Suppression des fichiers...",
+        message: "Deleting files...",
       });
 
       try {
@@ -101,22 +100,19 @@ export class UninstallEngine {
             id: gameId,
             stage: "uninstalling",
             progress: 20 + Math.floor(progress * 0.6), // 20% → 80%
-            message: `Suppression en cours... ${Math.floor(progress)}%`,
+            message: `Deleting... ${Math.floor(progress)}%`,
           });
         });
 
         uninstallState.filesDeleted = true;
-        console.log(`[UninstallEngine] ✅ Fichiers supprimés: ${gamePath}`);
+        logger.info(`[UninstallEngine] Files deleted: ${gamePath}`);
       } catch (filesError) {
-        console.error(
-          `[UninstallEngine] ❌ Erreur suppression fichiers:`,
-          filesError
-        );
+        logger.error(`[UninstallEngine] File deletion error:`, filesError);
         uninstallState.error = filesError;
 
         // Do not continue if files were not deleted
         throw new Error(
-          `Échec de la suppression des fichiers: ${filesError.message}`
+          `Failed to delete files: ${filesError.message}`
         );
       }
 
@@ -128,7 +124,7 @@ export class UninstallEngine {
         id: gameId,
         stage: "uninstalling",
         progress: 90,
-        message: "Nettoyage de la base de données...",
+        message: "Cleaning up database...",
       });
 
       try {
@@ -136,20 +132,16 @@ export class UninstallEngine {
 
         if (dbResult) {
           uninstallState.dbDeleted = true;
-          console.log(
-            `[UninstallEngine] ✅ Jeu supprimé de la base de données`
-          );
+          logger.info(`[UninstallEngine] Game removed from database`);
         } else {
-          console.warn(
-            `[UninstallEngine] ⚠️ Échec suppression BDD, mais fichiers supprimés`
-          );
+          logger.warn(`[UninstallEngine] Database removal failed, but files deleted`);
 
           // Files are deleted but not the database
           sendProgress({
             id: gameId,
             stage: "uninstalled",
             progress: 100,
-            message: "⚠️ Fichiers supprimés, mais erreur base de données",
+            message: "Files deleted, but database error",
             warning: true,
           });
 
@@ -157,18 +149,18 @@ export class UninstallEngine {
             success: true,
             filesDeleted: true,
             dbDeleted: false,
-            warning: "Fichiers supprimés mais le jeu reste en base de données",
+            warning: "Files deleted but game remains in database",
           };
         }
       } catch (dbError) {
-        console.error(`[UninstallEngine] ❌ Erreur suppression BDD:`, dbError);
+        logger.error(`[UninstallEngine] Database removal error:`, dbError);
 
         // Files are deleted but not the database
         sendProgress({
           id: gameId,
           stage: "uninstalled",
           progress: 100,
-          message: "⚠️ Fichiers supprimés, mais erreur base de données",
+          message: "Files deleted, but database error",
           warning: true,
         });
 
@@ -176,7 +168,7 @@ export class UninstallEngine {
           success: true,
           filesDeleted: true,
           dbDeleted: false,
-          warning: "Fichiers supprimés mais le jeu reste en base de données",
+          warning: "Files deleted but game remains in database",
         };
       }
 
@@ -188,7 +180,7 @@ export class UninstallEngine {
         id: gameId,
         stage: "uninstalled",
         progress: 100,
-        message: "Désinstallation terminée !",
+        message: "Uninstall complete!",
       });
 
       return {
@@ -197,7 +189,7 @@ export class UninstallEngine {
         dbDeleted: true,
       };
     } catch (error) {
-      console.error(`[UninstallEngine] ❌ Erreur critique:`, error);
+      logger.error(`[UninstallEngine] Critical error:`, error);
 
       // ========================================
       // ERROR HANDLING AND ROLLBACK
@@ -205,17 +197,13 @@ export class UninstallEngine {
 
       // If files were deleted but not the database
       if (uninstallState.filesDeleted && !uninstallState.dbDeleted) {
-        console.warn(
-          `[UninstallEngine] ⚠️ État incohérent: fichiers supprimés mais pas la BDD`
-        );
+        logger.warn(`[UninstallEngine] Inconsistent state: files deleted but not database`);
 
         // Try to delete from the database one last time
         try {
           const retryDb = await this.removeFromDatabase(gameId);
           if (retryDb) {
-            console.log(
-              `[UninstallEngine] ✅ Suppression BDD réussie au retry`
-            );
+            logger.info(`[UninstallEngine] Database removal succeeded on retry`);
             return {
               success: true,
               filesDeleted: true,
@@ -223,14 +211,14 @@ export class UninstallEngine {
             };
           }
         } catch (retryError) {
-          console.error(`[UninstallEngine] ❌ Retry suppression BDD échoué`);
+          logger.error(`[UninstallEngine] Database removal retry failed`);
         }
 
         sendProgress({
           id: gameId,
           stage: "failed",
           progress: 0,
-          error: "Fichiers supprimés mais erreur base de données",
+          error: "Files deleted but database error",
           warning: true,
         });
 
@@ -238,7 +226,7 @@ export class UninstallEngine {
           success: false,
           filesDeleted: true,
           dbDeleted: false,
-          error: "Fichiers supprimés mais le jeu reste en base de données",
+          error: "Files deleted but game remains in database",
         };
       }
 
@@ -284,10 +272,7 @@ export class UninstallEngine {
         const progress = (processedItems / totalItems) * 100;
         progressCallback(progress);
       } catch (error) {
-        console.warn(
-          `[UninstallEngine] ⚠️ Erreur suppression ${itemPath}:`,
-          error.message
-        );
+        logger.warn(`[UninstallEngine] Error deleting ${itemPath}: ${error.message}`);
         // Continue despite the error for individual files
         processedItems++;
       }
@@ -295,7 +280,7 @@ export class UninstallEngine {
 
     // Delete the root folder
     await fs.promises.rmdir(dirPath);
-    console.log(`[UninstallEngine] ✅ Dossier supprimé: ${dirPath}`);
+    logger.info(`[UninstallEngine] Directory deleted: ${dirPath}`);
   }
 
   /**
@@ -304,9 +289,7 @@ export class UninstallEngine {
    */
   async removeFromDatabase(gameId) {
     try {
-      console.log(
-        `[UninstallEngine] 🗑️ Suppression BDD pour gameId: ${gameId}`
-      );
+      logger.info(`[UninstallEngine] Removing from database: ${gameId}`);
 
       const url = new URL(
         buildServerUrl(this.serverAddress, `/api/installedGames/removeInstalledGame/${gameId}`)
@@ -327,26 +310,23 @@ export class UninstallEngine {
         const req = (isHttps ? https : http).request(options, (res) => {
           res.resume();
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log(`[UninstallEngine] ✅ Réponse backend: ${res.statusCode}`);
+            logger.info(`[UninstallEngine] Backend response: ${res.statusCode}`);
             resolve(true);
           } else {
-            console.error(`[UninstallEngine] ❌ Erreur backend: ${res.statusCode}`);
+            logger.error(`[UninstallEngine] Backend error: ${res.statusCode}`);
             resolve(false);
           }
         });
 
         req.on("error", (err) => {
-          console.error("[UninstallEngine] ❌ Erreur réseau:", err.message);
+          logger.error(`[UninstallEngine] Network error: ${err.message}`);
           resolve(false);
         });
 
         req.end();
       });
     } catch (error) {
-      console.error(
-        `[UninstallEngine] ❌ Erreur suppression base de données:`,
-        error
-      );
+      logger.error(`[UninstallEngine] Database removal error:`, error);
       return false;
     }
   }

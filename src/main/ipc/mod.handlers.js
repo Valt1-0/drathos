@@ -8,6 +8,7 @@ import crypto from "crypto";
 import store from "../store.js";
 import { extractionEngine } from "../extractionEngine.js";
 import { validateFilename, validateAndResolvePath } from "../app/validation.js";
+import logger from "../utils/logger.js";
 import { apiRequest } from "../utils/httpClient.js";
 
 const MAX_MOD_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
@@ -33,7 +34,7 @@ export const registerModHandlers = () => {
         allowSelfSigned,
       });
       if (!modRes.ok) throw new Error(`Failed to fetch mod info: HTTP ${modRes.status}`);
-      const modInfo = modRes.json();
+      const modInfo = await modRes.json();
       if (!modInfo.installPath) throw new Error("Mod has no installation path");
 
       const extractPath = validateAndResolvePath(gameData.path, modInfo.installPath);
@@ -50,7 +51,7 @@ export const registerModHandlers = () => {
       const contentDisposition = response.headers["content-disposition"];
 
       if (contentType?.includes("application/json")) {
-        const errorData = response.json();
+        const errorData = await response.json();
         throw new Error(errorData.message || "Server returned an error");
       }
       if (!contentDisposition?.includes("attachment")) {
@@ -72,7 +73,7 @@ export const registerModHandlers = () => {
       await fs.promises.mkdir(tempDir, { recursive: true });
       tempArchivePath = path.join(tempDir, `${modId}_${Date.now()}_${filename}`);
 
-      const buffer = response.arrayBuffer();
+      const buffer = await response.arrayBuffer();
       if (buffer.length > MAX_MOD_SIZE) throw new Error("File exceeds 5GB limit");
       if (buffer.length < MIN_ARCHIVE_SIZE) throw new Error("File too small, may be corrupted");
 
@@ -97,7 +98,7 @@ export const registerModHandlers = () => {
       return { success: true, path: extractPath, hash: fileHash };
     } catch (error) {
       if (tempArchivePath) await fs.promises.unlink(tempArchivePath).catch(() => {});
-      console.error("[Mods] Download error:", error);
+      logger.error("[Mods] Download error:", error);
       return { success: false, error: error.message };
     }
   });

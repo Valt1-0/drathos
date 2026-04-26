@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { FiWifiOff } from "react-icons/fi";
 
 export const useGameModals = () => {
+  const { t } = useTranslation();
   // Uninstall modal
   const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
   const [gameToUninstall, setGameToUninstall] = useState(null);
@@ -62,29 +64,17 @@ export const useGameModals = () => {
   };
 
   // Delete game modal handlers
-  const openDeleteGameModal = (game, user, isInstalled) => {
-    // Check permissions
-    if (!user || user.role !== "admin") {
-      alert("❌ Accès refusé - Admin uniquement");
-      return;
-    }
-
-    // Check that there is no active installation
-    if (isInstalled(game._id)) {
-      alert("❌ Impossible - Le jeu est installé. Désinstallez-le d'abord.");
-      return;
-    }
-
+  const openDeleteGameModal = useCallback((game) => {
     setGameToDelete(game);
     setDeleteGameResult(null);
     setDeleteGameModalOpen(true);
-  };
+  }, []);
 
-  const closeDeleteGameModal = () => {
+  const closeDeleteGameModal = useCallback(() => {
     setDeleteGameModalOpen(false);
     setGameToDelete(null);
     setDeleteGameResult(null);
-  };
+  }, []);
 
   // Confirmation modal handlers
   const openConfirmationModal = (data) => {
@@ -99,9 +89,9 @@ export const useGameModals = () => {
   // Show offline uninstall confirmation
   const showOfflineUninstallConfirmation = (gameName, onConfirm) => {
     openConfirmationModal({
-      title: "Serveur non disponible",
-      message: `"${gameName}" a été ajouté à la file d'attente.\n\nLa désinstallation sera effectuée automatiquement lorsque le serveur sera disponible.`,
-      confirmText: "Compris",
+      title: t("games.offlineUninstallTitle"),
+      message: t("games.offlineUninstallMessage", { gameName }),
+      confirmText: t("common.understood"),
       cancelText: "",
       confirmColor: "yellow",
       icon: FiWifiOff,

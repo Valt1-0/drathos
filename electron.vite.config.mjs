@@ -64,10 +64,18 @@ export default defineConfig(({ mode }) => {
           },
           output: {
             format: 'es',
-            manualChunks: {
-              'vendor-react': ['react', 'react-dom', 'react-router'],
-              'vendor-framer': ['framer-motion'],
-              'vendor-icons': ['react-icons'],
+            manualChunks(id) {
+              if (
+                id.includes('node_modules/react/') ||
+                id.includes('node_modules/react-dom/') ||
+                id.includes('node_modules/react-router/') ||
+                id.includes('node_modules/scheduler/')
+              ) return 'vendor-react';
+              if (
+                id.includes('node_modules/framer-motion/') ||
+                id.includes('node_modules/motion/')
+              ) return 'vendor-framer';
+              if (id.includes('node_modules/react-icons/')) return 'vendor-icons';
             },
           },
         },

@@ -19,13 +19,14 @@ export const registerShortcutHandlers = () => {
         });
         if (!success) throw new Error("shell.writeShortcutLink returned false");
       } else {
-        const desktopFile = path.join(desktop, `${gameName}.desktop`);
+        const escapeDesktop = (v) => v.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+        const desktopFile = path.join(desktop, `${gameName.replace(/[/\\:*?"<>|]/g, "_")}.desktop`);
         const content = [
           "[Desktop Entry]",
           "Type=Application",
-          `Name=${gameName}`,
-          `Exec=${execPath}`,
-          `Path=${gamePath}`,
+          `Name=${escapeDesktop(gameName)}`,
+          `Exec=${escapeDesktop(execPath)}`,
+          `Path=${escapeDesktop(gamePath)}`,
           "Icon=application-x-executable",
           "Terminal=false",
           "Categories=Game;",

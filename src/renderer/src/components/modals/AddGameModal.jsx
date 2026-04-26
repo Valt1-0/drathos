@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { searchGamesFromIGDB } from "../../api/igdb";
 import { addGameToServer } from "../../api/serverGames";
 import { useAuth } from "../../contexts/authContext";
 import { useUpload } from "../../contexts/uploadContext";
+import logger from "../../services/logger";
 import {
   FiSearch,
   FiX,
@@ -26,6 +29,8 @@ const PLATFORM_CONFIG = {
 };
 
 const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
+  const containerRef = useFocusTrap(isOpen);
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { startUpload, updateUploadProgress, completeUpload, failUpload } = useUpload();
   const [query, setQuery] = useState("");
@@ -58,7 +63,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
         const data = await searchGamesFromIGDB(query);
         setSuggestions(data || []);
       } catch (err) {
-        console.error("Erreur dans la recherche IGDB :", err);
+        logger.error("[AddGameModal] IGDB search error:", err);
         setSuggestions([]);
       } finally {
         setLoading(false);
@@ -85,8 +90,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
       if (result.canceled) return;
 
       if (!result.success) {
-        setErrorMessage(result.error || "Error scanning archive");
-        setUploadState("error");
+        setErrorMessage(result.error || t("modals.addGame.errorScanArchive"));
         return;
       }
 
@@ -101,10 +105,9 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
         setExecutableName(result.executables[0].path);
       }
     } catch (error) {
-      console.error("[AddGameModal] Erreur scan archive:", error);
+      logger.error("[AddGameModal] Archive scan error:", error);
       setAvailableExecutables([]);
-      setErrorMessage("Error selecting file");
-      setUploadState("error");
+      setErrorMessage(t("modals.addGame.errorSelectFile"));
     } finally {
       setIsLoadingExecutables(false);
     }
@@ -112,18 +115,18 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleUpload = async () => {
     if (!selectedGame || !zipFile) {
-      setErrorMessage("Please select a game and a file");
+      setErrorMessage(t("modals.addGame.errorSelectGame"));
       return;
     }
 
     // Validate version format (should be X.Y.Z or similar)
     const versionPattern = /^\d+(\.\d+)*$/;
     if (!version.trim()) {
-      setErrorMessage("Version is required");
+      setErrorMessage(t("modals.addGame.errorVersionRequired"));
       return;
     }
     if (!versionPattern.test(version.trim())) {
-      setErrorMessage("Invalid version format. Use format like: 1.0.0");
+      setErrorMessage(t("modals.addGame.errorInvalidVersion"));
       return;
     }
 
@@ -180,14 +183,14 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
             onSuccess?.();
           }, 500);
         } catch (uploadError) {
-          console.error("[AddGameModal] Erreur upload:", uploadError);
-          failUpload(uploadError.message || "Erreur lors de l'ajout du jeu");
+          logger.error("[AddGameModal] Upload error:", uploadError);
+          failUpload(uploadError.message || t("modals.addGame.uploadFailed"));
         }
       }, 100);
     } catch (err) {
-      console.error("[AddGameModal] Erreur préparation upload:", err);
-      setErrorMessage(err.message || "Erreur lors de la préparation de l'upload");
-      failUpload(err.message || "Erreur lors de la préparation de l'upload");
+      logger.error("[AddGameModal] Upload preparation error:", err);
+      setErrorMessage(err.message || t("modals.addGame.uploadPrepFailed"));
+      failUpload(err.message || t("modals.addGame.uploadPrepFailed"));
     }
   };
 
@@ -234,6 +237,9 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Modal */}
           <motion.div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -245,6 +251,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
               <button
                 onClick={handleClose}
                 className="absolute top-4 right-4 z-10 p-2 rounded-full bg-surface hover:bg-surface/80 text-text-secondary hover:text-text transition-all duration-200"
+                aria-label="Close"
               >
                 <FiX className="text-lg" />
               </button>
@@ -258,10 +265,10 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-text">
-                        Add a Game
+                        {t("modals.addGame.title")}
                       </h2>
                       <p className="text-text-secondary text-sm">
-                        Search and upload a new game
+                        {t("modals.addGame.subtitle")}
                       </p>
                     </div>
                   </div>
@@ -277,7 +284,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         <FiAlertTriangle className="text-error text-lg flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <p className="text-error font-semibold text-sm mb-1">
-                            Error
+                            {t("common.error")}
                           </p>
                           <p className="text-text-secondary text-sm break-words">
                             {errorMessage}
@@ -290,7 +297,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                   {/* Search Input */}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Search for IGDB Game
+                      {t("modals.addGame.searchIGDB")}
                     </label>
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2">
@@ -303,7 +310,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           setQuery(e.target.value);
                           setSelectedGame(null);
                         }}
-                        placeholder="Search for a game by name..."
+                        placeholder={t("modals.addGame.searchPlaceholder")}
                         className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-text placeholder-text-secondary"
                       />
                     </div>
@@ -315,7 +322,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       {loading && (
                         <div className="flex items-center justify-center py-8">
                           <FiLoader className="text-3xl text-primary animate-spin" />
-                          <span className="ml-3 text-text-secondary">Searching...</span>
+                          <span className="ml-3 text-text-secondary">{t("modals.addGame.searching")}</span>
                         </div>
                       )}
 
@@ -360,7 +367,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           className="text-center py-8 text-text-secondary"
                         >
                           <FiSearch className="text-4xl mx-auto mb-2 opacity-50" />
-                          <p>No games found for "{query}"</p>
+                          <p>{t("modals.addGame.noResults", { query })}</p>
                         </motion.div>
                       )}
                     </div>
@@ -380,7 +387,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             <FiCheck className="text-success text-xl" />
                           </div>
                           <div>
-                            <p className="text-sm text-text-secondary">Selected Game</p>
+                            <p className="text-sm text-text-secondary">{t("modals.addGame.selectedGame")}</p>
                             <p className="font-bold text-text text-lg">{selectedGame.name}</p>
                           </div>
                         </div>
@@ -389,7 +396,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       {/* File Upload */}
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-2">
-                          Game File
+                          {t("modals.addGame.gameFile")}
                         </label>
                         <div className="relative">
                           <button
@@ -413,10 +420,10 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                               zipFile ? "text-text" : "text-text-secondary group-hover:text-text"
                             }`}>
                               {isLoadingExecutables
-                                ? "Analyzing..."
+                                ? t("modals.addGame.analyzing")
                                 : zipFile
                                   ? zipFile.name
-                                  : "Choose a file (.zip, .7z, .rar, .tar, .gz)"}
+                                  : t("modals.addGame.chooseFile")}
                             </span>
                           </button>
                         </div>
@@ -426,7 +433,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
                           <FiFileText />
-                          Game Version
+                          {t("modals.addGame.version")}
                         </label>
                         <input
                           type="text"
@@ -441,7 +448,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
                           <FiCpu />
-                          Executable to launch (optional)
+                          {t("modals.addGame.executable")}
                         </label>
 
 
@@ -451,7 +458,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             <div className="flex items-center justify-between">
                               <p className="text-xs text-success flex items-center gap-1">
                                 <FiCheck className="text-sm" />
-                                {availableExecutables.length} executable(s) found
+                                {availableExecutables.length} {t("modals.addGame.executablesFound")}
                               </p>
                               {executableName && (
                                 <button
@@ -459,7 +466,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                                   onClick={() => setExecutableName("")}
                                   className="text-xs text-text-secondary hover:text-text transition-colors"
                                 >
-                                  Clear Selection
+                                  {t("modals.addGame.clearSelection")}
                                 </button>
                               )}
                             </div>
@@ -518,7 +525,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             />
                             <p className="text-xs text-warning flex items-center gap-1">
                               <FiAlertTriangle className="text-sm" />
-                              No executables found automatically
+                              {t("modals.addGame.noExecutables")}
                             </p>
                           </div>
                         )}
@@ -526,12 +533,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                         {/* No File Selected Yet */}
                         {!zipFile && (
                           <div className="p-3 rounded-xl bg-surface border border-border text-text-secondary text-sm">
-                            Select a file first to detect executables
+                            {t("modals.addGame.selectFile")}
                           </div>
                         )}
 
                         <p className="text-xs text-text-secondary mt-2">
-                          If empty, the game will automatically detect the executable on launch
+                          {t("modals.addGame.executableDesc")}
                         </p>
                       </div>
 
@@ -549,12 +556,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           )}
                           <div>
                             <p className="font-medium text-text">
-                              {isPublic ? "Public Game" : "Private Game"}
+                              {isPublic ? t("modals.addGame.publicGame") : t("modals.addGame.privateGame")}
                             </p>
                             <p className="text-xs text-text-secondary">
                               {isPublic
-                                ? "Visible to all users"
-                                : "Visible only to you"}
+                                ? t("modals.addGame.publicDesc")
+                                : t("modals.addGame.privateDesc")}
                             </p>
                           </div>
                         </div>
@@ -586,12 +593,12 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             </div>
                             <div>
                               <p className="font-medium text-text">
-                                {multiplayer.enabled ? "Multiplayer Game" : "Single Player Game"}
+                                {multiplayer.enabled ? t("modals.addGame.multiplayerGame") : t("modals.addGame.singlePlayerGame")}
                               </p>
                               <p className="text-xs text-text-secondary">
                                 {multiplayer.enabled
-                                  ? "Supports multiplayer mode"
-                                  : "Single player only"}
+                                  ? t("modals.addGame.multiplayerDesc")
+                                  : t("modals.addGame.singlePlayerDesc")}
                               </p>
                             </div>
                           </div>
@@ -620,7 +627,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             >
                               {/* Type */}
                               <div className="p-4 bg-surface rounded-xl border border-border">
-                                <label className="block text-sm font-medium text-text mb-2">Connection Type</label>
+                                <label className="block text-sm font-medium text-text mb-2">{t("modals.addGame.connectionType")}</label>
                                 <div className="grid grid-cols-3 gap-2">
                                   {['online', 'local', 'both'].map((type) => (
                                     <button
@@ -640,7 +647,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
                               {/* Max Players */}
                               <div className="p-4 bg-surface rounded-xl border border-border">
-                                <label className="block text-sm font-medium text-text mb-2">Max Players</label>
+                                <label className="block text-sm font-medium text-text mb-2">{t("modals.addGame.maxPlayers")}</label>
                                 <input
                                   type="number"
                                   min="1"
@@ -657,7 +664,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
 
                               {/* Modes */}
                               <div className="p-4 bg-surface rounded-xl border border-border">
-                                <label className="block text-sm font-medium text-text mb-2">Game Modes</label>
+                                <label className="block text-sm font-medium text-text mb-2">{t("modals.addGame.gameModes")}</label>
                                 <div className="flex gap-3">
                                   {['co-op', 'pvp'].map((mode) => (
                                     <button
@@ -693,11 +700,10 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                             setSelectedGame(null);
                             setZipFile(null);
                             setErrorMessage("");
-                            setUploadState("idle");
                           }}
                           className="flex-1 px-6 py-3 bg-surface hover:bg-surface/80 text-text-secondary hover:text-text rounded-xl font-medium transition-all duration-200 border border-border"
                         >
-                          Back
+                          {t("modals.addGame.back")}
                         </button>
                         <button
                           onClick={handleUpload}
@@ -705,7 +711,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
                           className="flex-1 px-6 py-3 bg-success hover:bg-success/80 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-glow-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                         >
                           <FiUpload />
-                          Upload
+                          {t("modals.addGame.upload")}
                         </button>
                       </div>
                     </motion.div>

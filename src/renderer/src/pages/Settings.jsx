@@ -77,6 +77,25 @@ const SettingsPage = () => {
   const [uploadProgress, setUploadProgress] = useState(null);
   const fileInputRef = useRef(null);
 
+  const SEARCH_INDEX = {
+    general:    ['account', 'user', 'profile', 'picture', 'photo', 'avatar', 'username', 'language', 'langue', 'english', 'french', 'anglais', 'français', 'compte'],
+    appearance: ['theme', 'color', 'couleur', 'dark', 'light', 'appearance', 'apparence', 'design'],
+    downloads:  ['download', 'install', 'path', 'folder', 'directory', 'téléchargement', 'installation', 'dossier', 'chemin', 'storage'],
+    advanced:   ['notification', 'startup', 'démarrage', 'certificate', 'ssl', 'cache', 'image', 'update', 'mise à jour', 'version'],
+  };
+
+  const matchingCategories = searchQuery.trim()
+    ? Object.entries(SEARCH_INDEX)
+        .filter(([, kws]) => kws.some(kw => kw.includes(searchQuery.toLowerCase())))
+        .map(([id]) => id)
+    : [];
+
+  useEffect(() => {
+    if (matchingCategories.length > 0 && !matchingCategories.includes(activeCategory)) {
+      setActiveCategory(matchingCategories[0]);
+    }
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Categories
   const categories = [
     { id: 'general', name: t('settings.general'), icon: FiUser },
@@ -298,6 +317,7 @@ const SettingsPage = () => {
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = activeCategory === category.id;
+              const hasMatch = matchingCategories.includes(category.id);
 
               return (
                 <motion.button
@@ -310,13 +330,17 @@ const SettingsPage = () => {
                     background: isActive ? 'var(--app-surface)' : 'transparent',
                     borderWidth: '1px',
                     borderStyle: 'solid',
-                    borderColor: isActive ? 'var(--app-primary)' : 'transparent',
+                    borderColor: isActive ? 'var(--app-primary)' : hasMatch ? 'var(--app-primary)' : 'transparent',
+                    opacity: searchQuery && !hasMatch ? 0.4 : 1,
                   }}
                 >
-                  <Icon className="text-lg" style={{ color: isActive ? 'var(--app-primary)' : 'var(--app-textSecondary)' }} />
+                  <Icon className="text-lg" style={{ color: isActive || hasMatch ? 'var(--app-primary)' : 'var(--app-textSecondary)' }} />
                   <span className="font-medium text-sm" style={{ color: isActive ? 'var(--app-text)' : 'var(--app-textSecondary)' }}>
                     {category.name}
                   </span>
+                  {hasMatch && searchQuery && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  )}
                 </motion.button>
               );
             })}

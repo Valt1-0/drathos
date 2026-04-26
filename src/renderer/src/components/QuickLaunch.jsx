@@ -18,6 +18,7 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
   const [installedCache, setInstalledCache] = useState({});
   const [activeGames, setActiveGames] = useState(new Set());
   const [launching, setLaunching] = useState(null);
+  const launchingRef = useRef(false);
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
@@ -27,6 +28,7 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
     setQuery("");
     setSelectedIndex(0);
     setLaunching(null);
+    launchingRef.current = false;
 
     window.store.get("installedGamesCache").then(cache => setInstalledCache(cache || {}));
     gameManager.getActiveGames().then(games => setActiveGames(new Set(games.map(g => g.gameId))));
@@ -46,7 +48,7 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
       filtered = [...installed, ...rest].slice(0, MAX_RESULTS);
     } else {
       filtered = games
-        .filter(g => g.name.toLowerCase().includes(q))
+        .filter(g => g.name?.toLowerCase().includes(q))
         .slice(0, MAX_RESULTS);
     }
 
@@ -61,19 +63,22 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
   }, [selectedIndex]);
 
   const handleSelect = useCallback(async (game) => {
-    if (!game || launching) return;
+    if (!game || launchingRef.current) return;
 
     const cached = installedCache[game._id];
     if (cached) {
+      launchingRef.current = true;
       setLaunching(game._id);
       onClose();
       try { await launchGameAPI(game._id); } catch (_) { /* offline */ }
       await gameManager.launchGame(game._id, cached.path, cached.executable || null, game.name);
+      launchingRef.current = false;
+      setLaunching(null);
     } else {
       navigate("/games", { state: { selectGameId: game._id } });
       onClose();
     }
-  }, [installedCache, launching, navigate, onClose]);
+  }, [installedCache, navigate, onClose]);
 
   const handleKeyDown = (e) => {
     if (e.key === "ArrowDown") {
@@ -150,8 +155,8 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
               spellCheck={false}
             />
             {query && (
-              <button onClick={() => setQuery("")} className="text-text-secondary hover:text-text transition-colors">
-                <span className="text-xs px-1.5 py-0.5 rounded bg-surface">✕</span>
+              <button onClick={() => setQuery("")} className="text-text-secondary hover:text-text transition-colors" aria-label={t("common.clearSearch")}>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-surface" aria-hidden="true">✕</span>
               </button>
             )}
           </div>

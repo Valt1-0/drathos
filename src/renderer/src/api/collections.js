@@ -1,5 +1,6 @@
 import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
+import logger from "../services/logger";
 
 // ==================== CRUD COLLECTIONS ====================
 
@@ -24,7 +25,7 @@ export const getUserCollections = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.debug("[API] Collections unavailable (offline mode)");
+    logger.info("[API] Collections unavailable (offline mode)");
     return null;
   }
 };
@@ -50,7 +51,7 @@ export const getCollectionById = async (collectionId) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("[API] Error fetching collection:", error);
+    logger.error("[API] Error fetching collection:", error);
     return null;
   }
 };
@@ -80,7 +81,7 @@ export const createCollection = async (collectionData) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("[API] Error creating collection:", error);
+    logger.error("[API] Error creating collection:", error);
     throw error;
   }
 };
@@ -110,7 +111,7 @@ export const updateCollection = async (collectionId, updateData) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("[API] Error updating collection:", error);
+    logger.error("[API] Error updating collection:", error);
     throw error;
   }
 };
@@ -138,7 +139,7 @@ export const deleteCollection = async (collectionId) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("[API] Error deleting collection:", error);
+    logger.error("[API] Error deleting collection:", error);
     throw error;
   }
 };
@@ -170,7 +171,7 @@ export const addGamesToCollection = async (collectionId, gameIds) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("[API] Error adding games to collection:", error);
+    logger.error("[API] Error adding games to collection:", error);
     throw error;
   }
 };
@@ -200,7 +201,7 @@ export const removeGamesFromCollection = async (collectionId, gameIds) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("[API] Error removing games from collection:", error);
+    logger.error("[API] Error removing games from collection:", error);
     throw error;
   }
 };

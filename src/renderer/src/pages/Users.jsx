@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
+import logger from "../services/logger";
 import {
   FiSearch,
   FiUser,
@@ -586,6 +587,7 @@ const Users = () => {
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
@@ -623,6 +625,7 @@ const Users = () => {
       }
 
       setLoading(true);
+      setFetchError(null);
       try {
         const result = await getAllUsers({
           search: searchQuery,
@@ -634,7 +637,8 @@ const Users = () => {
           setPagination(result.pagination || { page: 1, pages: 1, total: 0 });
         }
       } catch (error) {
-        console.error("Error loading users:", error);
+        logger.error("Error loading users:", error);
+        setFetchError(error.message || t('errors.loadingFailed'));
       } finally {
         setLoading(false);
       }
@@ -747,6 +751,13 @@ const Users = () => {
       style={getBackgroundStyle("gradient")}
     >
       <div className="max-w-6xl mx-auto p-6 space-y-6">
+        {/* Error banner */}
+        {fetchError && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+            <span className="flex-1">{fetchError}</span>
+            <button onClick={() => loadUsers(1, search)} className="underline hover:no-underline shrink-0">{t('games.retry')}</button>
+          </div>
+        )}
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

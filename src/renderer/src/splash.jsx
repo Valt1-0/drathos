@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { motion } from 'framer-motion';
 import '@renderer/assets/main.css';
 import logo from '@resources/icon.png';
+import logger from './services/logger';
 
 // Pre-generated particles
 const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
@@ -32,7 +33,7 @@ function SplashScreen() {
           }
         }
       } catch (error) {
-        console.error('[Splash] Error getting version:', error);
+        logger.error('[Splash] Error getting version:', error);
       }
 
       // Basic progress animation
@@ -99,7 +100,7 @@ function SplashScreen() {
           });
         }
       } catch (error) {
-        console.error('[Splash] Error setting up listeners:', error);
+        logger.error('[Splash] Error setting up listeners:', error);
       }
     }, 100);
 

@@ -34,7 +34,7 @@ async function runInstallation() {
         stage: "Completed",
         progress: 100,
         finalPath: result.path,
-        message: "Installation terminée avec succès!",
+        message: "Installation complete!",
       });
     } else {
       parentPort.postMessage({
@@ -44,11 +44,11 @@ async function runInstallation() {
       });
     }
   } catch (error) {
-    console.error("[InstallWorker] Erreur critique:", error.message);
+    parentPort.postMessage({ type: "log", level: "error", message: `[InstallWorker] Critical error: ${error.message}` });
     parentPort.postMessage({
       stage: "Failed",
       progress: 0,
-      error: error.message || "Erreur inconnue lors de l'installation",
+      error: error.message || "Unknown installation error",
     });
   }
 }
