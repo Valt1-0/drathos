@@ -7,6 +7,7 @@ import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
 import { buildServerUrl } from "./utils/urlHelper.js";
 import logger from "./utils/logger.js";
+import { MAX_API_RESPONSE_SIZE, EXTRACTION_TIMEOUT_MS } from "./app/constants.js";
 
 export class GameEngine {
   constructor() {
@@ -17,8 +18,6 @@ export class GameEngine {
       speedSamples: 10,
       maxRetries: 3,
       retryDelay: 1000,
-      // ⚠️ Set to false in production if certificate is valid (Let's Encrypt)
-      allowSelfSignedCerts: true, // For dev/servers with self-signed certificates
     };
 
     this.activeDownloads = new Map();
@@ -110,7 +109,6 @@ export class GameEngine {
     this.downloadPath = this.initializeDownloadPath(store);
     this.serverAddress = store.get("serverAddress");
     this.userToken = store.get("userToken");
-    this.config.allowSelfSignedCerts = store.get("allowSelfSignedCerts") ?? true;
     this.initializeMetrics(gameId);
   }
   initializeDownloadPath(store) {
@@ -143,11 +141,13 @@ export class GameEngine {
   async downloadGameFile(serverGame) {
     const gameId = serverGame._id;
 
-    const originalExtension = path.extname(serverGame.zipFileName).toLowerCase();
-    const fileName = `${serverGame.name.replace(
-      /[^a-zA-Z0-9]/g,
-      "_"
-    )}_${gameId}${originalExtension || ".zip"}`;
+    const zipLower = serverGame.zipFileName.toLowerCase();
+    const compoundExts = [".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
+    const originalExtension =
+      compoundExts.find((ext) => zipLower.endsWith(ext)) ||
+      path.extname(zipLower) ||
+      ".zip";
+    const fileName = `${serverGame.name.replace(/[^a-zA-Z0-9]/g, "_")}_${gameId}${originalExtension}`;
     const filePath = path.join(this.downloadPath, fileName);
 
     this.activeDownloads.set(gameId, {
@@ -160,7 +160,7 @@ export class GameEngine {
       id: gameId,
       stage: "downloading",
       progress: 0,
-      message: "Connexion au serveur...",
+      message: "Connecting to server...",
     });
 
     const downloadUrl = buildServerUrl(this.serverAddress, `/api/serverGame/downloadGame/${gameId}`);
@@ -194,9 +194,7 @@ export class GameEngine {
           method: "GET",
           headers,
         };
-        if (isHttps && this.config.allowSelfSignedCerts) {
-          options.rejectUnauthorized = false;
-        }
+        if (isHttps) options.rejectUnauthorized = false;
         const req = transport.request(options, resolve);
         req.on("error", reject);
         req.end();
@@ -215,7 +213,7 @@ export class GameEngine {
 
       if (response.statusCode !== 200 && response.statusCode !== 206) {
         response.destroy();
-        throw new Error(`Erreur HTTP ${response.statusCode}: ${response.statusMessage}`);
+        throw new Error(`HTTP error ${response.statusCode}`);
       }
 
       if (response.statusCode === 206) {
@@ -363,7 +361,8 @@ export class GameEngine {
   async extractGameFile(filePath, serverGame) {
     const gameId = serverGame._id;
     const sanitizedName = this.sanitizeGameName(serverGame.name);
-    const extractPath = path.join(this.downloadPath, sanitizedName);
+    const sanitizedVersion = (serverGame.version || "1.0.0").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const extractPath = path.join(this.downloadPath, `${sanitizedName}_v${sanitizedVersion}`);
 
     // Check cancel before starting extraction
     if (this.cancelled) {
@@ -371,7 +370,7 @@ export class GameEngine {
       throw new Error("CANCELLED");
     }
 
-    logger.info(`[GameEngine] Extraction vers: ${extractPath}`);
+    logger.info(`[GameEngine] Extracting to: ${extractPath}`);
 
     if (!fs.existsSync(extractPath)) {
       fs.mkdirSync(extractPath, { recursive: true });
@@ -381,28 +380,34 @@ export class GameEngine {
       id: gameId,
       stage: "extracting",
       progress: 0,
-      message: "Analyse de l'archive...",
+      message: "Analyzing archive...",
     });
 
     const fileExtension = extractionEngine.getFileExtension(filePath);
 
     try {
       if (extractionEngine.isSupported(fileExtension)) {
-        const result = await extractionEngine.extract(
-          filePath,
-          extractPath,
-          (progress, extractedFiles, totalFiles, currentFile) => {
-            this.sendProgress({
-              id: gameId,
-              stage: "extracting",
-              progress: progress,
-              extractedFiles: extractedFiles,
-              totalFiles: totalFiles,
-              currentFile: currentFile,
-              message: `Extraction: ${extractedFiles}/${totalFiles} fichiers`,
-            });
-          }
+        const extractionTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Extraction timeout")), EXTRACTION_TIMEOUT_MS)
         );
+        const result = await Promise.race([
+          extractionEngine.extract(
+            filePath,
+            extractPath,
+            (progress, extractedFiles, totalFiles, currentFile) => {
+              this.sendProgress({
+                id: gameId,
+                stage: "extracting",
+                progress: progress,
+                extractedFiles: extractedFiles,
+                totalFiles: totalFiles,
+                currentFile: currentFile,
+                message: `Extracting: ${extractedFiles}/${totalFiles} files`,
+              });
+            }
+          ),
+          extractionTimeout,
+        ]);
 
         // Check cancel after extraction completes
         if (this.cancelled) {
@@ -422,7 +427,7 @@ export class GameEngine {
         throw error;
       }
       logger.error(`[GameEngine] Extraction failed: ${error.message}`);
-      throw new Error(`Erreur d'extraction: ${error.message}`);
+      throw new Error(`Extraction error: ${error.message}`);
     }
   }
 
@@ -436,19 +441,19 @@ export class GameEngine {
       throw new Error("CANCELLED");
     }
 
-    logger.info(`[GameEngine] Finalisation: ${serverGame.name}...`);
+    logger.info(`[GameEngine] Finalizing: ${serverGame.name}...`);
 
     this.sendProgress({
       id: gameId,
       stage: "finalizing",
       progress: 0,
-      message: "Finalisation...",
+      message: "Finalizing...",
     });
 
     try {
       await fs.promises.unlink(filePath);
     } catch (err) {
-      logger.warn(`[GameEngine] Impossible de supprimer le fichier temporaire: ${err.message}`);
+      logger.warn(`[GameEngine] Could not delete temp file: ${err.message}`);
     }
 
     // Calculate the installed size (in MB)
@@ -461,10 +466,18 @@ export class GameEngine {
       logger.warn(`[GameEngine] Could not calculate installed size: ${err.message}`);
     }
 
-    const decoded = jwtDecode(this.userToken);
+    let userId;
+    try {
+      const decoded = jwtDecode(this.userToken);
+      userId = decoded?.user?.id;
+    } catch {
+      // malformed token — decoded value unusable
+    }
+    if (!userId) throw new Error("Invalid authentication token");
+
     const url = buildServerUrl(this.serverAddress, '/api/installedGames/addInstalledGame');
     const body = JSON.stringify({
-      userId: decoded.user.id,
+      userId,
       serverGameId: gameId,
       path: extractPath,
       version: serverGame.version,
@@ -486,11 +499,19 @@ export class GameEngine {
           "Content-Length": Buffer.byteLength(body),
         },
       };
-      if (isHttps && this.config.allowSelfSignedCerts) options.rejectUnauthorized = false;
+      if (isHttps) options.rejectUnauthorized = false;
 
       const req = transport.request(options, (res) => {
         let data = "";
-        res.on("data", (chunk) => { data += chunk; });
+        let bytesReceived = 0;
+        res.on("data", (chunk) => {
+          bytesReceived += chunk.length;
+          if (bytesReceived > MAX_API_RESPONSE_SIZE) {
+            res.destroy(new Error("API response too large"));
+            return;
+          }
+          data += chunk;
+        });
         res.on("end", () => resolve({ status: res.statusCode, data }));
       });
       req.on("error", reject);
@@ -524,6 +545,8 @@ export class GameEngine {
       releaseDate: serverGame.releaseDate,
       developer: serverGame.developer,
       publisher: serverGame.publisher,
+      igdbId: serverGame.igdbId || null,
+      multiplayer: serverGame.multiplayer || null,
       path: extractPath,
       installedAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
@@ -614,18 +637,35 @@ export class GameEngine {
     return false;
   }
 
-  async calculateDirSize(dirPath) {
-    const items = await fs.promises.readdir(dirPath);
-    const sizes = await Promise.all(items.map(async (item) => {
-      try {
-        const itemPath = path.join(dirPath, item);
-        const stats = await fs.promises.stat(itemPath);
-        return stats.isDirectory() ? await this.calculateDirSize(itemPath) : stats.size;
-      } catch {
-        return 0;
+  async calculateDirSize(dirPath, depth = 0, counter = { files: 0 }) {
+    const MAX_DEPTH = 12;
+    const MAX_FILES = 50_000;
+    const CONCURRENCY = 32;
+    if (depth > MAX_DEPTH || counter.files >= MAX_FILES) return 0;
+    try {
+      const items = await fs.promises.readdir(dirPath);
+      let total = 0;
+      for (let i = 0; i < items.length; i += CONCURRENCY) {
+        if (counter.files >= MAX_FILES) break;
+        const chunk = items.slice(i, i + CONCURRENCY);
+        const sizes = await Promise.all(chunk.map(async (item) => {
+          if (counter.files >= MAX_FILES) return 0;
+          try {
+            const itemPath = path.join(dirPath, item);
+            const stats = await fs.promises.stat(itemPath);
+            if (stats.isDirectory()) return this.calculateDirSize(itemPath, depth + 1, counter);
+            counter.files++;
+            return stats.size;
+          } catch {
+            return 0;
+          }
+        }));
+        total += sizes.reduce((sum, s) => sum + s, 0);
       }
-    }));
-    return sizes.reduce((sum, s) => sum + s, 0);
+      return total;
+    } catch {
+      return 0;
+    }
   }
 
   cleanupFiles(filePath, extractPath) {

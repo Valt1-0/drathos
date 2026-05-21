@@ -192,7 +192,7 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
                     >
                       {/* Game Cover */}
                       <div className="w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-surface">
-                        {game.coverUrl ? (
+                        {game.coverUrl && /^https?:\/\//i.test(game.coverUrl) ? (
                           <img
                             src={game.coverUrl.replace('t_thumb', 't_cover_small')}
                             alt={game.name}

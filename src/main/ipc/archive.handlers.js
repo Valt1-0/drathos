@@ -1,11 +1,19 @@
 /**
  * Archive scanning IPC handlers
  */
-import { ipcMain, dialog, BrowserWindow } from "electron";
+import { dialog, BrowserWindow } from "electron";
 import fs from "fs";
 import path from "path";
 import Seven from "node-7z";
 import sevenBin from "7zip-bin";
+import { secureHandle } from "./secureHandle.js";
+import { MAX_ARCHIVE_READ_SIZE } from "../app/constants.js";
+
+const ARCHIVE_EXTENSIONS = new Set([".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tgz", ".tbz2", ".txz"]);
+
+// Reject paths that are not absolute or contain traversal segments
+const isValidFilePath = (filePath) =>
+  path.isAbsolute(filePath) && !filePath.split(/[/\\]/).includes('..');
 
 const EXECUTABLE_PATTERNS = {
   windows: [".exe", ".bat", ".cmd"],
@@ -41,8 +49,9 @@ const scanArchive = async (filePath) => {
 
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
+      try { stream.destroy?.(); } catch {}
       resolve({ success: false, error: "Scan timeout", executables: [] });
-    }, 30000);
+    }, 10000);
 
     stream.on("data", (data) => {
       if (!data.file || data.file.endsWith("/") || data.file.endsWith("\\")) return;
@@ -74,8 +83,15 @@ const scanArchive = async (filePath) => {
 const getMainWindow = () => BrowserWindow.getAllWindows()[0];
 
 export const registerArchiveHandlers = () => {
-  ipcMain.handle("readArchiveFile", async (_, filePath) => {
+  secureHandle("readArchiveFile", async (_event, filePath) => {
+    if (!isValidFilePath(filePath)) return { success: false, error: "Invalid file path" };
+    const ext = path.extname(filePath).toLowerCase();
+    if (!ARCHIVE_EXTENSIONS.has(ext)) return { success: false, error: "Invalid file type" };
     try {
+      const stat = await fs.promises.stat(filePath);
+      if (stat.size > MAX_ARCHIVE_READ_SIZE) {
+        return { success: false, error: `File too large to read in memory (${Math.round(stat.size / (1024 * 1024))} MB)` };
+      }
       const buffer = await fs.promises.readFile(filePath);
       return { success: true, buffer };
     } catch (error) {
@@ -83,7 +99,7 @@ export const registerArchiveHandlers = () => {
     }
   });
 
-  ipcMain.handle("selectAndScanArchive", async () => {
+  secureHandle("selectAndScanArchive", async () => {
     try {
       const result = await dialog.showOpenDialog(getMainWindow(), {
         properties: ["openFile"],
@@ -105,9 +121,14 @@ export const registerArchiveHandlers = () => {
     }
   });
 
-  ipcMain.handle("listArchiveFiles", async (_, filePath) => scanArchive(filePath));
+  secureHandle("listArchiveFiles", async (_event, filePath) => {
+    if (!isValidFilePath(filePath)) return { success: false, error: "Invalid file path", executables: [] };
+    const ext = path.extname(filePath).toLowerCase();
+    if (!ARCHIVE_EXTENSIONS.has(ext)) return { success: false, error: "Invalid file type", executables: [] };
+    return scanArchive(filePath);
+  });
 
-  ipcMain.handle("selectArchiveFile", async () => {
+  secureHandle("selectArchiveFile", async () => {
     try {
       const result = await dialog.showOpenDialog(getMainWindow(), {
         properties: ["openFile"],

@@ -22,13 +22,17 @@ i18n
   // Init i18next
   .init({
     resources,
-    lng: 'en',
     fallbackLng: 'en',
-    debug: process.env.NODE_ENV === 'development',
+    debug: import.meta.env.DEV,
 
     interpolation: {
       escapeValue: false, // React already escapes
     },
+
+    saveMissing: import.meta.env.DEV,
+    missingKeyHandler: import.meta.env.DEV
+      ? (_lng, _ns, key) => console.warn(`[i18n] Missing key: "${key}"`)
+      : undefined,
 
     detection: {
       order: ['localStorage', 'navigator'],

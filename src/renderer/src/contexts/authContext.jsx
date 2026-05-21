@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 import { loginUser, registerUser } from "../api/user";
+import { setUnauthorizedHandler } from "../utils/apiUtils";
 import logger from "../services/logger";
 import { storeGet } from "../utils/storeClient";
 
@@ -12,9 +13,18 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    const handleUnauthorized = async () => {
+      await window.store.delete("userToken");
+      setUser(null);
+      setIsAuthenticated(false);
+    };
+    setUnauthorizedHandler(handleUnauthorized);
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
     const fetchToken = async () => {
       try {
-        // Wait for the promise to resolve
         const token = await storeGet("userToken");
         if (typeof token === 'string' && token.length > 0) {
           try {
@@ -25,7 +35,7 @@ export const AuthProvider = ({ children }) => {
               setUser(decoded.user);
               setIsAuthenticated(true);
             }
-          } catch (error) {
+          } catch {
             window.store.delete("userToken");
           }
         }
@@ -35,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     };
-    fetchToken(); // Call the async function to retrieve the token
+    fetchToken();
   }, []);
 
   const login = async (username, password) => {
@@ -63,9 +73,9 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await window.store.delete("userToken");
     setUser(null);
+    setIsAuthenticated(false);
   };
 
-  // Update user data (e.g., profile picture)
   const updateUser = (updates) => {
     setUser(prev => prev ? { ...prev, ...updates } : null);
   };

@@ -29,6 +29,7 @@ import UpdateModal from "./components/modals/UpdateModal";
 import DownloadTray from "./components/DownloadTray";
 import ErrorBoundary from "./components/ErrorBoundary";
 import QuickLaunch from "./components/QuickLaunch";
+import KeyboardShortcutsModal from "./components/modals/KeyboardShortcutsModal";
 import useKeyboardShortcuts, { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 
 // * Critical pages imported directly (no lazy loading)
@@ -72,9 +73,13 @@ function AppRoutes() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [quickLaunchOpen, setQuickLaunchOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   useGlobalShortcuts(navigate);
-  useKeyboardShortcuts({ 'ctrl+k': () => user && setQuickLaunchOpen(true) });
+  useKeyboardShortcuts({
+    'ctrl+k': () => user && setQuickLaunchOpen(true),
+    'ctrl+shift+?': () => user && setShortcutsOpen((prev) => !prev),
+  });
 
   return (
     <>
@@ -194,6 +199,10 @@ function AppRoutes() {
       onClose={() => setQuickLaunchOpen(false)}
       navigate={navigate}
     />
+    <KeyboardShortcutsModal
+      isOpen={shortcutsOpen}
+      onClose={() => setShortcutsOpen(false)}
+    />
     </>
   );
 }
@@ -243,9 +252,9 @@ export default function App() {
                             toastOptions={{
                               duration: 4000,
                               style: {
-                                background: "var(--color-surface)",
-                                color: "var(--color-text)",
-                                border: "1px solid var(--color-border)",
+                                background: "var(--app-surface)",
+                                color: "var(--app-text)",
+                                border: "1px solid var(--app-border)",
                                 borderRadius: "12px",
                                 padding: "16px",
                                 backdropFilter: "blur(12px)",

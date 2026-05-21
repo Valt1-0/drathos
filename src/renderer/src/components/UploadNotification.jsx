@@ -6,6 +6,7 @@ import {
   FiLoader,
   FiCheckCircle,
   FiAlertTriangle,
+  FiInfo,
   FiX,
   FiZap,
   FiClock,
@@ -26,7 +27,7 @@ const UploadNotification = () => {
     queueInfo,
     dismissUpload,
   } = useUpload();
-  const { isLight, getTextClass } = useTheme();
+  const { getTextClass } = useTheme();
 
   // Function to format speed
   const formatSpeed = (bytesPerSecond) => {
@@ -66,11 +67,9 @@ const UploadNotification = () => {
     return `${kb.toFixed(2)} KB`;
   };
 
-  if (!isUploading) return null;
-
   return (
     <AnimatePresence>
-      <motion.div
+      {isUploading && <motion.div
         initial={{ opacity: 0, y: 100, scale: 0.8 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 100, scale: 0.8 }}
@@ -123,12 +122,24 @@ const UploadNotification = () => {
                 </motion.div>
               )}
 
+              {uploadState === "duplicate" && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200 }}
+                  className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center"
+                >
+                  <FiInfo className="text-2xl text-secondary" />
+                </motion.div>
+              )}
+
               <div className="flex-1 min-w-0">
                 <h3 className={`font-bold text-sm truncate ${getTextClass('primary')}`}>
                   {uploadState === "queued" && t('upload.queued')}
                   {uploadState === "uploading" && t('upload.uploading')}
                   {uploadState === "success" && t('upload.complete')}
                   {uploadState === "error" && t('upload.error')}
+                  {uploadState === "duplicate" && t('upload.duplicate')}
                 </h3>
                 <p className={`text-xs truncate ${getTextClass('secondary')}`}>{uploadGameName}</p>
                 {uploadState === "queued" && queueInfo && (
@@ -245,9 +256,20 @@ const UploadNotification = () => {
                 </p>
               </div>
             )}
+
+            {uploadState === "duplicate" && (
+              <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-3">
+                <p className={`text-sm ${getTextClass('primary')}`}>
+                  {t('upload.duplicateMessage')}
+                </p>
+                <p className={`text-xs mt-1 ${getTextClass('secondary')}`}>
+                  {t('upload.autoClose')}
+                </p>
+              </div>
+            )}
           </div>
         </div>
-      </motion.div>
+      </motion.div>}
     </AnimatePresence>
   );
 };

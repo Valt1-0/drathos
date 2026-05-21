@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router";
 import logger from "../services/logger";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +20,7 @@ import {
   FiActivity,
   FiHardDrive,
   FiZap,
+  FiClock,
   FiSettings,
   FiLoader,
   FiList,
@@ -29,6 +30,13 @@ import {
 import { toast } from "sonner";
 
 const LOW_DISK_THRESHOLD_GB = 5;
+
+const formatETA = (seconds) => {
+  if (!seconds || !isFinite(seconds) || seconds <= 0) return null;
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+};
 
 const Download = () => {
   const { t } = useTranslation();
@@ -51,9 +59,9 @@ const Download = () => {
   const [diskSpaceError, setDiskSpaceError] = useState(false);
   const [diskSpaceNotConfigured, setDiskSpaceNotConfigured] = useState(false);
 
-  const loadDiskSpace = useCallback(async () => {
+  const loadDiskSpace = useCallback(async (showLoader = true) => {
     try {
-      setDiskSpaceLoading(true);
+      if (showLoader) setDiskSpaceLoading(true);
       const result = await window.api.getDiskSpace();
       if (result.success) {
         setDiskSpace({ freeSpace: result.freeGB, totalSpace: result.totalGB, usedPercent: result.usedPercent });
@@ -74,8 +82,8 @@ const Download = () => {
   }, []);
 
   useEffect(() => {
-    loadDiskSpace();
-    const interval = setInterval(loadDiskSpace, 30000);
+    loadDiskSpace(true);
+    const interval = setInterval(() => loadDiskSpace(false), 30000);
     return () => clearInterval(interval);
   }, [loadDiskSpace]);
 
@@ -103,6 +111,14 @@ const Download = () => {
     }
   };
 
+  const totalEtaSeconds = useMemo(() => {
+    if (downloadStats.totalSpeed <= 0) return null;
+    const remaining = activeDownloads
+      .filter(dl => ['downloading', 'extracting'].includes(dl.stage))
+      .reduce((sum, dl) => sum + Math.max(0, (dl.totalSize || 0) - (dl.sizeDownloaded || 0)), 0);
+    return remaining > 0 ? remaining / downloadStats.totalSpeed : null;
+  }, [activeDownloads, downloadStats.totalSpeed]);
+
   // Retry a failed download — goes through the queue like any other install
   const handleRetryDownload = (download) => {
     removeDownload(download.id);
@@ -116,195 +132,106 @@ const Download = () => {
   };
 
   return (
-    <div className="h-full bg-background text-text overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
+    <div className="h-full bg-background text-text overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent flex flex-col">
       {/* Header with stats */}
-      <div className="px-8 py-8 max-w-7xl mx-auto">
+      <div className="px-8 py-8 max-w-7xl mx-auto w-full flex-1 flex flex-col">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          {/* Title */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ background: 'var(--app-gradient-primary)' }}>
-                <FiDownload className="text-white text-xl" />
+          {/* Header */}
+          <div className="flex items-center justify-between gap-4 mb-8">
+            {/* Title */}
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl shrink-0" style={{ background: 'var(--app-gradient-primary)' }}>
+                  <FiDownload className="text-white text-xl" />
+                </div>
+                <h1 className="text-3xl md:text-4xl font-black text-text">
+                  {t('downloads.title')}
+                </h1>
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-text">
-                {t('downloads.title')}
-              </h1>
+              <p className="text-text-secondary text-sm ml-15">
+                {t('downloads.subtitle')}
+              </p>
             </div>
-            <p className="text-text-secondary text-sm ml-15">
-              {t('downloads.subtitle')}
-            </p>
-          </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Total Speed */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              className="group relative overflow-hidden backdrop-blur-xl border rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300"
-              style={{
-                background: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.1)',
-                borderColor: 'var(--app-success)',
-                borderOpacity: 0.3
-              }}
-            >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(var(--app-success-rgb, 16, 185, 129), 0.15), transparent)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-text-secondary font-medium">
-                    {t('downloads.totalSpeed')}
-                  </span>
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.2)' }}>
-                    <FiZap className="text-success text-xl" />
-                  </div>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-text">
-                    {downloadStats.totalSpeed.toFixed(1)}
-                  </span>
-                  <span className="text-sm text-text-secondary">MB/s</span>
-                </div>
-                <div className="h-2 bg-surface rounded-full overflow-hidden mt-3">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ background: 'var(--app-gradient-primary)' }}
-                    initial={{ width: 0 }}
-                    animate={{
-                      width: `${Math.min(100, (downloadStats.totalSpeed / 100) * 100)}%`,
-                    }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
+            {/* Stats pills */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Speed */}
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                style={{
+                  background: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.08)',
+                  borderColor: 'rgba(var(--app-success-rgb, 16, 185, 129), 0.3)',
+                }}
+              >
+                <FiZap className="text-success text-xs shrink-0" />
+                <span className="text-sm font-semibold text-text">{downloadStats.totalSpeed.toFixed(1)}</span>
+                <span className="text-xs text-text-secondary">MB/s</span>
               </div>
-            </motion.div>
 
-            {/* Free Space */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="group relative overflow-hidden backdrop-blur-xl border rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300"
-              style={{
-                background: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.1)',
-                borderColor: 'var(--app-warning)',
-                borderOpacity: 0.3
-              }}
-            >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, rgba(var(--app-warning-rgb, 251, 191, 36), 0.15), transparent)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-text-secondary font-medium">
-                    {t('downloads.freeSpace')}
-                  </span>
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.2)' }}>
-                    <FiHardDrive className="text-warning text-xl" />
-                  </div>
+              {/* ETA */}
+              {formatETA(totalEtaSeconds) && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                  style={{
+                    background: 'rgba(var(--app-secondary-rgb, 139, 92, 246), 0.08)',
+                    borderColor: 'rgba(var(--app-secondary-rgb, 139, 92, 246), 0.3)',
+                  }}
+                >
+                  <FiClock className="text-secondary text-xs shrink-0" />
+                  <span className="text-sm font-semibold text-text">{formatETA(totalEtaSeconds)}</span>
                 </div>
+              )}
 
+              {/* Disk */}
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                style={{
+                  background: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.08)',
+                  borderColor: 'rgba(var(--app-warning-rgb, 251, 191, 36), 0.3)',
+                }}
+              >
+                <FiHardDrive className="text-warning text-xs shrink-0" />
                 {diskSpaceLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <FiLoader className="text-2xl text-warning animate-spin" />
-                    <span className="ml-3 text-text-secondary text-sm">{t('downloads.loadingDiskSpace')}</span>
-                  </div>
+                  <FiLoader className="text-warning text-xs animate-spin" />
                 ) : diskSpaceError ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <FiAlertTriangle className="text-error shrink-0" />
-                      <span className="text-sm text-text-secondary">{t('downloads.diskSpaceUnavailable')}</span>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={loadDiskSpace}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text transition-colors"
-                      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
-                    >
-                      <FiLoader className="text-sm" />
-                      {t('common.retry')}
-                    </motion.button>
-                  </div>
-                ) : diskSpaceNotConfigured ? (
-                  <div className="space-y-3">
-                    <p className="text-text-secondary text-sm leading-relaxed">
-                      {t('downloads.noLocationSelected')}
-                    </p>
-                    <Link to="/settings">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium transition-all duration-300"
-                        style={{
-                          background: 'var(--app-gradient-button)',
-                          boxShadow: 'var(--app-shadow-primary)'
-                        }}
-                      >
-                        <FiSettings className="text-lg" />
-                        <span>{t('downloads.configure')}</span>
-                      </motion.button>
-                    </Link>
-                  </div>
-                ) : diskSpace.freeSpace > 0 ? (
+                  <button onClick={loadDiskSpace} className="text-xs text-error hover:underline flex items-center gap-1">
+                    <FiAlertTriangle className="text-xs" />{t('common.retry')}
+                  </button>
+                ) : diskSpaceNotConfigured || !diskSpace.freeSpace ? (
+                  <Link to="/settings" className="text-xs text-primary hover:underline">{t('downloads.configure')}</Link>
+                ) : (
                   <>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-3xl font-bold text-text">
-                        {diskSpace.freeSpace}
-                      </span>
-                      <span className="text-sm text-text-secondary">{t('downloads.gbFree')}</span>
-                    </div>
+                    <span className="text-sm font-semibold text-text">{diskSpace.freeSpace}</span>
+                    <span className="text-xs text-text-secondary">GB</span>
                     {diskSpace.totalSpace > 0 && (
-                      <div className="text-sm text-text-secondary mb-2 opacity-70">
-                        {t('downloads.ofTotal', { total: diskSpace.totalSpace })}
-                      </div>
-                    )}
-                    <div className="h-2 bg-surface rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{
-                          background: diskSpace.usedPercent > 90
-                            ? 'var(--app-gradient-button)'
-                            : diskSpace.usedPercent > 75
-                            ? 'linear-gradient(to right, var(--app-warning), var(--app-warning))'
-                            : 'var(--app-gradient-primary)'
-                        }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${diskSpace.usedPercent || 0}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                      />
-                    </div>
-                    {diskSpace.usedPercent > 0 && (
-                      <div className="text-sm text-text-secondary mt-2 text-right">
-                        {t('downloads.percentUsed', { percent: diskSpace.usedPercent })}
-                      </div>
+                      <>
+                        <span className="text-xs text-text-secondary opacity-40">/</span>
+                        <span className="text-xs text-text-secondary opacity-60">{diskSpace.totalSpace} GB</span>
+                        <div className="w-12 h-1 bg-surface rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{
+                              background: diskSpace.usedPercent > 90
+                                ? 'var(--app-gradient-button)'
+                                : diskSpace.usedPercent > 75
+                                ? 'linear-gradient(to right, var(--app-warning), var(--app-warning))'
+                                : 'var(--app-gradient-primary)'
+                            }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${diskSpace.usedPercent}%` }}
+                            transition={{ duration: 0.8, ease: "easeOut" }}
+                          />
+                        </div>
+                      </>
                     )}
                   </>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-text-secondary text-sm leading-relaxed">
-                      {t('downloads.noLocationSelected')}
-                    </p>
-                    <Link to="/settings">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg font-medium transition-all duration-300"
-                        style={{
-                          background: 'var(--app-gradient-button)',
-                          boxShadow: 'var(--app-shadow-primary)'
-                        }}
-                      >
-                        <FiSettings className="text-lg" />
-                        <span>{t('downloads.configure')}</span>
-                      </motion.button>
-                    </Link>
-                  </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           </div>
         </motion.div>
 
@@ -593,7 +520,7 @@ const Download = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="text-center py-16"
+            className="flex-1 flex flex-col items-center justify-center text-center"
           >
             <div className="relative w-24 h-24 mx-auto mb-6">
               <div className="absolute inset-0 rounded-full blur-xl" style={{ background: 'linear-gradient(135deg, var(--app-primary), var(--app-secondary))', opacity: 0.2 }}></div>

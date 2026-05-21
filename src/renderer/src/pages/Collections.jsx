@@ -100,7 +100,9 @@ const Collections = () => {
   );
 
   const bannerCovers = useMemo(
-    () => selectedCollection?.games?.slice(0, 4).map(g => (g.serverGameId || g)?.coverUrl).filter(Boolean) || [],
+    () => selectedCollection?.games?.slice(0, 4)
+      .map(g => (g.serverGameId || g)?.coverUrl)
+      .filter(url => typeof url === "string" && /^https?:\/\//i.test(url)) || [],
     [selectedCollection?.games]
   );
 

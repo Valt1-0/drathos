@@ -1,5 +1,11 @@
 const DEFAULT_TIMEOUT = 5000;
 
+let _onUnauthorized = null;
+
+export const setUnauthorizedHandler = (handler) => {
+  _onUnauthorized = handler;
+};
+
 export async function fetchWithTimeout(url, options = {}) {
   const timeout = options.timeout || DEFAULT_TIMEOUT;
   const controller = new AbortController();
@@ -11,6 +17,9 @@ export async function fetchWithTimeout(url, options = {}) {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
+    if (response.status === 401) {
+      _onUnauthorized?.();
+    }
     return response;
   } catch (error) {
     clearTimeout(timeoutId);

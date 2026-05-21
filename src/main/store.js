@@ -22,10 +22,6 @@ const schema = {
     type: "object",
     default: {},
   },
-  allowSelfSignedCerts: {
-    type: "boolean",
-    default: true,
-  },
 };
 
 /**
@@ -80,9 +76,7 @@ function createStore() {
   let storePath;
 
   for (const attemptOptions of [
-    // Legacy: hardcoded dev key used before 0.7.0
-    { schema, encryptionKey: "drathos-dev-key-change-in-production" },
-    // Unencrypted: DRATHOS_ENCRYPTION_KEY was not set before this version
+    // Legacy: unencrypted store (pre-0.8.0 installs without DRATHOS_ENCRYPTION_KEY)
     { schema },
   ]) {
     try {

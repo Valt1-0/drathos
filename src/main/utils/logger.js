@@ -8,13 +8,40 @@ import path from 'path';
 import { app } from 'electron';
 import os from 'os';
 
+const SENSITIVE_KEYS = new Set([
+  'authorization', 'token', 'usertoken', 'password', 'secret',
+  'apikey', 'api_key', 'bearer', 'accesstoken', 'refreshtoken',
+]);
+
+// Redact tokens embedded in string values (e.g. "Authorization: Bearer abc123")
+const redactSensitiveString = (str) =>
+  str
+    .replace(/Bearer\s+[\w.\-/+=]+/gi, 'Bearer [REDACTED]')
+    .replace(/(password|token|secret|api[_-]?key)\s*[:=]\s*\S+/gi, '$1=[REDACTED]');
+
 class Logger {
   constructor() {
     this.logsDir = null;
     this.currentLogFile = null;
-    this.maxLogFiles = 7; // Keep 7 days of logs
-    this.maxLogSizeBytes = 10 * 1024 * 1024; // 10 MB par fichier
+    this.maxLogFiles = 7;
+    this.maxLogSizeBytes = 10 * 1024 * 1024;
     this.initialized = false;
+    this._approxSizeBytes = 0;
+    this._recentLines = [];
+    this._maxRecentLines = 500;
+  }
+
+  sanitizeData(obj, depth = 0) {
+    if (typeof obj === 'string') return redactSensitiveString(obj);
+    if (!obj || typeof obj !== 'object' || depth > 5) return obj;
+    if (Array.isArray(obj)) return obj.map(item => this.sanitizeData(item, depth + 1));
+    const result = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = SENSITIVE_KEYS.has(key.toLowerCase())
+        ? '[REDACTED]'
+        : this.sanitizeData(value, depth + 1);
+    }
+    return result;
   }
 
   /**
@@ -36,6 +63,17 @@ class Logger {
       // Set the current log file
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       this.currentLogFile = path.join(this.logsDir, `app-${today}.log`);
+
+      // Seed in-memory state from existing file (one-time read on startup)
+      try {
+        const content = await fs.promises.readFile(this.currentLogFile, 'utf8');
+        this._approxSizeBytes = Buffer.byteLength(content, 'utf8');
+        const lines = content.split('\n').filter(Boolean);
+        this._recentLines = lines.slice(-this._maxRecentLines);
+      } catch {
+        this._approxSizeBytes = 0;
+        this._recentLines = [];
+      }
 
       // Clean up old logs
       await this.cleanOldLogs();
@@ -80,28 +118,21 @@ class Logger {
   }
 
   /**
-   * Checks if the current log file is too large and creates a new one if needed
+   * Checks if the current log file is too large and creates a new one if needed.
+   * Uses in-memory byte counter — no I/O.
    */
   checkLogRotation() {
     if (!this.currentLogFile) return;
-
-    try {
-      if (fs.existsSync(this.currentLogFile)) {
-        const stats = fs.statSync(this.currentLogFile);
-        if (stats.size > this.maxLogSizeBytes) {
-          // Create a new file with timestamp
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-          const today = new Date().toISOString().split('T')[0];
-          this.currentLogFile = path.join(this.logsDir, `app-${today}-${timestamp}.log`);
-        }
-      }
-    } catch (error) {
-      console.error('[Logger] Failed to check log rotation:', error);
+    if (this._approxSizeBytes > this.maxLogSizeBytes) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const today = new Date().toISOString().split('T')[0];
+      this.currentLogFile = path.join(this.logsDir, `app-${today}-${timestamp}.log`);
+      this._approxSizeBytes = 0;
     }
   }
 
   /**
-   * Writes a message to the log file
+   * Writes a message to the log file (non-blocking).
    */
   writeToFile(level, message, data) {
     if (!this.initialized || !this.currentLogFile) return;
@@ -109,14 +140,17 @@ class Logger {
     this.checkLogRotation();
 
     const timestamp = new Date().toISOString();
-    const dataStr = data ? ` | ${JSON.stringify(data)}` : '';
+    const dataStr = data ? ` | ${JSON.stringify(this.sanitizeData(data))}` : '';
     const logLine = `[${timestamp}] [${level}] ${message}${dataStr}\n`;
 
-    try {
-      fs.appendFileSync(this.currentLogFile, logLine, 'utf8');
-    } catch (error) {
-      console.error('[Logger] Failed to write to log file:', error);
-    }
+    this._approxSizeBytes += Buffer.byteLength(logLine, 'utf8');
+
+    this._recentLines.push(logLine.trimEnd());
+    if (this._recentLines.length > this._maxRecentLines) this._recentLines.shift();
+
+    fs.promises.appendFile(this.currentLogFile, logLine, 'utf8').catch(err => {
+      console.error('[Logger] Failed to write to log file:', err);
+    });
   }
 
   /**
@@ -162,22 +196,11 @@ class Logger {
   }
 
   /**
-   * Retrieves the content of recent logs
+   * Retrieves recent log lines from the in-memory buffer — no I/O.
    */
   getRecentLogs(lines = 100) {
-    if (!this.currentLogFile || !fs.existsSync(this.currentLogFile)) {
-      return '';
-    }
-
-    try {
-      const content = fs.readFileSync(this.currentLogFile, 'utf8');
-      const allLines = content.split('\n');
-      const recentLines = allLines.slice(-lines);
-      return recentLines.join('\n');
-    } catch (error) {
-      console.error('[Logger] Failed to read logs:', error);
-      return '';
-    }
+    const count = Math.min(lines, this._recentLines.length);
+    return this._recentLines.slice(-count).join('\n');
   }
 
   /**

@@ -32,10 +32,13 @@ export function NotificationProvider({ children }) {
     }
 
     const init = async () => {
-      const serverAddress = await window.store.get("serverAddress");
-      if (!serverAddress) return;
+      const [serverAddress, token] = await Promise.all([
+        window.store.get("serverAddress"),
+        window.store.get("userToken"),
+      ]);
+      if (!serverAddress || !token) return;
 
-      const socket = connectSocket(serverAddress);
+      const socket = connectSocket(serverAddress, token);
 
       socket.on("game:added", ({ game, user: addedBy }) => {
         if (addedBy?.id === userRef.current?._id) return;

@@ -1,15 +1,16 @@
 /**
  * Statistics and disk space IPC handlers
  */
-import { ipcMain } from "electron";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import nodePath from "path";
 import store from "../store.js";
+import { secureHandle } from "./secureHandle.js";
 
 const execFileAsync = promisify(execFile);
 
 export const registerStatsHandlers = () => {
-  ipcMain.handle("save-local-stats", async (_, { gameId, sessionData }) => {
+  secureHandle("save-local-stats", async (_event, { gameId, sessionData }) => {
     try {
       const games = store.get("installedGamesCache", {});
       if (!games[gameId]) return { success: false, error: "Game not found" };
@@ -20,7 +21,12 @@ export const registerStatsHandlers = () => {
       };
 
       const stats = games[gameId].stats;
-      stats.totalPlayTime += sessionData.duration;
+      const duration = Number(sessionData.duration);
+      if (!Number.isFinite(duration) || duration < 0) {
+        return { success: false, error: "Invalid session duration" };
+      }
+      // Cap at 24 hours to prevent inflated stats from a malformed renderer value
+      stats.totalPlayTime += Math.min(duration, 86400);
       stats.totalSessions += 1;
       stats.lastPlayed = Date.now();
       stats.firstLaunched = stats.firstLaunched || Date.now();
@@ -32,7 +38,7 @@ export const registerStatsHandlers = () => {
     }
   });
 
-  ipcMain.handle("get-local-stats", async (_, { gameId }) => {
+  secureHandle("get-local-stats", async (_event, { gameId }) => {
     try {
       return store.get("installedGamesCache", {})[gameId]?.stats || null;
     } catch {
@@ -40,9 +46,18 @@ export const registerStatsHandlers = () => {
     }
   });
 
-  ipcMain.handle("getDiskSpace", async (_, path) => {
+  secureHandle("getDiskSpace", async (_event, providedPath) => {
     try {
-      const installPath = path || store.get("downloadPath");
+      let installPath;
+      if (providedPath) {
+        const normalized = nodePath.normalize(providedPath);
+        if (!nodePath.isAbsolute(normalized) || providedPath.split(/[/\\]/).includes("..")) {
+          return { success: false, error: "Invalid path" };
+        }
+        installPath = normalized;
+      } else {
+        installPath = store.get("downloadPath");
+      }
       if (!installPath) return { success: false, notConfigured: true, error: "Install path not configured" };
 
       let freeBytes, totalBytes;

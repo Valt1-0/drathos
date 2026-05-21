@@ -17,7 +17,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [installedCache, setInstalledCache] = useState({});
   const [activeGames, setActiveGames] = useState(new Set());
-  const [launching, setLaunching] = useState(null);
   const launchingRef = useRef(false);
   const inputRef = useRef(null);
   const listRef = useRef(null);
@@ -27,7 +26,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
     if (!isOpen) return;
     setQuery("");
     setSelectedIndex(0);
-    setLaunching(null);
     launchingRef.current = false;
 
     window.store.get("installedGamesCache").then(cache => setInstalledCache(cache || {}));
@@ -35,14 +33,22 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
     setTimeout(() => inputRef.current?.focus(), 30);
   }, [isOpen]);
 
-  // Filter games
+  // Filter games — fall back to installedGamesCache when gamesCache is empty (offline)
   useEffect(() => {
-    const games = gamesCache.get()?.games || [];
+    let games = gamesCache.get()?.games || [];
+
+    if (games.length === 0 && Object.keys(installedCache).length > 0) {
+      games = Object.entries(installedCache).map(([id, data]) => ({
+        _id: id,
+        name: data.name,
+        coverUrl: data.coverUrl,
+      }));
+    }
+
     const q = query.trim().toLowerCase();
 
     let filtered;
     if (!q) {
-      // No query: show installed games first, then rest
       const installed = games.filter(g => installedCache[g._id]);
       const rest = games.filter(g => !installedCache[g._id]);
       filtered = [...installed, ...rest].slice(0, MAX_RESULTS);
@@ -68,12 +74,10 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
     const cached = installedCache[game._id];
     if (cached) {
       launchingRef.current = true;
-      setLaunching(game._id);
       onClose();
       try { await launchGameAPI(game._id); } catch (_) { /* offline */ }
       await gameManager.launchGame(game._id, cached.path, cached.executable || null, game.name);
       launchingRef.current = false;
-      setLaunching(null);
     } else {
       navigate("/games", { state: { selectGameId: game._id } });
       onClose();

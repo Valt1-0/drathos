@@ -30,7 +30,6 @@ export class UninstallEngine {
       // Initialize
       this.serverAddress = store.get("serverAddress");
       this.userToken = store.get("userToken");
-      this.allowSelfSignedCerts = store.get("allowSelfSignedCerts") ?? true;
       this.sendProgress = sendProgress;
 
       // ========================================
@@ -303,7 +302,7 @@ export class UninstallEngine {
         headers: {
           Authorization: `Bearer ${this.userToken}`,
         },
-        ...(isHttps && this.allowSelfSignedCerts ? { rejectUnauthorized: false } : {}),
+        ...(isHttps ? { rejectUnauthorized: false } : {}),
       };
 
       return await new Promise((resolve) => {

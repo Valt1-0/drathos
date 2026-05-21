@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
 
@@ -151,5 +151,13 @@ const GameCover = ({
   );
 };
 
-export default GameCover;
+// onError is excluded from comparison — it's a callback that changes identity on every
+// parent render but doesn't affect whether the image needs to be re-fetched or re-rendered.
+export default memo(GameCover, (prev, next) =>
+  prev.src === next.src &&
+  prev.size === next.size &&
+  prev.className === next.className &&
+  prev.blur === next.blur &&
+  prev.alt === next.alt
+);
 export { optimizeIGDBImageUrl };

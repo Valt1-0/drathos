@@ -69,6 +69,7 @@ export const DownloadProvider = ({ children }) => {
           try {
             const installed = await getInstalledGames();
             gamesCache.set({ installedGames: installed });
+            window.dispatchEvent(new CustomEvent("games:installed"));
           } catch (err) {
             logger.warn("[DownloadQueue] Could not refresh installed games:", err);
           }

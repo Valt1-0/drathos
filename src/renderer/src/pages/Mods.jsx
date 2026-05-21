@@ -77,6 +77,7 @@ const Mods = () => {
   const { isOnline } = useConnection();
 
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadModalGame, setUploadModalGame] = useState(null);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -266,7 +267,7 @@ const Mods = () => {
               gradient={true}
               size="md"
               icon={<FiPlus />}
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => { setUploadModalGame(null); setShowUploadModal(true); }}
             >
               {t("mods.upload")}
             </Button>
@@ -406,6 +407,17 @@ const Mods = () => {
                       icon={<FiPackage className="w-6 h-6" />}
                       title={t("mods.modsFor", { name: selectedGame.name })}
                       subtitle={t("mods.manageServerMods")}
+                      action={
+                        <Button
+                          variant="primary"
+                          gradient={true}
+                          size="sm"
+                          icon={<FiPlus />}
+                          onClick={() => { setUploadModalGame(selectedGame); setShowUploadModal(true); }}
+                        >
+                          {t("mods.upload")}
+                        </Button>
+                      }
                     />
 
                     <Card.Body>
@@ -429,20 +441,11 @@ const Mods = () => {
                             {t("mods.noModsOnServer")}
                           </p>
                           <p
-                            className="text-sm mb-4"
+                            className="text-sm"
                             style={{ color: "var(--app-textSecondary)" }}
                           >
                             {t("mods.uploadFirst")}
                           </p>
-                          <Button
-                            variant="primary"
-                            gradient={true}
-                            size="md"
-                            icon={<FiPlus />}
-                            onClick={() => setShowUploadModal(true)}
-                          >
-                            {t("mods.upload")}
-                          </Button>
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -570,6 +573,7 @@ const Mods = () => {
             <UploadModModal
               onClose={() => setShowUploadModal(false)}
               onSuccess={handleUploadSuccess}
+              preselectedGame={uploadModalGame}
             />
           </Suspense>
         )}

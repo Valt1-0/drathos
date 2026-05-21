@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FaBars,
@@ -8,21 +8,24 @@ import {
   FaGear,
 } from "react-icons/fa6";
 import { FaHome, FaFolderOpen } from "react-icons/fa";
-import { FiX, FiPackage, FiUsers } from "react-icons/fi";
+import { FiX, FiPackage, FiUsers, FiSearch, FiChevronLeft, FiMessageSquare } from "react-icons/fi";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../contexts/authContext";
 import { useConnection } from "../contexts/connectionContext";
 import ProfileAvatar from "./ProfileAvatar";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmationModal from "./modals/ConfirmationModal";
+import GameRequestsPanel from "./GameRequestsPanel";
 import syncQueue from "../utils/syncQueue";
 
 const Drawer = ({ children }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [requestsPanelOpen, setRequestsPanelOpen] = useState(false);
+  const [tabHovered, setTabHovered] = useState(false);
   const [pendingSyncs, setPendingSyncs] = useState(0);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isOnline } = useConnection();
   const location = useLocation();
 
@@ -50,14 +53,15 @@ const Drawer = ({ children }) => {
   const closeDeleteModal = useCallback(() => setShowDeleteModal(false), []);
 
   const handlerDeleteUserData = useCallback(async () => {
+    await logout();
     await window.store.clear();
     window.api.reloadApp();
-  }, []);
+  }, [logout]);
 
   const isActiveRoute = useCallback((path) => location.pathname === path, [location.pathname]);
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden relative">
       {/* Sidebar */}
       <motion.div
         initial={false}
@@ -86,7 +90,7 @@ const Drawer = ({ children }) => {
             onClick={toggleDrawer}
             aria-label={isOpen ? t('nav.closeMenu') : t('nav.openMenu')}
             aria-expanded={isOpen}
-            className="p-3 rounded-xl flex items-center justify-center transition-all duration-300"
+            className="p-3 rounded-xl flex items-center justify-center transition-all duration-300 outline-none"
             style={{
               background: 'var(--app-surface)',
               color: 'var(--app-primary)',
@@ -137,60 +141,47 @@ const Drawer = ({ children }) => {
                 to={isDisabled ? "#" : item.path}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
-                className={isDisabled ? "pointer-events-none" : ""}
+                className={`outline-none group/navitem${isDisabled ? " pointer-events-none" : ""}`}
                 title={isDisabled ? t('nav.serverOffline') : undefined}
               >
                 <motion.div
-                  className={`group relative overflow-hidden rounded-xl border transition-colors duration-200 ${
-                    !isActive && !isDisabled ? 'hover:bg-surface' : ''
-                  }`}
-                  style={{
-                    background: isActive
-                      ? 'linear-gradient(135deg, var(--app-primary) 0%, var(--app-secondary) 100%)'
-                      : undefined,
-                    borderColor: isActive ? 'var(--app-primary)' : 'transparent',
-                    opacity: isDisabled ? 0.35 : (isActive ? 0.9 : 1),
-                  }}
+                  className="group relative overflow-hidden rounded-xl"
+                  style={{ opacity: isDisabled ? 0.35 : 1 }}
                   whileHover={isDisabled ? {} : { scale: 1.03 }}
                   whileTap={isDisabled ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  {/* Active glow indicator */}
                   {isActive && !isDisabled && (
                     <motion.div
                       layoutId="activeTab"
-                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                      style={{
-                        background: 'linear-gradient(to bottom, var(--app-accent), var(--app-primary))',
-                        boxShadow: '0 0 8px var(--app-primary)',
-                      }}
+                      className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r"
+                      style={{ background: 'var(--app-primary)' }}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   )}
 
-                  <div className={`flex items-center py-3 transition-all duration-200 ${
-                    isOpen ? "px-4" : "justify-center px-2"
+                  <div className={`flex items-center py-2 transition-all duration-200 ${
+                    isOpen ? "px-3" : "justify-center px-2"
                   }`}>
-                    <motion.div
-                      className="relative shrink-0"
-                    >
+                    <div className="relative shrink-0">
                       <div
                         className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-all duration-200 ${
                           isActive
-                            ? 'text-text'
-                            : 'bg-surface text-text-secondary group-hover:bg-primary group-hover:text-text'
+                            ? 'text-primary'
+                            : isDisabled
+                            ? 'text-text-secondary'
+                            : 'text-text-secondary group-hover:bg-primary/15 group-hover:text-primary'
                         }`}
-                        style={isActive ? { background: 'rgba(255, 255, 255, 0.15)' } : undefined}
+                        style={isActive ? { background: 'color-mix(in srgb, var(--app-primary) 15%, transparent)' } : undefined}
                       >
                         <Icon className="text-lg" />
                       </div>
-                      {/* Sync badge for Settings */}
                       {item.path === "/settings" && pendingSyncs > 0 && (
                         <div className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-warning text-white text-xs font-bold rounded-full animate-pulse">
                           {pendingSyncs}
                         </div>
                       )}
-                    </motion.div>
+                    </div>
 
                     <AnimatePresence>
                       {isOpen && (
@@ -207,13 +198,10 @@ const Drawer = ({ children }) => {
                           exit={{
                             opacity: 0,
                             x: -10,
-                            transition: {
-                              duration: 0.2,
-                              ease: [0.4, 0, 1, 1]
-                            }
+                            transition: { duration: 0.2, ease: [0.4, 0, 1, 1] }
                           }}
-                          className={`ml-4 text-sm font-medium whitespace-nowrap ${
-                            isActive ? "text-text" : "text-text-secondary group-hover:text-text"
+                          className={`ml-3 text-sm font-medium whitespace-nowrap ${
+                            isActive ? "text-primary" : "text-text-secondary group-hover:text-text"
                           }`}
                         >
                           {item.label}
@@ -240,7 +228,7 @@ const Drawer = ({ children }) => {
           <button
             onClick={openDeleteModal}
             aria-label={t('nav.clearData')}
-            className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-error/30 hover:border-error"
+            className="group relative overflow-hidden w-full rounded-xl transition-all duration-300 border border-error/30 hover:border-error outline-none"
           >
             <div className="absolute inset-0 bg-linear-to-r from-error/10 to-transparent transition-opacity duration-300 group-hover:from-error/20" />
             <motion.div
@@ -341,6 +329,44 @@ const Drawer = ({ children }) => {
       <div className="flex-1 bg-background overflow-hidden">
         {children}
       </div>
+
+      {/* Onglet flottant — Game Requests */}
+      <AnimatePresence>
+        {isOnline && !requestsPanelOpen && (
+          <>
+            {/* Zone de clic invisible — large pour être accessible */}
+            <div
+              className="absolute right-0 top-0 bottom-0 w-6 z-40 cursor-pointer"
+              style={{ WebkitAppRegion: 'no-drag' }}
+              onMouseEnter={() => setTabHovered(true)}
+              onMouseLeave={() => setTabHovered(false)}
+              onClick={() => { setRequestsPanelOpen(true); setTabHovered(false); }}
+            />
+            {/* Onglet visuel — pointer-events-none */}
+            <motion.div
+              className="absolute right-0 z-50 w-10"
+              style={{ top: '50%', pointerEvents: 'none' }}
+              initial={{ x: 40, y: '-50%' }}
+              animate={{ x: tabHovered ? 0 : 35, y: '-50%' }}
+              exit={{ x: 40, y: '-50%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <div
+                className="flex flex-col items-center justify-center gap-2 py-5 rounded-l-xl w-full"
+                style={{
+                  background: 'var(--app-gradient-primary)',
+                  boxShadow: '-4px 0 16px rgba(59, 130, 246, 0.4)',
+                }}
+              >
+                <FiChevronLeft className="text-white text-sm" />
+                <FiMessageSquare className="text-white text-sm" />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <GameRequestsPanel isOpen={requestsPanelOpen} onClose={() => setRequestsPanelOpen(false)} />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

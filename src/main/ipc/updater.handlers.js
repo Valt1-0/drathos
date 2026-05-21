@@ -1,8 +1,6 @@
-/**
- * Auto-updater IPC handlers
- */
-import { ipcMain, app } from "electron";
+import { app } from "electron";
 import logger from "../utils/logger.js";
+import { secureHandle } from "./secureHandle.js";
 
 let autoUpdateManager = null;
 
@@ -13,7 +11,7 @@ export const setAutoUpdateManager = (manager) => {
 export const getAutoUpdateManager = () => autoUpdateManager;
 
 export const registerUpdaterHandlers = () => {
-  ipcMain.handle("updater:checkForUpdates", async () => {
+  secureHandle("updater:checkForUpdates", async () => {
     try {
       if (!autoUpdateManager) return { success: false, error: "AutoUpdateManager not initialized" };
       const result = await autoUpdateManager.checkForUpdates();
@@ -24,7 +22,7 @@ export const registerUpdaterHandlers = () => {
     }
   });
 
-  ipcMain.handle("updater:downloadAndInstall", async () => {
+  secureHandle("updater:downloadAndInstall", async () => {
     try {
       if (!autoUpdateManager) return { success: false, error: "AutoUpdateManager not initialized" };
       return await autoUpdateManager.downloadUpdate();
@@ -34,7 +32,7 @@ export const registerUpdaterHandlers = () => {
     }
   });
 
-  ipcMain.handle("updater:quitAndInstall", async () => {
+  secureHandle("updater:quitAndInstall", async () => {
     try {
       if (!autoUpdateManager) return { success: false, error: "AutoUpdateManager not initialized" };
       return autoUpdateManager.quitAndInstall();
@@ -44,7 +42,7 @@ export const registerUpdaterHandlers = () => {
     }
   });
 
-  ipcMain.handle("updater:getStatus", async () => {
+  secureHandle("updater:getStatus", async () => {
     try {
       if (!autoUpdateManager) return { success: false, status: "idle", currentVersion: app.getVersion() };
       return { success: true, ...autoUpdateManager.getStatus() };
@@ -53,7 +51,7 @@ export const registerUpdaterHandlers = () => {
     }
   });
 
-  ipcMain.handle("updater:skipVersion", async (_, { version }) => {
+  secureHandle("updater:skipVersion", async (_, { version }) => {
     try {
       if (!autoUpdateManager) return { success: false, error: "AutoUpdateManager not initialized" };
       return { success: true, ...autoUpdateManager.skipVersion(version) };

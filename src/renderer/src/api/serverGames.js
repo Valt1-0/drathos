@@ -4,27 +4,34 @@ import uploadManager from "../services/uploadManager";
 import { gamesCache } from "../utils/gamesCache";
 import logger from "../services/logger";
 
+let _serverGamesPending = null;
+
 export const getAllServerGames = async () => {
-  try {
-    const serverAddress = await window.store.get("serverAddress");
-    const token = await window.store.get("userToken");
-    const response = await fetchWithTimeout(
-      buildServerUrl(serverAddress, '/api/serverGame/getAllGames'),
-      {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+  if (_serverGamesPending) return _serverGamesPending;
+  _serverGamesPending = (async () => {
+    try {
+      const serverAddress = await window.store.get("serverAddress");
+      const token = await window.store.get("userToken");
+      const response = await fetchWithTimeout(
+        buildServerUrl(serverAddress, '/api/serverGame/getAllGames'),
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Error fetching games: ${response.status}`);
       }
-    );
-    if (!response.ok) {
-      throw new Error(`Error fetching games: ${response.status}`);
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.games ?? []);
+    } catch (error) {
+      logger.debug("[API] Server games unavailable (offline mode)");
+      return null;
     }
-    return await response.json();
-  } catch (error) {
-    logger.debug("[API] Server games unavailable (offline mode)");
-    return null;
-  }
+  })().finally(() => { _serverGamesPending = null; });
+  return _serverGamesPending;
 };
 
 // Invalidate the central games cache

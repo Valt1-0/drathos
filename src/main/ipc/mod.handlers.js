@@ -1,7 +1,7 @@
 /**
  * Mod management IPC handlers
  */
-import { ipcMain, app } from "electron";
+import { app } from "electron";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -10,18 +10,16 @@ import { extractionEngine } from "../extractionEngine.js";
 import { validateFilename, validateAndResolvePath } from "../app/validation.js";
 import logger from "../utils/logger.js";
 import { apiRequest } from "../utils/httpClient.js";
-
-const MAX_MOD_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
-const MIN_ARCHIVE_SIZE = 1024; // 1KB
+import { secureHandle } from "./secureHandle.js";
+import { MAX_MOD_SIZE, MIN_ARCHIVE_SIZE } from "../app/constants.js";
 
 export const registerModHandlers = () => {
-  ipcMain.handle("mod:download", async (event, { modId, gameId }) => {
+  secureHandle("mod:download", async (_event, { modId, gameId }) => {
     let tempArchivePath = null;
 
     try {
       const serverAddress = store.get("serverAddress");
       const token = store.get("userToken");
-      const allowSelfSigned = store.get("allowSelfSignedCerts");
       if (!serverAddress || !token) throw new Error("Server not configured");
 
       const installedGames = store.get("installedGamesCache") || {};
@@ -31,7 +29,6 @@ export const registerModHandlers = () => {
       // Fetch mod metadata
       const modRes = await apiRequest(`${serverAddress}/api/mods/${modId}`, {
         headers: { Authorization: `Bearer ${token}` },
-        allowSelfSigned,
       });
       if (!modRes.ok) throw new Error(`Failed to fetch mod info: HTTP ${modRes.status}`);
       const modInfo = await modRes.json();
@@ -43,7 +40,6 @@ export const registerModHandlers = () => {
       // Download mod
       const response = await apiRequest(`${serverAddress}/api/mods/download/${modId}`, {
         headers: { Authorization: `Bearer ${token}` },
-        allowSelfSigned,
       });
       if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
 
@@ -77,7 +73,8 @@ export const registerModHandlers = () => {
       if (buffer.length > MAX_MOD_SIZE) throw new Error("File exceeds 5GB limit");
       if (buffer.length < MIN_ARCHIVE_SIZE) throw new Error("File too small, may be corrupted");
 
-      const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
+      const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", buffer);
+      const fileHash = Buffer.from(hashBuffer).toString("hex");
       if (modInfo.fileHash && modInfo.fileHash !== fileHash) {
         throw new Error("File integrity check failed");
       }
@@ -103,7 +100,7 @@ export const registerModHandlers = () => {
     }
   });
 
-  ipcMain.handle("mod:deleteFile", async (_, { modId }) => {
+  secureHandle("mod:deleteFile", async (_event, { modId }) => {
     try {
       const installedMods = store.get("installedMods") || {};
       let gameIdToUpdate = null;
@@ -126,7 +123,7 @@ export const registerModHandlers = () => {
     }
   });
 
-  ipcMain.handle("mod:verifyIntegrity", async (_, { modId, gameId }) => {
+  secureHandle("mod:verifyIntegrity", async (_event, { modId, gameId }) => {
     try {
       const installedMods = store.get("installedMods") || {};
       const modInfo = installedMods[gameId]?.[modId];

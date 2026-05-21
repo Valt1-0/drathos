@@ -31,7 +31,7 @@ function sanitizeInstallPath(input) {
   return sanitized;
 }
 
-const UploadModModal = ({ onClose, onSuccess }) => {
+const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
   const containerRef = useFocusTrap(true);
   const { t } = useTranslation();
 
@@ -41,7 +41,7 @@ const UploadModModal = ({ onClose, onSuccess }) => {
   const [showGamesList, setShowGamesList] = useState(false);
 
   const [formData, setFormData] = useState({
-    gameId: "",
+    gameId: preselectedGame?._id || "",
     name: "",
     author: "",
     version: "1.0.0",
@@ -142,7 +142,8 @@ const UploadModModal = ({ onClose, onSuccess }) => {
     }
   };
 
-  const selectedGame = games.find(g => g._id === formData.gameId);
+  const selectedGame = games.find(g => g._id === formData.gameId)
+    ?? (preselectedGame?._id === formData.gameId ? preselectedGame : null);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

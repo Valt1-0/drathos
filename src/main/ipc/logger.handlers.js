@@ -1,13 +1,11 @@
-/**
- * Logger and bug reporting IPC handlers
- */
-import { ipcMain, shell } from "electron";
+import { shell } from "electron";
 import fs from "fs";
 import logger from "../utils/logger.js";
 import crashReporter from "../utils/crashReporter.js";
+import { secureHandle } from "./secureHandle.js";
 
 export const registerLoggerHandlers = () => {
-  ipcMain.handle("logger:log", async (_, { level, message, data }) => {
+  secureHandle("logger:log", async (_, { level, message, data }) => {
     try {
       const logFn = logger[level] || logger.info;
       level === "error" ? logFn.call(logger, message, data?.error, data?.context) : logFn.call(logger, message, data);
@@ -17,7 +15,7 @@ export const registerLoggerHandlers = () => {
     }
   });
 
-  ipcMain.handle("logger:getLogs", async (_, { lines = 100 }) => {
+  secureHandle("logger:getLogs", async (_, { lines = 100 }) => {
     try {
       return { success: true, logs: logger.getRecentLogs(lines) };
     } catch (error) {
@@ -25,7 +23,7 @@ export const registerLoggerHandlers = () => {
     }
   });
 
-  ipcMain.handle("logger:getSystemInfo", async () => {
+  secureHandle("logger:getSystemInfo", async () => {
     try {
       return { success: true, systemInfo: logger.getSystemInfo() };
     } catch (error) {
@@ -33,8 +31,15 @@ export const registerLoggerHandlers = () => {
     }
   });
 
-  ipcMain.handle("logger:exportBugReport", async (_, { description, userEmail }) => {
+  secureHandle("logger:exportBugReport", async (_, { description, userEmail }) => {
     try {
+      if (typeof description !== "string" || description.length > 5000) {
+        return { success: false, error: "Invalid description" };
+      }
+      if (typeof userEmail !== "string" || userEmail.length > 254) {
+        return { success: false, error: "Invalid email" };
+      }
+
       const reportPath = await logger.exportBugReport();
       if (!reportPath) return { success: false, error: "Failed to create report" };
 
@@ -49,7 +54,7 @@ export const registerLoggerHandlers = () => {
     }
   });
 
-  ipcMain.handle("logger:openLogsFolder", async () => {
+  secureHandle("logger:openLogsFolder", async () => {
     try {
       await shell.openPath(logger.logsDir);
       return { success: true };
@@ -58,7 +63,7 @@ export const registerLoggerHandlers = () => {
     }
   });
 
-  ipcMain.handle("crashReport:send", async (_, { error, componentStack, context, description }) => {
+  secureHandle("crashReport:send", async (_, { error, componentStack, context, description }) => {
     try {
       if (description) {
         await crashReporter.reportManual({ description, error, context });

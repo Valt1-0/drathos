@@ -32,3 +32,36 @@ export const checkServerStatus = async (serverAddress, autoDetect = true) => {
     return { online: false, error: "Impossible de se connecter au serveur" };
   }
 };
+
+export const getServerLimits = async () => {
+  const serverAddress = await window.store.get("serverAddress");
+  const token = await window.store.get("userToken");
+  const response = await fetchWithTimeout(
+    buildServerUrl(serverAddress, '/api/server/settings'),
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!response.ok) throw new Error(`Error fetching settings: ${response.status}`);
+  const data = await response.json();
+  return data.settings;
+};
+
+export const updateServerLimits = async (settings) => {
+  const serverAddress = await window.store.get("serverAddress");
+  const token = await window.store.get("userToken");
+  const response = await fetchWithTimeout(
+    buildServerUrl(serverAddress, '/api/server/settings'),
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    }
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || `Error updating settings: ${response.status}`);
+  }
+  return (await response.json()).settings;
+};

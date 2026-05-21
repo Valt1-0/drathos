@@ -1,10 +1,27 @@
-import { ipcMain, app, shell } from "electron";
+import { app, shell } from "electron";
 import fs from "fs";
 import path from "path";
+import { secureHandle } from "./secureHandle.js";
+import store from "../store.js";
 
 export const registerShortcutHandlers = () => {
-  ipcMain.handle("createShortcut", async (_event, { gameName, gamePath, executable }) => {
+  secureHandle("createShortcut", async (_event, { gameName, gamePath, executable }) => {
     try {
+      // Validate gamePath is within the configured library directory
+      const downloadPath = store.get("downloadPath");
+      if (!downloadPath || !path.isAbsolute(gamePath)) {
+        return { success: false, error: "Invalid game path" };
+      }
+      const resolvedGame = path.resolve(gamePath);
+      const resolvedLib = path.resolve(downloadPath);
+      if (!resolvedGame.startsWith(resolvedLib + path.sep) && resolvedGame !== resolvedLib) {
+        return { success: false, error: "Game path outside library" };
+      }
+      // Validate executable is relative with no traversal
+      if (!executable || path.isAbsolute(executable) || executable.split(/[/\\]/).includes('..')) {
+        return { success: false, error: "Invalid executable path" };
+      }
+
       const desktop = app.getPath("desktop");
       const execPath = path.join(gamePath, executable);
 

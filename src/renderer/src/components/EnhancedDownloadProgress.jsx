@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { motion } from "framer-motion";
 import {
   FiDownload,
@@ -15,24 +15,29 @@ import { useTheme } from "../contexts/themeContext";
 import { useTranslation } from "react-i18next";
 
 const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
-  const { isLight, getTextClass } = useTheme();
+  const { getTextClass } = useTheme();
   const { t } = useTranslation();
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [displaySpeed, setDisplaySpeed] = useState(0);
   const [displayETA, setDisplayETA] = useState("");
   const animationRef = useRef(null);
 
-  // Smooth progress bar animation (60fps)
+  // Smooth progress bar animation (60fps) — stopped on terminal stages
   useEffect(() => {
     const target = Number.isFinite(download.progress) ? download.progress : 0;
+    const isTerminal = download.stage === "completed" || download.stage === "failed" || download.stage === "cancelled";
+
+    if (isTerminal) {
+      setAnimatedProgress(target);
+      return;
+    }
+
     const animate = () => {
       setAnimatedProgress((prev) => {
         const diff = target - prev;
-        // Easing for smooth animation
         const newValue = prev + diff * 0.1;
         return Math.abs(diff) < 0.1 ? target : newValue;
       });
-
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -43,7 +48,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [download.progress]);
+  }, [download.progress, download.stage]);
 
   // Update metrics with smooth transitions
   useEffect(() => {
@@ -216,7 +221,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
               )}
 
               {/* Cancel button - during downloading, paused, extracting, finalizing */}
-              {["downloading", "paused", "extracting", "finalizing"].includes(download.stage) && onCancel && (
+              {["preparing", "downloading", "paused", "extracting", "finalizing"].includes(download.stage) && onCancel && (
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}

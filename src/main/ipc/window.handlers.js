@@ -1,26 +1,24 @@
-/**
- * Window control IPC handlers
- */
-import { ipcMain, BrowserWindow } from "electron";
+import { BrowserWindow } from "electron";
 import { is } from "@electron-toolkit/utils";
+import { secureHandle, secureOn } from "./secureHandle.js";
 
 export const registerWindowHandlers = () => {
   const getWindow = () => BrowserWindow.getFocusedWindow();
 
-  ipcMain.on("window-minimize", () => getWindow()?.minimize());
+  secureOn("window-minimize", () => getWindow()?.minimize());
 
-  ipcMain.on("window-maximize", () => {
+  secureOn("window-maximize", () => {
     const win = getWindow();
     win && (win.isMaximized() ? win.unmaximize() : win.maximize());
   });
 
-  ipcMain.on("window-close", () => getWindow()?.close());
+  secureOn("window-close", () => getWindow()?.close());
 
-  ipcMain.handle("window-is-maximized", () => getWindow()?.isMaximized() ?? false);
+  secureHandle("window-is-maximized", () => getWindow()?.isMaximized() ?? false);
 
-  ipcMain.on("window-toggle-devtools", () => {
+  secureOn("window-toggle-devtools", () => {
     if (is.dev) getWindow()?.webContents.toggleDevTools();
   });
 
-  ipcMain.on("reload-app", () => getWindow()?.webContents.reloadIgnoringCache());
+  secureOn("reload-app", () => getWindow()?.webContents.reloadIgnoringCache());
 };

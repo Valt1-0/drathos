@@ -8,7 +8,8 @@ import path from "path";
 import store from "../store.js";
 import { GameLauncher } from "../gameLauncher.js";
 import { SimpleExecutableDetector } from "../simpleExecutableDetector.js";
-import { isValidSender, isExecutableFile } from "../app/security.js";
+import { isExecutableFile } from "../app/security.js";
+import { secureHandle } from "./secureHandle.js";
 import workerPath from "../installWorker.js?modulePath";
 import logger from "../utils/logger.js";
 import uninstallWorkerPath from "../uninstallWorker.js?modulePath";
@@ -47,7 +48,7 @@ export const terminateAllWorkers = () => {
 
 export const registerGameHandlers = () => {
   // Installation
-  ipcMain.handle("installGame", async (event, { serverGame }) => {
+  secureHandle("installGame", async (event, { serverGame }) => {
     return new Promise((resolve, reject) => {
       const worker = new Worker(workerPath, {
         workerData: {
@@ -56,7 +57,6 @@ export const registerGameHandlers = () => {
             serverAddress: store.get("serverAddress"),
             userToken: store.get("userToken"),
             downloadPath: store.get("downloadPath"),
-            allowSelfSignedCerts: store.get("allowSelfSignedCerts"),
           },
         },
       });
@@ -68,7 +68,9 @@ export const registerGameHandlers = () => {
         if (data.type === "store-set") { store.set(data.key, data.value); return; }
         if (data.type === "log") { logger[data.level]?.(`[Worker] ${data.message}`); return; }
 
-        event.sender.send("downloadProgress", { id: serverGame._id, ...data });
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("downloadProgress", { id: serverGame._id, ...data });
+        }
 
         // Taskbar progress bar
         const done = ["completed", "cancelled", "failed"].includes(data.stage?.toLowerCase());
@@ -79,7 +81,8 @@ export const registerGameHandlers = () => {
         }
         syncTaskbarProgress();
 
-        if (data.stage === "Completed" || data.stage === "completed") {
+        const stage = data.stage?.toLowerCase();
+        if (stage === "completed") {
           if (data.cacheData) {
             const cache = store.get("installedGamesCache") || {};
             cache[serverGame._id] = data.cacheData;
@@ -87,14 +90,16 @@ export const registerGameHandlers = () => {
           }
           resolve({ success: true, path: data.finalPath });
         }
-        if (data.stage === "cancelled") {
+        if (stage === "cancelled") {
           resolve({ success: false, error: "CANCELLED" });
         }
-        if (data.stage === "Failed" || data.stage === "failed") reject(new Error(data.error));
+        if (stage === "failed") reject(new Error(data.error));
       });
 
       worker.on("error", (err) => {
-        event.sender.send("downloadProgress", { id: serverGame._id, progress: 0, stage: "Failed", error: err.message });
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("downloadProgress", { id: serverGame._id, progress: 0, stage: "Failed", error: err.message });
+        }
         reject(err);
       });
 
@@ -106,7 +111,7 @@ export const registerGameHandlers = () => {
   });
 
   // Download controls
-  ipcMain.handle("cancelDownload", async (event, { gameId }) => {
+  secureHandle("cancelDownload", async (_event, { gameId }) => {
     const worker = activeWorkers.get(gameId);
     if (worker) {
       worker.postMessage({ type: "cancel" });
@@ -120,7 +125,7 @@ export const registerGameHandlers = () => {
     return { success: true };
   });
 
-  ipcMain.handle("pauseDownload", async (event, { gameId }) => {
+  secureHandle("pauseDownload", async (_event, { gameId }) => {
     const worker = activeWorkers.get(gameId);
     if (worker) {
       worker.postMessage({ type: "pause" });
@@ -128,7 +133,7 @@ export const registerGameHandlers = () => {
     return { success: true };
   });
 
-  ipcMain.handle("resumeDownload", async (event, { gameId }) => {
+  secureHandle("resumeDownload", async (_event, { gameId }) => {
     const worker = activeWorkers.get(gameId);
     if (worker) {
       worker.postMessage({ type: "resume" });
@@ -137,7 +142,7 @@ export const registerGameHandlers = () => {
   });
 
   // Detection
-  ipcMain.handle("getBestExecutable", async (_, { gamePath, gameName }) => {
+  secureHandle("getBestExecutable", async (_event, { gamePath, gameName }) => {
     try {
       const exe = await getDetector().getBestExecutable(gamePath, gameName);
       return exe ? { success: true, executable: exe } : { success: false, error: "No executable found" };
@@ -146,7 +151,7 @@ export const registerGameHandlers = () => {
     }
   });
 
-  ipcMain.handle("detectExecutables", async (_, { gamePath, gameName }) => {
+  secureHandle("detectExecutables", async (_event, { gamePath, gameName }) => {
     try {
       const exes = await getDetector().listAllExecutables(gamePath, gameName);
       return { success: true, executables: exes, count: exes.length };
@@ -156,7 +161,7 @@ export const registerGameHandlers = () => {
   });
 
   // Launch
-  ipcMain.handle("launchGame", async (event, params) => {
+  secureHandle("launchGame", async (event, params) => {
     try {
       let { gameId, gamePath, executableName, gameName } = params.gameData || params;
       gameId = gameId || params._id || params.id;
@@ -177,25 +182,37 @@ export const registerGameHandlers = () => {
     }
   });
 
-  ipcMain.handle("getActiveGames", () => gameLauncher.getActiveGames());
-  ipcMain.handle("isGameRunning", (_, { gameId }) => gameLauncher.isGameRunning(gameId));
-  ipcMain.handle("openGameFolder", (_, gamePath) => gameLauncher.openGameFolder(gamePath));
-  ipcMain.handle("getGameProcess", (_, { gameId }) => gameLauncher.getGameProcess(gameId));
+  secureHandle("getActiveGames", () => gameLauncher.getActiveGames());
+  secureHandle("isGameRunning", (_event, { gameId }) => gameLauncher.isGameRunning(gameId));
+  secureHandle("openGameFolder", (_event, gamePath) =>
+    gameLauncher.openGameFolder(gamePath)
+  );
+  secureHandle("getGameProcess", (_event, { gameId }) => gameLauncher.getGameProcess(gameId));
 
   // Stop
-  ipcMain.handle("stopGame", async (_, { gameId, force = false }) => gameLauncher.stopGame(gameId, force));
-  ipcMain.handle("forceStopGame", async (_, { gameId }) => gameLauncher.stopGame(gameId, true));
+  secureHandle("stopGame", (_event, { gameId, force = false }) =>
+    gameLauncher.stopGame(gameId, force)
+  );
+  secureHandle("forceStopGame", (_event, { gameId }) =>
+    gameLauncher.stopGame(gameId, true)
+  );
 
   // Directory listing
-  ipcMain.handle("listGameDirectory", async (_, { gamePath }) => {
+  secureHandle("listGameDirectory", async (_event, { gamePath }) => {
+    const normalized = path.normalize(gamePath);
+    // Check for traversal in the original path (normalize resolves '..' so checking
+    // normalized is useless — check the original segments instead)
+    if (!path.isAbsolute(normalized) || gamePath.split(/[/\\]/).includes('..')) {
+      return { success: false, error: "Invalid path" };
+    }
     try {
-      await fs.promises.access(gamePath);
-      const items = await fs.promises.readdir(gamePath);
+      await fs.promises.access(normalized);
+      const items = await fs.promises.readdir(normalized);
       const files = [], directories = [];
 
       await Promise.all(items.map(async (item) => {
         try {
-          const itemPath = path.join(gamePath, item);
+          const itemPath = path.join(normalized, item);
           const stats = await fs.promises.stat(itemPath);
           if (stats.isFile()) files.push({ name: item, size: stats.size, isExecutable: isExecutableFile(item) });
           else if (stats.isDirectory()) directories.push({ name: item, path: itemPath });
@@ -209,8 +226,7 @@ export const registerGameHandlers = () => {
   });
 
   // Uninstall
-  ipcMain.handle("uninstallGame", async (event, { gameId, gamePath, gameName }) => {
-    if (!isValidSender(event.senderFrame)) throw new Error("Unauthorized");
+  secureHandle("uninstallGame", async (event, { gameId, gamePath, gameName }) => {
 
     if (gameLauncher.isGameRunning(gameId)) {
       await gameLauncher.stopGame(gameId, true);
@@ -225,14 +241,15 @@ export const registerGameHandlers = () => {
           storeData: {
             serverAddress: store.get("serverAddress"),
             userToken: store.get("userToken"),
-            allowSelfSignedCerts: store.get("allowSelfSignedCerts"),
           },
         },
       });
 
       worker.on("message", async (data) => {
         if (data.type === "log") { logger[data.level]?.(`[Worker] ${data.message}`); return; }
-        event.sender.send("uninstallProgress", { id: gameId, ...data });
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("uninstallProgress", { id: gameId, ...data });
+        }
 
         if (data.stage === "uninstalled") {
           // Clean mods
@@ -257,7 +274,9 @@ export const registerGameHandlers = () => {
       });
 
       worker.on("error", (err) => {
-        event.sender.send("uninstallProgress", { id: gameId, progress: 0, stage: "Failed", error: err.message });
+        if (!event.sender.isDestroyed()) {
+          event.sender.send("uninstallProgress", { id: gameId, progress: 0, stage: "Failed", error: err.message });
+        }
         reject(err);
       });
 
@@ -267,7 +286,7 @@ export const registerGameHandlers = () => {
     });
   });
 
-  ipcMain.handle("canUninstallGame", async (_, { gameId, gamePath }) => {
+  secureHandle("canUninstallGame", async (_event, { gameId, gamePath }) => {
     try {
       await fs.promises.access(gamePath);
       const isRunning = gameLauncher.isGameRunning(gameId);
@@ -277,7 +296,7 @@ export const registerGameHandlers = () => {
     }
   });
 
-  ipcMain.handle("getGameSize", async (_, { gamePath }) => {
+  secureHandle("getGameSize", async (_event, { gamePath }) => {
     try {
       await fs.promises.access(gamePath);
       const counter = { files: 0, truncated: false };

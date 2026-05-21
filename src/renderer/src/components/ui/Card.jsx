@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useTheme } from "../../contexts/themeContext";
+import { isColorLight } from "../../config/themes";
 
 /**
  * Card Component - Drathos design system
@@ -50,8 +51,7 @@ const Card = ({
     const styles = {};
 
     // Determine if the theme is light
-    const isLight = theme?.colors?.background &&
-      parseInt(theme.colors.background.replace('#', ''), 16) > 0x808080;
+    const isLight = theme?.colors?.background && isColorLight(theme.colors.background);
 
     switch (variant) {
       case 'glass':
@@ -143,7 +143,7 @@ const Card = ({
       )}
 
       {/* Content */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col">
         {children}
       </div>
     </motion.div>
@@ -158,13 +158,13 @@ const Card = ({
 Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
   return (
     <div
-      className={`flex items-start justify-between p-6 pb-4 ${className}`}
+      className={`flex items-center justify-between px-4 pt-4 pb-3 ${className}`}
       {...props}
     >
-      <div className="flex items-start gap-4 flex-1">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         {icon && (
           <div
-            className="flex items-center justify-center w-12 h-12 rounded-xl shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
             style={{
               background: 'var(--app-gradient-primary)',
               color: '#FFFFFF',
@@ -176,7 +176,7 @@ Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
         <div className="flex-1 min-w-0">
           {title && (
             <h3
-              className="text-lg font-semibold mb-1"
+              className="text-sm font-semibold"
               style={{ color: 'var(--app-text)' }}
             >
               {title}
@@ -184,7 +184,7 @@ Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
           )}
           {subtitle && (
             <p
-              className="text-sm"
+              className="text-xs"
               style={{ color: 'var(--app-textSecondary)' }}
             >
               {subtitle}
@@ -202,7 +202,7 @@ Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
  */
 Card.Body = ({ className = '', children, ...props }) => {
   return (
-    <div className={`p-6 pt-0 ${className}`} {...props}>
+    <div className={`px-4 pb-4 pt-0 ${className}`} {...props}>
       {children}
     </div>
   );

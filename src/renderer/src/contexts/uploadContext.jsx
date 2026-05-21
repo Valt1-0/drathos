@@ -1,5 +1,4 @@
 import { createContext, useContext, useReducer, useCallback } from "react";
-import { getUploadQueueInfo } from "../api/serverGames";
 
 const UploadContext = createContext();
 
@@ -13,7 +12,7 @@ export const useUpload = () => {
 
 const INITIAL_STATE = {
   isUploading: false,
-  uploadState: "idle", // idle | queued | uploading | success | error
+  uploadState: "idle", // idle | queued | uploading | success | error | duplicate
   uploadProgress: 0,
   uploadSpeed: 0,
   uploadETA: 0,
@@ -50,6 +49,8 @@ const uploadReducer = (state, action) => {
       return { ...state, uploadState: "success" };
     case "FAIL":
       return { ...state, uploadState: "error", uploadError: action.error };
+    case "DUPLICATE":
+      return { ...state, uploadState: "duplicate" };
     case "RESET":
       return INITIAL_STATE;
     default:
@@ -78,6 +79,11 @@ export const UploadProvider = ({ children }) => {
     setTimeout(() => dispatch({ type: "RESET" }), 10000);
   }, []);
 
+  const duplicateUpload = useCallback(() => {
+    dispatch({ type: "DUPLICATE" });
+    setTimeout(() => dispatch({ type: "RESET" }), 6000);
+  }, []);
+
   const resetUpload = useCallback(() => {
     dispatch({ type: "RESET" });
   }, []);
@@ -96,6 +102,7 @@ export const UploadProvider = ({ children }) => {
         updateUploadProgress,
         completeUpload,
         failUpload,
+        duplicateUpload,
         resetUpload,
         dismissUpload,
       }}

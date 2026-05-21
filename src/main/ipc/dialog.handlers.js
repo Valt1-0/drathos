@@ -1,14 +1,12 @@
-/**
- * Dialog IPC handlers
- */
-import { ipcMain, dialog, BrowserWindow } from "electron";
+import { dialog, BrowserWindow } from "electron";
 import fs from "fs";
 import path from "path";
+import { secureHandle } from "./secureHandle.js";
 
 const getMainWindow = () => BrowserWindow.getAllWindows()[0];
 
 export const registerDialogHandlers = () => {
-  ipcMain.handle("dialog:selectAndCreate", async () => {
+  secureHandle("dialog:selectAndCreate", async () => {
     const result = await dialog.showOpenDialog(getMainWindow(), {
       properties: ["openDirectory"],
     });
@@ -20,7 +18,7 @@ export const registerDialogHandlers = () => {
     return subfolder;
   });
 
-  ipcMain.handle("dialog:openFolder", async () => {
+  secureHandle("dialog:openFolder", async () => {
     const result = await dialog.showOpenDialog(getMainWindow(), {
       properties: ["openDirectory"],
     });

@@ -1,19 +1,13 @@
-/**
- * Upload Manager Service
- * Handles file upload optimization including:
- * - File size verification
- * - Upload queue management (max simultaneous uploads)
- * - Resumable uploads support
- */
+import { MAX_UPLOAD_FILE_SIZE, MIN_UPLOAD_FILE_SIZE } from "../utils/constants.js";
+import i18n from "../i18n/config";
 
 class UploadManager {
   constructor() {
-    this.maxSimultaneousUploads = 2; // Max concurrent uploads
-    this.activeUploads = new Map(); // Currently uploading files
-    this.uploadQueue = []; // Pending uploads
-    this.maxFileSize = 200 * 1024 * 1024 * 1024; // 200 GB default max
-    this.minFileSize = 1024; // 1 KB minimum
-    this.resumableUploads = new Map(); // Store resumable upload data
+    this.maxSimultaneousUploads = 2;
+    this.activeUploads = new Map();
+    this.uploadQueue = [];
+    this.maxFileSize = MAX_UPLOAD_FILE_SIZE;
+    this.minFileSize = MIN_UPLOAD_FILE_SIZE;
   }
 
   /**
@@ -25,25 +19,21 @@ class UploadManager {
     if (!file) {
       return {
         valid: false,
-        error: "No file provided",
+        error: i18n.t("upload.noFileProvided"),
       };
     }
 
     if (file.size < this.minFileSize) {
       return {
         valid: false,
-        error: `File is too small. Minimum size is ${this.formatBytes(
-          this.minFileSize
-        )}`,
+        error: i18n.t("upload.fileTooSmall", { size: this.formatBytes(this.minFileSize) }),
       };
     }
 
     if (file.size > this.maxFileSize) {
       return {
         valid: false,
-        error: `File is too large. Maximum size is ${this.formatBytes(
-          this.maxFileSize
-        )}`,
+        error: i18n.t("upload.fileTooLarge", { size: this.formatBytes(this.maxFileSize) }),
         fileSize: file.size,
         maxSize: this.maxFileSize,
       };
@@ -117,22 +107,12 @@ class UploadManager {
    * @param {Object} upload - Upload object
    */
   async startUpload(upload) {
-    const { config } = upload;
     upload.status = "uploading";
     this.activeUploads.set(upload.id, upload);
 
     try {
-      // Check for resumable upload
-      const resumeData = this.resumableUploads.get(config.file.name);
-      if (resumeData && config.resumable) {
-        // Resume upload
-        const result = await this.resumeUpload(upload, resumeData);
-        this.handleUploadComplete(upload, result);
-      } else {
-        // New upload
-        const result = await this.executeUpload(upload);
-        this.handleUploadComplete(upload, result);
-      }
+      const result = await this.executeUpload(upload);
+      this.handleUploadComplete(upload, result);
     } catch (error) {
       this.handleUploadError(upload, error);
     }
@@ -155,7 +135,7 @@ class UploadManager {
       formData.append("version", config.version);
       formData.append("isPublic", config.isPublic);
 
-      // Nouveau format multiplayer
+      // New multiplayer format
       if (config.multiplayer) {
         formData.append("multiplayer", JSON.stringify(config.multiplayer));
       }
@@ -189,17 +169,6 @@ class UploadManager {
             lastTime = currentTime;
 
             upload.progress = percent;
-
-            // Save progress for resumable uploads
-            if (config.resumable) {
-              this.saveUploadProgress(config.file.name, {
-                loaded: event.loaded,
-                total: event.total,
-                lastModified: config.file.lastModified,
-                uploadId: upload.id,
-              });
-            }
-
             config.onProgress?.({
               percent,
               loaded: event.loaded,
@@ -216,12 +185,6 @@ class UploadManager {
         if (xhr.status === 201) {
           try {
             const responseData = JSON.parse(xhr.responseText);
-
-            // Clear resumable data on success
-            if (config.resumable) {
-              this.clearUploadProgress(config.file.name);
-            }
-
             resolve(responseData);
           } catch (err) {
             reject(new Error("Invalid server response"));
@@ -231,8 +194,11 @@ class UploadManager {
           try {
             const responseData = JSON.parse(xhr.responseText);
             if (responseData.message) errorMessage = responseData.message;
+            if (responseData.details) errorMessage += `: ${responseData.details}`;
           } catch {}
-          reject(new Error(errorMessage));
+          const uploadErr = new Error(errorMessage);
+          if (xhr.status === 409) uploadErr.isDuplicate = true;
+          reject(uploadErr);
         }
       };
 
@@ -241,48 +207,11 @@ class UploadManager {
       };
 
       xhr.onabort = () => {
-        // Save state for resume
-        if (config.resumable) {
-          reject(new Error("Upload paused"));
-        } else {
-          reject(new Error("Upload cancelled"));
-        }
+        reject(new Error("Upload cancelled"));
       };
 
       xhr.send(formData);
     });
-  }
-
-  /**
-   * Resume an upload
-   * @param {Object} upload - Upload object
-   * @param {Object} resumeData - Resume data
-   * @returns {Promise} Upload result
-   */
-  async resumeUpload(upload, resumeData) {
-    // For now, restart the upload (full resumable upload requires server support)
-    // This clears the saved progress and starts fresh
-    return this.executeUpload(upload);
-  }
-
-  /**
-   * Save upload progress for resumable uploads
-   * @param {string} fileName - File name
-   * @param {Object} progressData - Progress data
-   */
-  saveUploadProgress(fileName, progressData) {
-    this.resumableUploads.set(fileName, {
-      ...progressData,
-      savedAt: Date.now(),
-    });
-  }
-
-  /**
-   * Clear upload progress
-   * @param {string} fileName - File name
-   */
-  clearUploadProgress(fileName) {
-    this.resumableUploads.delete(fileName);
   }
 
   /**
@@ -339,14 +268,13 @@ class UploadManager {
   }
 
   /**
-   * Pause an upload (for resumable uploads)
+   * Pause an upload
    * @param {string} uploadId - Upload ID
    */
   pauseUpload(uploadId) {
     const upload = this.activeUploads.get(uploadId);
-    if (upload && upload.xhr && upload.config.resumable) {
+    if (upload?.xhr) {
       upload.xhr.abort();
-      upload.status = "paused";
     }
   }
 
@@ -386,7 +314,7 @@ class UploadManager {
    * @returns {string} Upload ID
    */
   generateUploadId() {
-    return `upload_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    return crypto.randomUUID();
   }
 
   /**

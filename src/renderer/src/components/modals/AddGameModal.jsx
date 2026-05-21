@@ -32,7 +32,7 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
   const containerRef = useFocusTrap(isOpen);
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { startUpload, updateUploadProgress, completeUpload, failUpload } = useUpload();
+  const { startUpload, updateUploadProgress, completeUpload, failUpload, duplicateUpload } = useUpload();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -184,7 +184,11 @@ const AddGameModal = ({ isOpen, onClose, onSuccess }) => {
           }, 500);
         } catch (uploadError) {
           logger.error("[AddGameModal] Upload error:", uploadError);
-          failUpload(uploadError.message || t("modals.addGame.uploadFailed"));
+          if (uploadError.isDuplicate) {
+            duplicateUpload();
+          } else {
+            failUpload(uploadError.message || t("modals.addGame.uploadFailed"));
+          }
         }
       }, 100);
     } catch (err) {

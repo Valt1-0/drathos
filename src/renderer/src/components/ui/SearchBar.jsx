@@ -1,12 +1,7 @@
-import { memo } from "react";
+import { memo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { FiSearch, FiX } from "react-icons/fi";
-
-const sizeConfig = {
-  sm: { input: 'pl-8 py-1.5 text-sm rounded-lg', icon: 'left-2.5 text-sm', clear: 'right-2 text-sm w-4 h-4' },
-  md: { input: 'pl-10 py-2.5 text-sm rounded-lg', icon: 'left-3 text-base', clear: 'right-2.5 text-sm w-4 h-4' },
-  lg: { input: 'pl-12 py-3 rounded-xl', icon: 'left-4 text-xl', clear: 'right-3 text-base w-5 h-5' },
-};
+import { motion, AnimatePresence } from "framer-motion";
 
 const SearchBar = memo(({
   placeholder,
@@ -14,53 +9,95 @@ const SearchBar = memo(({
   onChange,
   autoFocus = false,
   size = 'md',
+  shortcut,
   className = '',
   ...props
 }) => {
   const { t } = useTranslation();
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
   const resolvedPlaceholder = placeholder ?? t('common.search');
-  const config = sizeConfig[size] || sizeConfig.md;
   const hasValue = value.length > 0;
+  const active = focused || hasValue;
 
   const handleClear = () => {
     onChange({ target: { value: "" } });
+    inputRef.current?.focus();
   };
 
-  return (
-    <div className={`relative ${className}`}>
-      <FiSearch
-        className={`absolute top-1/2 -translate-y-1/2 pointer-events-none ${config.icon}`}
-        style={{ color: 'var(--app-textSecondary)' }}
-      />
+  const py = size === 'sm' ? 'py-1.5' : size === 'lg' ? 'py-2.5' : 'py-2';
 
+  return (
+    <div
+      className={`relative flex items-center rounded-xl border transition-all duration-200 ${className}`}
+      style={{
+        background: active ? 'var(--app-surface)' : 'var(--app-background)',
+        borderColor: active ? 'var(--app-primary)' : 'var(--app-border)',
+        boxShadow: focused
+          ? '0 0 0 3px color-mix(in srgb, var(--app-primary) 12%, transparent)'
+          : 'none',
+      }}
+    >
+      {/* Search icon */}
+      <div className="pl-3 pr-1 shrink-0 flex items-center pointer-events-none">
+        <motion.div animate={{ scale: focused ? 1.1 : 1 }} transition={{ duration: 0.15 }}>
+          <FiSearch
+            className="text-sm transition-colors duration-200"
+            style={{ color: active ? 'var(--app-primary)' : 'var(--app-textSecondary)' }}
+          />
+        </motion.div>
+      </div>
+
+      {/* Input */}
       <input
+        ref={inputRef}
         type="text"
         placeholder={resolvedPlaceholder}
         value={value}
         onChange={onChange}
         autoFocus={autoFocus}
         aria-label={resolvedPlaceholder}
-        className={`w-full ${config.input} ${hasValue ? 'pr-8' : 'pr-3'} border font-medium transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary`}
-        style={{
-          background: 'var(--app-surface)',
-          borderColor: 'var(--app-border)',
-          color: 'var(--app-text)'
-        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className={`flex-1 ${py} text-sm font-medium bg-transparent outline-none placeholder:text-text-secondary min-w-0`}
+        style={{ color: 'var(--app-text)' }}
         {...props}
       />
 
-      {hasValue && (
-        <button
-          onClick={handleClear}
-          aria-label={t('common.clearSearch')}
-          className={`absolute top-1/2 -translate-y-1/2 ${config.clear} flex items-center justify-center rounded-full transition-colors duration-150`}
-          style={{ color: 'var(--app-textSecondary)' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--app-text)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--app-textSecondary)'}
-        >
-          <FiX />
-        </button>
-      )}
+      {/* Right side: clear btn or keyboard shortcut */}
+      <div className="pr-2 shrink-0 flex items-center">
+        <AnimatePresence mode="wait">
+          {hasValue ? (
+            <motion.button
+              key="clear"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ duration: 0.12 }}
+              onClick={handleClear}
+              aria-label={t('common.clearSearch')}
+              className="w-5 h-5 flex items-center justify-center rounded-full transition-colors"
+              style={{ background: 'var(--app-border)', color: 'var(--app-textSecondary)' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--app-text)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--app-textSecondary)'}
+            >
+              <FiX className="text-[10px]" />
+            </motion.button>
+          ) : shortcut && !focused ? (
+            <motion.kbd
+              key="shortcut"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="px-1.5 py-0.5 rounded text-[10px] font-mono leading-none"
+              style={{ background: 'var(--app-border)', color: 'var(--app-textSecondary)' }}
+            >
+              {shortcut}
+            </motion.kbd>
+          ) : null}
+        </AnimatePresence>
+      </div>
     </div>
   );
 });

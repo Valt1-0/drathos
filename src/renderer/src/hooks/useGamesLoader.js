@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getAllServerGames } from "../api/serverGames";
 import { getInstalledGames } from "../api/installedGames";
 import { gamesCache } from "../utils/gamesCache";
@@ -23,11 +23,24 @@ export function useGamesLoader() {
   const [loading, setLoading] = useState(!gamesCache.isValid());
   const [error, setError] = useState(null);
   const [reloadCount, setReloadCount] = useState(0);
+  const fetchingRef = useRef(false);
 
   const reload = useCallback(() => {
     gamesCache.clear();
     setError(null);
     setReloadCount(c => c + 1);
+  }, []);
+
+  // Refresh installed games list after an installation completes
+  useEffect(() => {
+    const handler = () => {
+      const cached = gamesCache.get();
+      if (cached?.installedGames?.length > 0) {
+        setInstalledGames([...cached.installedGames]);
+      }
+    };
+    window.addEventListener("games:installed", handler);
+    return () => window.removeEventListener("games:installed", handler);
   }, []);
 
   useEffect(() => {
@@ -52,11 +65,30 @@ export function useGamesLoader() {
         path: data.path,
       }));
 
-      // 2. Offline — show only what we have locally
+      // 2. Offline — show installed games reconstructed from local cache
       if (!isOnline) {
         gamesCache.clear();
         setInstalledGames(localInstalled);
-        setGames([]);
+        const offlineGames = Object.entries(localCache ?? {}).map(([id, data]) => ({
+          _id: id,
+          name: data.name,
+          coverUrl: data.coverUrl,
+          genres: data.genres || [],
+          summary: data.summary,
+          storyline: data.storyline,
+          version: data.version,
+          sizeMB: data.sizeMB,
+          platforms: data.platforms || [],
+          rating: data.rating || 0,
+          aggregatedRating: data.aggregatedRating || 0,
+          releaseDate: data.releaseDate,
+          developer: data.developer,
+          publisher: data.publisher,
+          executableName: data.executable,
+          igdbId: data.igdbId,
+          multiplayer: data.multiplayer,
+        }));
+        setGames(offlineGames);
         setLoading(false);
         return;
       }
@@ -70,7 +102,9 @@ export function useGamesLoader() {
         return;
       }
 
-      // 4. Online + cold cache — fetch
+      // 4. Online + cold cache — fetch (guard against concurrent calls)
+      if (fetchingRef.current) return;
+      fetchingRef.current = true;
       setLoading(true);
       setError(null);
       try {
@@ -87,7 +121,10 @@ export function useGamesLoader() {
         logger.error("[useGamesLoader] fetch error:", err.message);
         setError(err.message || "Loading failed");
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          fetchingRef.current = false;
+          setLoading(false);
+        }
       }
     };
 

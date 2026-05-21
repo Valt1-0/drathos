@@ -2,16 +2,11 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import logger from "../services/logger";
-import { motion, AnimatePresence } from "framer-motion";
-import { getAllServerGames, deleteServerGame } from "../api/serverGames";
-import { checkServerStatus } from "../api/server";
-import {
-  launchGame as launchGameAPI,
-  getInstalledGames,
-} from "../api/installedGames";
+import { motion } from "framer-motion";
+import { getAllServerGames } from "../api/serverGames";
+import { getInstalledGames } from "../api/installedGames";
 import { gamesCache } from "../utils/gamesCache";
 import { useGamesLoader } from "../hooks/useGamesLoader";
-import { formatStats as formatStatsAPI } from "../api/gameStats";
 import uninstallQueue from "../utils/uninstallQueue";
 import {
   useActiveDownloads,
@@ -24,8 +19,10 @@ import gameManager from "../services/gameManager";
 import { useGameStats } from "../hooks/games/useGameStats";
 import { useGameModals } from "../hooks/games/useGameModals";
 import useGameStatuses from "../hooks/games/useGameStatuses";
+import { useGamesActionHandlers } from "../hooks/games/useGamesActionHandlers";
 import { useDebounce } from "../hooks/useDebounce";
 import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
+import { GamesContext } from "../contexts/gamesContext";
 import GameLibrary from "../components/games/GameLibrary";
 import GameDetails from "../components/games/GameDetails";
 import { toast } from "sonner";
@@ -54,6 +51,7 @@ const Games = () => {
     error: gamesError,
     reload: reloadGames,
   } = useGamesLoader();
+
   const [selectedGame, setSelectedGame] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -69,7 +67,6 @@ const Games = () => {
   const [filters, setFilters] = useState(defaultFilters);
   const [libraryExpanded, setLibraryExpanded] = useState(false);
 
-  // Load persisted filters + view mode on mount
   useEffect(() => {
     const loadFilters = async () => {
       const saved = await window.store.get("gameFilters");
@@ -80,7 +77,6 @@ const Games = () => {
     loadFilters();
   }, []);
 
-  // Persist filters on change
   useEffect(() => {
     window.store.set("gameFilters", filters);
   }, [filters]);
@@ -91,6 +87,7 @@ const Games = () => {
       return !prev;
     });
   }, []);
+
   const loading = gamesLoading;
   const error = gamesError;
   const [gameSize, setGameSize] = useState(null);
@@ -99,7 +96,7 @@ const Games = () => {
   const [pendingUninstalls, setPendingUninstalls] = useState(new Set());
 
   const watchdogTimersRef = useRef(new Set());
-  const gameSizeCacheRef = useRef(new Map()); // path → sizeResult
+  const gameSizeCacheRef = useRef(new Map());
   useEffect(() => () => watchdogTimersRef.current.forEach(clearTimeout), []);
 
   const { gameStats, updateSessionStats } = useGameStats();
@@ -121,17 +118,14 @@ const Games = () => {
     (platform) => {
       if (!platform) return t("games.unknown");
       if (typeof platform === "string") return platform;
-      return (
-        platform.name || platform.slug || platform.id || t("games.unknown")
-      );
+      return platform.name || platform.slug || platform.id || t("games.unknown");
     },
     [t],
   );
 
   const getGenresArray = useCallback(
     (game) => {
-      if (!game || !game.genres) return [];
-      if (!Array.isArray(game.genres)) return [];
+      if (!game?.genres || !Array.isArray(game.genres)) return [];
       return game.genres.map(extractGenreName);
     },
     [extractGenreName],
@@ -139,26 +133,25 @@ const Games = () => {
 
   const getPlatformsArray = useCallback(
     (game) => {
-      if (!game || !game.platforms) return ["PC"];
-      if (!Array.isArray(game.platforms)) return ["PC"];
+      if (!game?.platforms || !Array.isArray(game.platforms)) return ["PC"];
       return game.platforms.map(extractPlatformName);
     },
     [extractPlatformName],
   );
 
-  // Auto-select first game once the list loads, and bootstrap active games list
+  useEffect(() => {
+    if (!games.length || selectedGame) return;
+    setSelectedGame(games[0]);
+  }, [games, selectedGame]);
+
   useEffect(() => {
     if (!games.length) return;
-    if (!selectedGame) setSelectedGame(games[0]);
     gameManager
       .getActiveGames()
-      .then((activeGames) => {
-        setPlayingGames(new Set(activeGames.map((g) => g.gameId)));
-      })
+      .then((activeGames) => setPlayingGames(new Set(activeGames.map((g) => g.gameId))))
       .catch(() => {});
   }, [games]);
 
-  // Pre-selection from QuickLaunch (navigate state)
   useEffect(() => {
     const gameId = location.state?.selectGameId;
     if (!gameId || !games.length) return;
@@ -171,42 +164,28 @@ const Games = () => {
 
   useEffect(() => {
     const handleQueueChange = (queueItems) => {
-      const pendingIds = new Set(queueItems.map((item) => item.gameId));
-      setPendingUninstalls(pendingIds);
+      setPendingUninstalls(new Set(queueItems.map((item) => item.gameId)));
     };
-
     const listenerId = uninstallQueue.addListener(handleQueueChange);
-    const initialQueue = uninstallQueue.getAll();
-    handleQueueChange(initialQueue);
-
+    handleQueueChange(uninstallQueue.getAll());
     return () => uninstallQueue.removeListener(listenerId);
   }, []);
 
   useEffect(() => {
     const processUninstallQueue = async () => {
       if (!isOnline) return;
+      const pending = uninstallQueue.getAll();
+      if (pending.length === 0) return;
 
-      const queue = uninstallQueue.getAll();
-      if (queue.length === 0) return;
-
-      for (const item of queue) {
+      for (const item of pending) {
         try {
           setUninstalling((prev) => new Set([...prev, item.gameId]));
-
-          const result = await gameManager.uninstallGame(
-            item.gameId,
-            item.gamePath,
-            item.gameName,
-          );
-
-          if (result.success) {
-            await uninstallQueue.dequeue(item.gameId);
-          }
-
+          const result = await gameManager.uninstallGame(item.gameId, item.gamePath, item.gameName);
+          if (result.success) await uninstallQueue.dequeue(item.gameId);
           setUninstalling((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(item.gameId);
-            return newSet;
+            const next = new Set(prev);
+            next.delete(item.gameId);
+            return next;
           });
         } catch (error) {
           logger.error("[Games] Uninstall error:", error);
@@ -214,9 +193,9 @@ const Games = () => {
             description: `${t("games.installErrorDesc", { name: item.gameName, error: error.message })}`,
           });
           setUninstalling((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(item.gameId);
-            return newSet;
+            const next = new Set(prev);
+            next.delete(item.gameId);
+            return next;
           });
         }
       }
@@ -230,20 +209,19 @@ const Games = () => {
         logger.warn("[Games] Refresh error:", err);
       }
     };
-
     processUninstallQueue();
   }, [isOnline]);
 
   useEffect(() => {
     const handleGameStatusChange = (status) => {
       setPlayingGames((prev) => {
-        const newSet = new Set(prev);
+        const next = new Set(prev);
         if (status.status === "running") {
-          newSet.add(status.gameId);
+          next.add(status.gameId);
         } else if (status.status === "stopped" || status.status === "failed") {
-          newSet.delete(status.gameId);
+          next.delete(status.gameId);
         }
-        return newSet;
+        return next;
       });
 
       if (status.sessionDuration) {
@@ -265,33 +243,31 @@ const Games = () => {
           }
         }
 
+        gameSizeCacheRef.current.clear();
         gamesCache.invalidate();
         getInstalledGames()
           .then((installed) => {
             setInstalledGames(installed);
             gamesCache.set({ installedGames: installed });
           })
-          .catch((err) =>
-            logger.warn("Could not refresh installed games:", err),
-          );
+          .catch((err) => logger.warn("Could not refresh installed games:", err));
 
         setUninstalling((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(progress.id);
-          return newSet;
+          const next = new Set(prev);
+          next.delete(progress.id);
+          return next;
         });
       } else if (progress.stage === "failed") {
         setUninstalling((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(progress.id);
-          return newSet;
+          const next = new Set(prev);
+          next.delete(progress.id);
+          return next;
         });
       }
     };
 
     gameManager.addStatusListener("*", handleGameStatusChange);
     gameManager.addUninstallListener("*", handleUninstallProgress);
-
     return () => {
       gameManager.removeStatusListener("*", handleGameStatusChange);
       gameManager.removeUninstallListener("*", handleUninstallProgress);
@@ -308,10 +284,7 @@ const Games = () => {
       if (!installedData) return;
 
       const cached = gameSizeCacheRef.current.get(installedData.path);
-      if (cached) {
-        setGameSize(cached);
-        return;
-      }
+      if (cached) { setGameSize(cached); return; }
 
       const sizeResult = await gameManager.getGameSize(installedData.path);
       if (!cancelled) {
@@ -322,9 +295,7 @@ const Games = () => {
     };
 
     loadGameSize();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedGame, installedGames]);
 
   const isInstalled = useCallback(
@@ -337,393 +308,54 @@ const Games = () => {
     [installedGames],
   );
 
-  const isGamePlaying = useCallback(
-    (gameId) => playingGames.has(gameId),
-    [playingGames],
-  );
-  const isGameUninstalling = useCallback(
-    (gameId) => uninstalling.has(gameId),
-    [uninstalling],
-  );
-  const isPendingUninstall = useCallback(
-    (gameId) => pendingUninstalls.has(gameId),
-    [pendingUninstalls],
-  );
-
-  const handleLaunchGame = useCallback(
-    async (game) => {
-      try {
-        if (isPendingUninstall(game._id)) {
-          toast.error(t("games.cannotLaunchTitle"), {
-            description: `"${game.name}" ${t("games.cannotLaunchPendingSync")}`,
-            duration: 5000,
-          });
-          return;
-        }
-
-        const installedData = getInstalledGameData(game._id);
-        if (!installedData) {
-          logger.error("Installation data not found for", game.name);
-          toast.error(t("games.gameNotFoundTitle"), {
-            description: t("games.gameNotFoundDesc", { name: game.name }),
-            duration: 4000,
-          });
-          return;
-        }
-
-        setPlayingGames((prev) => new Set([...prev, game._id]));
-
-        try {
-          await launchGameAPI(game._id);
-        } catch (error) {
-          // Offline mode - continue anyway
-        }
-
-        const cachedGames = await window.store.get("installedGamesCache", {});
-        const cachedData = cachedGames[game._id];
-
-        const result = await gameManager.launchGame(
-          game._id,
-          installedData.path,
-          cachedData?.executable || null,
-          game.name,
-        );
-
-        if (!result.success) {
-          logger.error("Launch failed:", result.error);
-
-          if (result.error && result.error.startsWith("WINE_NOT_INSTALLED:")) {
-            const instructionsJson = result.error.replace(
-              "WINE_NOT_INSTALLED:",
-              "",
-            );
-            try {
-              const instructions = JSON.parse(instructionsJson);
-              modals.wineModal.open(instructions);
-            } catch (e) {
-              logger.error("Error parsing Wine instructions:", e);
-            }
-          } else {
-            toast.error(t("games.launchFailedTitle"), {
-              description: t("games.launchFailedDesc", { name: game.name }),
-              id: `launch-error-${game._id}`,
-            });
-          }
-
-          setPlayingGames((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(game._id);
-            return newSet;
-          });
-        } else {
-          // Watchdog: if no status event in 15s, verify the game is still active
-          const timerId = setTimeout(async () => {
-            watchdogTimersRef.current.delete(timerId);
-            try {
-              const activeGames = await gameManager.getActiveGames();
-              if (!activeGames.some((g) => g.gameId === game._id)) {
-                setPlayingGames((prev) => {
-                  const newSet = new Set(prev);
-                  newSet.delete(game._id);
-                  return newSet;
-                });
-              }
-            } catch {
-              /* best-effort */
-            }
-          }, 15000);
-          watchdogTimersRef.current.add(timerId);
-        }
-      } catch (error) {
-        logger.error("Error launching", game.name, ":", error);
-        toast.error(t("games.launchErrorTitle"), {
-          description: t("games.launchErrorDesc", { name: game.name }),
-          id: `launch-error-${game._id}`,
-        });
-        setPlayingGames((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(game._id);
-          return newSet;
-        });
-      }
-    },
-    [
-      isPendingUninstall,
-      getInstalledGameData,
-      t,
-      modals.wineModal.open,
-      watchdogTimersRef,
-    ],
-  );
-
-  const handleStopGame = useCallback(
-    async (game) => {
-      try {
-        const result = await gameManager.stopGame(game._id);
-        if (!result.success) {
-          logger.error("Stop failed:", result.error);
-          toast.error(t("games.stopFailedTitle"), {
-            description: t("games.stopFailedDesc", { name: game.name }),
-            id: `stop-error-${game._id}`,
-          });
-        }
-      } catch (error) {
-        logger.error("Error stopping", game.name, ":", error);
-        toast.error(t("games.stopErrorTitle"), {
-          description: t("games.stopErrorDesc", { name: game.name }),
-          id: `stop-error-${game._id}`,
-        });
-      }
-    },
-    [t],
-  );
-
-  const handleForceStopGame = useCallback(
-    async (game) => {
-      try {
-        const result = await gameManager.forceStopGame(game._id);
-        if (!result.success) {
-          logger.error("Force stop failed:", result.error);
-          toast.error(t("games.forceStopFailedTitle"), {
-            description: t("games.forceStopFailedDesc", {
-              name: game.name,
-              error: result.error,
-            }),
-          });
-        } else {
-          toast.success(t("games.forceStopSuccess", { name: game.name }));
-        }
-      } catch (error) {
-        logger.error("Error force stopping", game.name, ":", error);
-        toast.error(t("games.forceStopErrorTitle"), {
-          description: t("games.forceStopErrorDesc", { name: game.name }),
-        });
-      }
-    },
-    [t],
-  );
-
+  const isGamePlaying = useCallback((gameId) => playingGames.has(gameId), [playingGames]);
+  const isGameUninstalling = useCallback((gameId) => uninstalling.has(gameId), [uninstalling]);
+  const isPendingUninstall = useCallback((gameId) => pendingUninstalls.has(gameId), [pendingUninstalls]);
   const isGameDownloading = useCallback(
     (gameId) => activeDownloads.some((dl) => dl.gameId === gameId),
     [activeDownloads],
   );
-
   const isGameQueued = useCallback(
     (gameId) => queue.some((g) => g._id === gameId),
     [queue],
   );
 
-  const handleEnqueueResult = useCallback(
-    (game, result) => {
-      if (result === "started") {
-        navigate("/download");
-      } else {
-        toast.success(t("downloads.addedToQueue"), {
-          description: t("downloads.queuedDesc", { name: game.name }),
-          duration: 3000,
-        });
-      }
-    },
-    [navigate, t],
-  );
-
-  const handleInstallGame = useCallback(
-    async (game) => {
-      if (isGameDownloading(game._id) || isGameQueued(game._id)) return;
-
-      const downloadPath = await window.store.get("downloadPath");
-
-      if (!downloadPath) {
-        modals.installPathModal.open(game);
-        return;
-      }
-
-      handleEnqueueResult(game, enqueueGame(game));
-    },
-    [
-      isGameDownloading,
-      isGameQueued,
-      modals.installPathModal.open,
-      handleEnqueueResult,
-      enqueueGame,
-    ],
-  );
-
-  const handleInstallPathConfirm = useCallback(async () => {
-    if (modals.installPathModal.game) {
-      const game = modals.installPathModal.game;
-      modals.installPathModal.close();
-      handleEnqueueResult(game, enqueueGame(game));
-    }
-  }, [
-    modals.installPathModal.game,
-    modals.installPathModal.close,
-    handleEnqueueResult,
-    enqueueGame,
-  ]);
-
-  const handleUninstallGame = useCallback(
-    (game) => {
-      modals.uninstallModal.open(game);
-    },
-    [modals.uninstallModal.open],
-  );
-
-  const confirmUninstall = useCallback(async () => {
-    if (!modals.uninstallModal.game) return;
-
-    const game = modals.uninstallModal.game;
-    const installedData = getInstalledGameData(game._id);
-    if (!installedData) return;
-
-    const serverAddress = await window.store.get("serverAddress");
-    const serverStatus = await checkServerStatus(serverAddress);
-    const isServerOnline = serverStatus.online;
-
-    if (!isServerOnline) {
-      await uninstallQueue.enqueue(game._id, game.name, installedData.path);
-      modals.uninstallModal.close();
-      modals.confirmationModal.showOfflineUninstall(game.name);
-      return;
-    }
-
-    try {
-      setUninstalling((prev) => new Set([...prev, game._id]));
-
-      const result = await gameManager.uninstallGame(
-        game._id,
-        installedData.path,
-        game.name,
-      );
-
-      if (!result.success) {
-        logger.error("Uninstall failed:", result.error);
-        toast.error(t("errors.uninstallFailed"), {
-          description: `${game.name}${result.error ? ` — ${result.error}` : ""}`,
-          duration: 5000,
-        });
-        setUninstalling((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(game._id);
-          return newSet;
-        });
-      } else {
-        toast.success(t("games.uninstallSuccessTitle"), {
-          description: t("games.uninstallSuccessDesc", { name: game.name }),
-          duration: 4000,
-        });
-      }
-    } catch (error) {
-      logger.error("Uninstall error:", error);
-      toast.error(t("errors.uninstallFailed"), {
-        description: t("games.launchErrorDesc", { name: game.name }),
-        duration: 5000,
-      });
-      setUninstalling((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(game._id);
-        return newSet;
-      });
-    }
-  }, [
-    modals.uninstallModal,
-    modals.confirmationModal,
+  const {
+    handleLaunchGame,
+    handleStopGame,
+    handleForceStopGame,
+    handleInstallGame,
+    handleInstallPathConfirm,
+    handleUninstallGame,
+    confirmUninstall,
+    openGameFolder,
+    createShortcut,
+    confirmDeleteGame,
+    handleAddGameSuccess,
+  } = useGamesActionHandlers({
+    setGames,
+    installedGames,
+    setInstalledGames,
+    selectedGame,
+    setSelectedGame,
+    setPlayingGames,
+    setUninstalling,
+    gameSizeCacheRef,
+    watchdogTimersRef,
+    isInstalled,
     getInstalledGameData,
-    t,
-  ]);
+    isPendingUninstall,
+    isGameDownloading,
+    isGameQueued,
+    enqueueGame,
+    modals,
+    user,
+  });
 
-  const openGameFolder = useCallback(
-    async (game) => {
-      const installedData = getInstalledGameData(game._id);
-      if (installedData && installedData.path) {
-        await gameManager.openGameFolder(installedData.path);
-      } else {
-        toast.error(t("games.cannotOpenFolderTitle"), {
-          description: t("games.cannotOpenFolderDesc", { name: game.name }),
-          duration: 3000,
-        });
-      }
-    },
-    [getInstalledGameData, t],
-  );
-
-  const createShortcut = useCallback(
-    async (game) => {
-      const installedData = getInstalledGameData(game._id);
-      if (!installedData?.path) return;
-
-      let executable = installedData.executable;
-      if (!executable) {
-        const detected = await window.api.getBestExecutable({
-          gamePath: installedData.path,
-          gameName: game.name,
-        });
-        executable = detected.success ? detected.executable : null;
-      }
-      if (!executable) {
-        toast.error(t("games.shortcutFailed"), { duration: 3000 });
-        return;
-      }
-
-      const result = await window.api.createShortcut({
-        gameName: game.name,
-        gamePath: installedData.path,
-        executable,
-      });
-      if (result.success) {
-        toast.success(t("games.shortcutCreated", { name: game.name }), {
-          duration: 3000,
-        });
-      } else {
-        toast.error(t("games.shortcutFailed"), { duration: 3000 });
-      }
-    },
-    [getInstalledGameData, t],
-  );
-
-  const confirmDeleteGame = useCallback(async () => {
-    if (!modals.deleteGameModal.game) return;
-
-    modals.deleteGameModal.setLoading(true);
-
-    try {
-      const response = await deleteServerGame(modals.deleteGameModal.game._id);
-
-      const updatedGames = await getAllServerGames();
-      setGames(updatedGames || []);
-
-      if (selectedGame?._id === modals.deleteGameModal.game._id) {
-        setSelectedGame(
-          updatedGames && updatedGames.length > 0 ? updatedGames[0] : null,
-        );
-      }
-
-      modals.deleteGameModal.setResult({
-        success: true,
-        cleanup: response.cleanup,
-        audit: response.audit,
-      });
-    } catch (error) {
-      modals.deleteGameModal.setResult({
-        error: error.message || t("games.unknownError"),
-        details: error.response?.data?.message || "",
-      });
-    } finally {
-      modals.deleteGameModal.setLoading(false);
-    }
-  }, [modals.deleteGameModal, selectedGame, t]);
-
-  // Keyboard shortcuts for Games page — useMemo keeps the object reference stable
-  // so useKeyboardShortcuts doesn't removeEventListener/addEventListener on every render
   const keyboardShortcuts = useMemo(
     () => ({
       enter: () => {
-        if (
-          !selectedGame ||
-          isGameDownloading(selectedGame._id) ||
-          isGameQueued(selectedGame._id)
-        )
-          return;
+        if (!selectedGame || isGameDownloading(selectedGame._id) || isGameQueued(selectedGame._id)) return;
         if (isInstalled(selectedGame._id) && !isGamePlaying(selectedGame._id)) {
           handleLaunchGame(selectedGame);
         } else if (!isInstalled(selectedGame._id)) {
@@ -739,20 +371,19 @@ const Games = () => {
       "ctrl+r": async () => {
         try {
           const updatedGames = await getAllServerGames();
-          setGames(updatedGames || []);
-          toast.success(t("games.gamesListRefreshed"), {
-            id: "games-refreshed",
-          });
-        } catch (error) {
+          if (updatedGames !== null) {
+            setGames(updatedGames);
+            toast.success(t("games.gamesListRefreshed"), { id: "games-refreshed" });
+          } else {
+            toast.error(t("errors.refreshGames"));
+          }
+        } catch {
           toast.error(t("errors.refreshGames"));
         }
       },
       "ctrl+f": (e) => {
-        const searchInput = document.querySelector('input[type="text"]');
-        if (searchInput) {
-          e.preventDefault();
-          searchInput.focus();
-        }
+        const searchInput = document.querySelector('[data-search-main]');
+        if (searchInput) { e.preventDefault(); searchInput.focus(); }
       },
     }),
     [
@@ -777,20 +408,6 @@ const Games = () => {
     modals.wineModal.isOpen;
   useKeyboardShortcuts(keyboardShortcuts, !anyModalOpen);
 
-  const handleAddGameSuccess = useCallback(async () => {
-    try {
-      const updatedGames = await getAllServerGames();
-      setGames(updatedGames || []);
-      toast.success(t("success.gameListUpdated"), { id: "games-refreshed" });
-    } catch (error) {
-      logger.error("Error reloading games:", error);
-      toast.error(t("errors.refreshGames"), {
-        description: t("games.failedReloadDesc"),
-      });
-    }
-  }, [t]);
-
-  // These useMemos MUST be before any early return — React rules of hooks
   const libraryStatusSets = useMemo(
     () => ({
       playingGames,
@@ -857,7 +474,7 @@ const Games = () => {
       handleUninstallGame,
       openGameFolder,
       createShortcut,
-      modals.deleteGameModal.open,
+      modals.deleteGameModal,
       user,
       isInstalled,
       setStatus,
@@ -865,27 +482,69 @@ const Games = () => {
     ],
   );
 
+  const gamesCtxValue = useMemo(
+    () => ({
+      games,
+      selectedGameId: selectedGame?._id ?? null,
+      onSelectGame: setSelectedGame,
+      searchTerm,
+      debouncedSearchTerm,
+      onSearchChange: setSearchTerm,
+      filters,
+      onFiltersChange: setFilters,
+      installedGames,
+      playingGames: libraryStatusSets.playingGames,
+      uninstallingGames: libraryStatusSets.uninstallingGames,
+      pendingUninstalls: libraryStatusSets.pendingUninstalls,
+      activeDownloads: libraryStatusSets.activeDownloads,
+      queue: libraryStatusSets.queue,
+      gameStats,
+      gameStatuses,
+      user,
+      onAddGame: modals.addGameModal.open,
+      getGenresArray,
+      expanded: libraryExpanded,
+      onToggleExpanded: handleToggleLibraryExpanded,
+      loading,
+      onLaunch: gameHandlers.onLaunch,
+      onStop: gameHandlers.onStop,
+      onInstall: gameHandlers.onInstall,
+      onOpenFolder: gameHandlers.onOpenFolder,
+      onUninstall: gameHandlers.onUninstall,
+    }),
+    [
+      games,
+      selectedGame,
+      searchTerm,
+      debouncedSearchTerm,
+      filters,
+      installedGames,
+      libraryStatusSets,
+      gameStats,
+      gameStatuses,
+      user,
+      modals.addGameModal.open,
+      getGenresArray,
+      libraryExpanded,
+      handleToggleLibraryExpanded,
+      loading,
+      gameHandlers,
+    ],
+  );
+
   if (loading) {
     return (
-      <div
-        className={`h-full flex items-center justify-center ${isLight ? "bg-gray-50" : "bg-gray-900"}`}
-      >
+      <div className={`h-full flex items-center justify-center ${isLight ? "bg-gray-50" : "bg-gray-900"}`}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div
-            className={`relative w-16 h-16 mx-auto mb-6 ${isLight ? "bg-blue-100" : "bg-blue-500/20"} rounded-2xl flex items-center justify-center`}
-          >
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+          <div className={`relative w-16 h-16 mx-auto mb-6 ${isLight ? "bg-blue-100" : "bg-blue-500/20"} rounded-2xl flex items-center justify-center`}>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
           </div>
-          <p className={`text-lg font-medium ${getTextClass("primary")}`}>
-            {t("games.loadingLibrary")}
-          </p>
-          <p className={`text-sm mt-2 ${getTextClass("secondary")}`}>
-            {t("games.pleaseWait")}
-          </p>
+          <p className={`text-lg font-medium ${getTextClass("primary")}`}>{t("games.loadingLibrary")}</p>
+          <p className={`text-sm mt-2 ${getTextClass("secondary")}`}>{t("games.pleaseWait")}</p>
         </motion.div>
       </div>
     );
@@ -893,41 +552,21 @@ const Games = () => {
 
   if (error) {
     return (
-      <div
-        className={`h-full flex items-center justify-center ${isLight ? "bg-gray-50" : "bg-gray-900"}`}
-      >
+      <div className={`h-full flex items-center justify-center ${isLight ? "bg-gray-50" : "bg-gray-900"}`}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className={`max-w-md w-full mx-4 rounded-2xl p-8 border ${isLight ? "bg-white border-red-200" : "bg-gray-800/50 border-red-500/30"}`}
         >
-          <div
-            className={`w-16 h-16 rounded-xl mx-auto mb-6 flex items-center justify-center ${isLight ? "bg-red-100" : "bg-red-500/20"}`}
-          >
-            <svg
-              className="w-8 h-8 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
+          <div className={`w-16 h-16 rounded-xl mx-auto mb-6 flex items-center justify-center ${isLight ? "bg-red-100" : "bg-red-500/20"}`}>
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2
-            className={`text-xl font-bold text-center mb-3 ${getTextClass("primary")}`}
-          >
+          <h2 className={`text-xl font-bold text-center mb-3 ${getTextClass("primary")}`}>
             {t("errors.loadingFailed")}
           </h2>
-          <p
-            className={`text-center mb-6 text-sm ${isLight ? "text-red-600" : "text-red-400"}`}
-          >
-            {error}
-          </p>
+          <p className={`text-center mb-6 text-sm ${isLight ? "text-red-600" : "text-red-400"}`}>{error}</p>
           <button
             onClick={reloadGames}
             className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
@@ -944,27 +583,9 @@ const Games = () => {
   }
 
   return (
+    <GamesContext.Provider value={gamesCtxValue}>
     <div className={`h-full flex ${isLight ? "bg-gray-50" : "bg-gray-900"}`}>
-      <GameLibrary
-        games={games}
-        selectedGameId={selectedGame?._id}
-        onSelectGame={setSelectedGame}
-        searchTerm={searchTerm}
-        debouncedSearchTerm={debouncedSearchTerm}
-        onSearchChange={setSearchTerm}
-        filters={filters}
-        onFiltersChange={setFilters}
-        installedGames={installedGames}
-        {...libraryStatusSets}
-        gameStats={gameStats}
-        gameStatuses={gameStatuses}
-        user={user}
-        onAddGame={modals.addGameModal.open}
-        getGenresArray={getGenresArray}
-        expanded={libraryExpanded}
-        onToggleExpanded={handleToggleLibraryExpanded}
-        loading={loading}
-      />
+      <GameLibrary />
 
       {!libraryExpanded && (
         <GameDetails
@@ -985,11 +606,7 @@ const Games = () => {
         onClose={modals.uninstallModal.close}
         onConfirm={confirmUninstall}
         game={modals.uninstallModal.game}
-        gameSize={
-          modals.uninstallModal.game?._id === selectedGame?._id
-            ? gameSize
-            : null
-        }
+        gameSize={modals.uninstallModal.game?._id === selectedGame?._id ? gameSize : null}
       />
 
       <InstallPathModal
@@ -1040,6 +657,7 @@ const Games = () => {
         instructions={modals.wineModal.instructions}
       />
     </div>
+    </GamesContext.Provider>
   );
 };
 

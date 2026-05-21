@@ -203,7 +203,8 @@ export const getAllGamesForAdmin = async () => {
   try {
     const response = await fetchWithTimeout(await buildUrl('/api/serverGame/getAllGames'), { headers: await getAuthHeaders() });
     if (!response.ok) throw new Error(`Error: ${response.status}`);
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.games ?? []);
   } catch {
     return [];
   }

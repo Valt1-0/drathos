@@ -1,12 +1,14 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import logger from "../services/logger";
 import { FaClock, FaGamepad, FaPlay, FaStar, FaPlus, FaRocket } from "react-icons/fa";
 import { FiTrendingUp, FiChevronRight, FiWifiOff } from "react-icons/fi";
 import { getAllServerGames } from "../api/serverGames";
 import { getMergedStats, getLocalStats, formatStats as formatStatsAPI } from "../api/gameStats";
+import { launchGame as launchGameAPI } from "../api/installedGames";
 import { useGamesLoader } from "../hooks/useGamesLoader";
 import AddGameModal from "../components/modals/AddGameModal";
 import GameCover from "../components/GameCover";
@@ -14,6 +16,7 @@ import { useAuth } from "../contexts/authContext";
 import { useTheme } from "../contexts/themeContext";
 import { useConnection } from "../contexts/connectionContext";
 import { Button } from "../components/ui";
+import gameManager from "../services/gameManager";
 
 const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 
@@ -37,40 +40,116 @@ const StatCard = memo(({ icon, label, value, color }) => (
     </div>
   </motion.div>
 ));
-
 StatCard.displayName = 'StatCard';
 
-const GameCard = ({ game, t }) => (
-  <motion.div
-    variants={fadeIn}
-    className="group rounded-2xl border overflow-hidden hover:scale-[1.02] transition-all"
-    style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
-  >
-    <div className="relative aspect-[3/4] overflow-hidden">
-      <GameCover
-        src={game.coverUrl}
-        alt={game.name}
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        size="cover_big"
-      />
-      <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ background: 'rgba(0,0,0,0.6)' }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Link to="/games">
-            <Button variant="primary" size="md" gradient icon={<FaPlay />}>
-              {t('home.viewGame')}
-            </Button>
-          </Link>
+const GameCard = memo(({ game, t, isInstalled, isPlaying, onLaunch, playtimeSeconds, maxPlaytimeSeconds }) => {
+  const progressPercent = maxPlaytimeSeconds > 0
+    ? Math.min(100, (playtimeSeconds / maxPlaytimeSeconds) * 100)
+    : 0;
+
+  const formattedTime = playtimeSeconds > 0
+    ? playtimeSeconds >= 3600
+      ? `${Math.floor(playtimeSeconds / 3600)}h ${Math.floor((playtimeSeconds % 3600) / 60)}m`
+      : `${Math.floor(playtimeSeconds / 60)}m`
+    : null;
+
+  return (
+    <motion.div
+      variants={fadeIn}
+      className="group rounded-2xl border overflow-hidden hover:scale-[1.02] transition-all"
+      style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
+    >
+      <div className="relative aspect-3/4 overflow-hidden">
+        <GameCover
+          src={game.coverUrl}
+          alt={game.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          size="cover_big"
+        />
+
+        {/* Playtime bar — always visible at bottom of cover */}
+        {formattedTime && (
+          <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+            <div
+              className="px-2.5 pb-2 pt-8"
+              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}
+            >
+              <span className="text-xs text-white/80 font-medium block mb-1.5 leading-none">
+                {formattedTime}
+              </span>
+              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: 'var(--app-gradient-primary)' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Hover overlay */}
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2.5"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+        >
+          {isInstalled ? (
+            <>
+              <motion.button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLaunch(game); }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={isPlaying}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white disabled:opacity-60"
+                style={{ background: 'var(--app-gradient-primary)', boxShadow: 'var(--app-shadow-primary)' }}
+              >
+                {isPlaying ? (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    {t('home.playing')}
+                  </>
+                ) : (
+                  <>
+                    <FaPlay className="text-xs" />
+                    {t('home.play')}
+                  </>
+                )}
+              </motion.button>
+              <Link
+                to="/games"
+                state={{ selectGameId: game._id }}
+                className="text-xs text-white/60 hover:text-white/90 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t('home.viewGame')}
+              </Link>
+            </>
+          ) : (
+            <Link to="/games" state={{ selectGameId: game._id }}>
+              <Button variant="primary" size="sm" gradient icon={<FaPlay />}>
+                {t('home.viewGame')}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
-    </div>
-    <div className="p-4">
-      <h3 className="font-semibold truncate" style={{ color: 'var(--app-text)' }}>{game.name}</h3>
-    </div>
-  </motion.div>
-);
+
+      <div className="p-3">
+        <h3 className="font-semibold truncate text-sm" style={{ color: 'var(--app-text)' }}>
+          {game.name}
+        </h3>
+        {isPlaying && (
+          <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--app-success)' }}>
+            ● {t('home.playing')}
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
+});
+GameCard.displayName = 'GameCard';
 
 const SectionHeader = ({ icon, title, action }) => (
   <div className="flex items-center justify-between mb-6">
@@ -108,6 +187,21 @@ const Home = () => {
 
   const [stats, setStats] = useState(null);
   const [showAddGameModal, setShowAddGameModal] = useState(false);
+  const [playingGames, setPlayingGames] = useState(new Set());
+
+  // Sync playing state with gameManager events
+  useEffect(() => {
+    const handleStatus = (status) => {
+      setPlayingGames((prev) => {
+        const next = new Set(prev);
+        if (status.status === 'running') next.add(status.gameId);
+        else if (status.status === 'stopped' || status.status === 'failed') next.delete(status.gameId);
+        return next;
+      });
+    };
+    gameManager.addStatusListener('*', handleStatus);
+    return () => gameManager.removeStatusListener('*', handleStatus);
+  }, []);
 
   // Load stats - use local stats if offline
   useEffect(() => {
@@ -117,7 +211,6 @@ const Home = () => {
       try {
         const gameIds = installedGames.map(g => g.serverGameId?._id).filter(Boolean);
 
-        // If offline, use only local stats; cap concurrent requests to 3
         const fetchFn = isOnline ? getMergedStats : getLocalStats;
         const allMergedStats = await (async () => {
           const results = new Array(gameIds.length);
@@ -133,10 +226,12 @@ const Home = () => {
 
         let totalPlayTime = 0, totalSessions = 0;
         const allStats = {};
+        const rawStatsMap = {};
 
         allMergedStats.forEach((s, i) => {
           if (s) {
             allStats[gameIds[i]] = formatStatsAPI(s);
+            rawStatsMap[gameIds[i]] = s;
             totalPlayTime += s.totalPlayTime || 0;
             totalSessions += s.totalSessions || 0;
           }
@@ -145,7 +240,11 @@ const Home = () => {
         const recentGames = installedGames
           .map(g => {
             const id = g.serverGameId?._id;
-            return id && allStats[id] ? { ...g.serverGameId, ...allStats[id] } : null;
+            return id && allStats[id] ? {
+              ...g.serverGameId,
+              ...allStats[id],
+              playtimeSeconds: rawStatsMap[id]?.totalPlayTime || 0,
+            } : null;
           })
           .filter(Boolean)
           .sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0))
@@ -155,7 +254,7 @@ const Home = () => {
           totalPlayTime: Math.floor(totalPlayTime / 3600),
           totalGames: gameIds.length,
           totalSessions,
-          recentGames
+          recentGames,
         });
       } catch (e) {
         logger.error("Error loading stats:", e);
@@ -164,8 +263,41 @@ const Home = () => {
     loadStats();
   }, [installedGames, isOnline]);
 
-  // What is displayed depends DIRECTLY on isOnline
+  const handleLaunchGame = useCallback(async (game) => {
+    const installedData = installedGames.find(g => g.serverGameId?._id === game._id);
+    if (!installedData) return;
+
+    setPlayingGames(prev => new Set([...prev, game._id]));
+
+    try {
+      await launchGameAPI(game._id).catch(() => {}); // offline-safe
+
+      const cachedGames = await window.store.get("installedGamesCache", {});
+      const result = await gameManager.launchGame(
+        game._id,
+        installedData.path,
+        cachedGames?.[game._id]?.executable || null,
+        game.name,
+      );
+
+      if (!result.success) {
+        setPlayingGames(prev => { const s = new Set(prev); s.delete(game._id); return s; });
+        if (result.error?.startsWith('WINE_NOT_INSTALLED:')) return; // handled by Games page
+        toast.error(t('games.launchFailedTitle'), {
+          description: t('games.launchFailedDesc', { name: game.name }),
+        });
+      }
+    } catch (err) {
+      logger.error('[Home] Launch error:', err);
+      setPlayingGames(prev => { const s = new Set(prev); s.delete(game._id); return s; });
+    }
+  }, [installedGames, t]);
+
   const games = isOnline ? serverGames : [];
+
+  const maxPlaytime = stats?.recentGames?.length > 0
+    ? Math.max(...stats.recentGames.map(g => g.playtimeSeconds || 0))
+    : 0;
 
   if (loading || isOnline === null) {
     return (
@@ -179,7 +311,7 @@ const Home = () => {
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-primary" style={getBackgroundStyle('gradient')}>
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
+      <div className="p-6 space-y-6">
 
         {/* Offline Banner */}
         {!isOnline && (
@@ -189,7 +321,7 @@ const Home = () => {
             className="flex items-center gap-3 p-4 rounded-xl border"
             style={{ background: 'var(--app-surface)', borderColor: 'var(--app-warning)' }}
           >
-            <FiWifiOff className="text-xl" style={{ color: 'var(--app-warning)' }} />
+            <FiWifiOff className="text-xl shrink-0" style={{ color: 'var(--app-warning)' }} />
             <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>
               {t('home.offlineMessage')}
             </p>
@@ -202,75 +334,54 @@ const Home = () => {
           animate="visible"
           variants={fadeIn}
           className="relative rounded-2xl border overflow-hidden"
-          style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
+          style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}
         >
-          <div className="p-8 md:p-12">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="flex-1 text-center md:text-left">
-                <div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-4"
-                  style={{ background: 'var(--app-primary)', color: '#fff' }}
-                >
-                  <FaRocket className="w-3 h-3" />
-                  {t('home.letsGo')}
-                </div>
+          <div className="px-8 py-7">
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
+              style={{ background: 'var(--app-primary)', color: '#fff' }}
+            >
+              <FaRocket className="w-3 h-3" />
+              {t('home.letsGo')}
+            </div>
 
-                <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: 'var(--app-text)' }}>
-                  {t('home.welcome')}, <span style={{ color: 'var(--app-primary)' }}>{user?.username}</span>
-                </h1>
+            <h1 className="text-3xl font-bold mb-1 text-text">
+              {t('home.welcome')}, <span style={{ color: 'var(--app-primary)' }}>{user?.username}</span>
+            </h1>
+            <p className="text-sm mb-5 text-text-secondary">{t('home.welcomeMessage')}</p>
 
-                <p className="text-base mb-6 max-w-md" style={{ color: 'var(--app-textSecondary)' }}>
-                  {t('home.welcomeMessage')}
-                </p>
-
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  <Link to="/games">
-                    <Button variant="primary" size="md" gradient icon={<FaGamepad />}>
-                      {t('home.browseGames')}
-                    </Button>
-                  </Link>
-                  {user?.role === 'admin' && (
-                    <Button variant="ghost" size="md" icon={<FaPlus />} onClick={() => setShowAddGameModal(true)}>
-                      {t('home.addGame')}
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {games.length > 0 && (
-                <Link to="/games" className="flex-shrink-0 group">
-                  <div className="relative">
-                    <div
-                      className="absolute -inset-2 rounded-2xl opacity-50 blur-xl group-hover:opacity-70 transition-opacity"
-                      style={{ background: 'var(--app-primary)' }}
-                    />
-                    <GameCover
-                      src={games[0].coverUrl}
-                      alt={games[0].name}
-                      className="relative w-36 md:w-44 rounded-xl border group-hover:scale-105 transition-transform"
-                      style={{ borderColor: 'var(--app-border)' }}
-                      size="cover_big"
-                    />
-                  </div>
-                </Link>
+            <div className="flex flex-wrap gap-3 mb-6">
+              <Link to="/games">
+                <Button variant="primary" size="sm" gradient icon={<FaGamepad />}>
+                  {t('home.browseGames')}
+                </Button>
+              </Link>
+              {user?.role === 'admin' && (
+                <Button variant="ghost" size="sm" icon={<FaPlus />} onClick={() => setShowAddGameModal(true)}>
+                  {t('home.addGame')}
+                </Button>
               )}
             </div>
+
+            {stats && (
+              <div className="flex gap-6">
+                {[
+                  { icon: <FaClock />, value: `${stats.totalPlayTime}h`, label: t('home.totalPlayTime') },
+                  { icon: <FaGamepad />, value: stats.totalGames, label: t('home.gamesInstalled') },
+                  { icon: <FiTrendingUp />, value: stats.totalSessions, label: t('home.totalSessions') },
+                ].map(({ icon, value, label }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="text-sm text-text-secondary">{icon}</span>
+                    <span className="font-bold text-sm text-text">{value}</span>
+                    <span className="text-xs text-text-secondary">{label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
 
-        {/* Stats */}
-        {installedGames.length > 0 && stats && (
-          <motion.div initial="hidden" animate="visible" variants={fadeIn}>
-            <SectionHeader icon={<FiTrendingUp />} title={t('home.yourStats')} />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard icon={<FaClock />} label={t('home.totalPlayTime')} value={`${stats.totalPlayTime}h`} color="primary" />
-              <StatCard icon={<FaGamepad />} label={t('home.gamesInstalled')} value={stats.totalGames} color="secondary" />
-              <StatCard icon={<FiTrendingUp />} label={t('home.totalSessions')} value={stats.totalSessions} color="success" />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Recent Games */}
+        {/* Continue Playing */}
         {stats?.recentGames?.length > 0 && (
           <motion.div initial="hidden" animate="visible" variants={fadeIn}>
             <SectionHeader
@@ -284,9 +395,18 @@ const Home = () => {
                 </Link>
               }
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
               {stats.recentGames.map(game => (
-                <GameCard key={game._id} game={game} t={t} />
+                <GameCard
+                  key={game._id}
+                  game={game}
+                  t={t}
+                  isInstalled={installedGames.some(g => g.serverGameId?._id === game._id)}
+                  isPlaying={playingGames.has(game._id)}
+                  onLaunch={handleLaunchGame}
+                  playtimeSeconds={game.playtimeSeconds || 0}
+                  maxPlaytimeSeconds={maxPlaytime}
+                />
               ))}
             </div>
           </motion.div>
@@ -306,9 +426,18 @@ const Home = () => {
                 </Link>
               }
             />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {games.slice(0, 4).map(game => (
-                <GameCard key={game._id} game={game} t={t} />
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+              {games.slice(0, 8).map(game => (
+                <GameCard
+                  key={game._id}
+                  game={game}
+                  t={t}
+                  isInstalled={installedGames.some(g => g.serverGameId?._id === game._id)}
+                  isPlaying={playingGames.has(game._id)}
+                  onLaunch={handleLaunchGame}
+                  playtimeSeconds={0}
+                  maxPlaytimeSeconds={0}
+                />
               ))}
             </div>
           </motion.div>
@@ -320,8 +449,8 @@ const Home = () => {
         isOpen={showAddGameModal}
         onClose={() => setShowAddGameModal(false)}
         onSuccess={async () => {
-          const games = await getAllServerGames();
-          setServerGames(games || []);
+          const updated = await getAllServerGames();
+          setServerGames(updated || []);
         }}
       />
     </div>

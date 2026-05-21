@@ -9,6 +9,8 @@ import logger from "./utils/logger.js";
 
 const execFileAsync = promisify(execFile);
 
+const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 h hard cap — cleans up if process dies without firing exit
+
 export class GameLauncher {
   constructor() {
     this.activeProcesses = new Map();
@@ -345,18 +347,25 @@ export class GameLauncher {
 
     const interval = setInterval(() => {
       const processInfo = this.activeProcesses.get(gameId);
-      if (processInfo) {
-        const duration = Date.now() - processInfo.startTime;
-        onStatusChange({
-          gameId,
-          status: "running",
-          sessionDuration: Math.floor(duration / 1000),
-          pid: processInfo.pid,
-        });
-      } else {
+      if (!processInfo) {
         clearInterval(interval);
         this.sessionTrackers.delete(gameId);
+        return;
       }
+      const duration = Date.now() - processInfo.startTime;
+      if (duration > SESSION_MAX_MS) {
+        logger.warn(`[GameLauncher] Session for ${gameId} exceeded 24h limit, forcing cleanup`);
+        clearInterval(interval);
+        this.sessionTrackers.delete(gameId);
+        this.cleanupProcess(gameId);
+        return;
+      }
+      onStatusChange({
+        gameId,
+        status: "running",
+        sessionDuration: Math.floor(duration / 1000),
+        pid: processInfo.pid,
+      });
     }, 30000);
 
     this.sessionTrackers.set(gameId, interval);

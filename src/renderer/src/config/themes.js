@@ -1,4 +1,65 @@
-// Application theme configuration
+// --- Color utilities ---
+const hexToRgb = (hex) => {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? { r: parseInt(r[1], 16), g: parseInt(r[2], 16), b: parseInt(r[3], 16) } : { r: 0, g: 0, b: 0 };
+};
+const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
+const toHex = (r, g, b) => '#' + [r, g, b].map(v => clamp(v).toString(16).padStart(2, '0')).join('');
+const darkenHex = (hex, pct) => { const { r, g, b } = hexToRgb(hex); const f = 1 - pct / 100; return toHex(r * f, g * f, b * f); };
+const lightenHex = (hex, pct) => { const { r, g, b } = hexToRgb(hex); const f = pct / 100; return toHex(r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f); };
+const rgbaHex = (hex, a) => { const { r, g, b } = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; };
+export const isColorLight = (hex) => { const { r, g, b } = hexToRgb(hex); return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5; };
+
+export const buildCustomTheme = (id, name, userColors) => {
+  const { primary, secondary, background, surface, text } = userColors;
+  const primaryDark = darkenHex(primary, 12);
+  const secondaryDark = darkenHex(secondary, 12);
+  const bgLight = isColorLight(background);
+  return {
+    id, name, description: 'Custom', isCustom: true,
+    userColors,
+    colors: {
+      primary,
+      primaryHover: primaryDark,
+      secondary,
+      secondaryHover: secondaryDark,
+      accent: secondary,
+      accentHover: darkenHex(secondary, 18),
+      background,
+      backgroundSecondary: bgLight ? darkenHex(background, 6) : lightenHex(background, 4),
+      surface,
+      text,
+      textSecondary: rgbaHex(text, 0.55),
+      border: rgbaHex(primary, 0.2),
+      success: '#10B981',
+      error: '#EF4444',
+      warning: '#F59E0B',
+    },
+    gradients: {
+      primary: `linear-gradient(135deg, ${primary} 0%, ${primaryDark} 100%)`,
+      secondary: `linear-gradient(135deg, ${secondary} 0%, ${secondaryDark} 100%)`,
+      button: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`,
+    },
+    shadows: {
+      primary: `0 4px 20px ${rgbaHex(primary, 0.3)}`,
+      secondary: `0 4px 20px ${rgbaHex(secondary, 0.3)}`,
+      accent: `0 4px 20px ${rgbaHex(secondary, 0.25)}`,
+    },
+  };
+};
+
+const applyThemeVars = (themeObj) => {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', themeObj.id);
+  Object.entries(themeObj.colors).forEach(([k, v]) => root.style.setProperty(`--app-${k}`, v, 'important'));
+  Object.entries(themeObj.gradients).forEach(([k, v]) => root.style.setProperty(`--app-gradient-${k}`, v, 'important'));
+  Object.entries(themeObj.shadows).forEach(([k, v]) => root.style.setProperty(`--app-shadow-${k}`, v, 'important'));
+  return themeObj;
+};
+
+export const applyThemeObject = applyThemeVars;
+
+// --- Application theme configuration ---
 export const themes = {
   ocean: {
     id: "ocean",
@@ -175,42 +236,13 @@ export const getThemesList = () => Object.values(themes);
 // Get a theme by its ID
 export const getThemeById = (id) => themes[id] || themes.default;
 
-// Detect if a theme is light
+// Detect if a theme is light (uses perceived luminance, same formula as isColorLight)
 export const isLightTheme = (themeId) => {
   const theme = themes[themeId];
   if (!theme) return false;
-
-  // Explicitly check if it is lightModern
-  if (themeId === "lightModern") return true;
-
-  // Otherwise, check the brightness of the background
-  if (theme.colors?.background) {
-    const hex = theme.colors.background.replace("#", "");
-    const rgb = parseInt(hex, 16);
-    return rgb > 0x808080; // More than 50% brightness
-  }
-
+  if (theme.colors?.background) return isColorLight(theme.colors.background);
   return false;
 };
 
 // Apply a theme via CSS variables
-export const applyTheme = (themeId) => {
-  const theme = getThemeById(themeId);
-  const root = document.documentElement;
-
-  root.setAttribute("data-theme", themeId);
-
-  Object.entries(theme.colors).forEach(([key, value]) => {
-    root.style.setProperty(`--app-${key}`, value, "important");
-  });
-
-  Object.entries(theme.gradients).forEach(([key, value]) => {
-    root.style.setProperty(`--app-gradient-${key}`, value, "important");
-  });
-
-  Object.entries(theme.shadows).forEach(([key, value]) => {
-    root.style.setProperty(`--app-shadow-${key}`, value, "important");
-  });
-
-  return theme;
-};
+export const applyTheme = (themeId) => applyThemeVars(getThemeById(themeId));

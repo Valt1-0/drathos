@@ -3,31 +3,34 @@
 import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 import logger from "../services/logger";
+import i18n from "../i18n/config";
 
 
-/**
- * Retrieves game statistics from the server
- * @param {string} gameId - Game ID
- * @returns {Promise<Object>} Game statistics
- */
+const _statsPending = new Map();
+
 export async function getGameStats(gameId) {
-  const serverAddress = await window.store.get("serverAddress");
-  const token = await window.store.get("userToken");
+  if (_statsPending.has(gameId)) return _statsPending.get(gameId);
+  const p = (async () => {
+    const serverAddress = await window.store.get("serverAddress");
+    const token = await window.store.get("userToken");
 
-  const response = await fetchWithTimeout(
-    buildServerUrl(serverAddress, `/api/installedGames/stats/${gameId}`),
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    const response = await fetchWithTimeout(
+      buildServerUrl(serverAddress, `/api/installedGames/stats/${gameId}`),
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch game stats");
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch game stats");
-  }
-
-  return await response.json();
+    return await response.json();
+  })().finally(() => _statsPending.delete(gameId));
+  _statsPending.set(gameId, p);
+  return p;
 }
 
 /**
@@ -133,10 +136,13 @@ function mergeStats(local, remote) {
     totalPlayTime: Math.max(local.totalPlayTime || 0, parsePlayTimeToSeconds(remote.totalPlayTime) || 0),
     totalSessions: Math.max(local.totalSessions || 0, remote.totalSessions || 0),
     lastPlayed: Math.max(localLastPlayed, remoteLastPlayed),
-    firstLaunched: Math.min(
-      local.firstLaunched || Date.now(),
-      remote.firstLaunched ? new Date(remote.firstLaunched).getTime() : Date.now()
-    ),
+    firstLaunched: (() => {
+      const candidates = [
+        local.firstLaunched || null,
+        remote.firstLaunched ? new Date(remote.firstLaunched).getTime() : null,
+      ].filter(Boolean);
+      return candidates.length > 0 ? Math.min(...candidates) : Date.now();
+    })(),
   };
 }
 
@@ -168,19 +174,19 @@ function parsePlayTimeToSeconds(formatted) {
 export function formatStats(stats) {
   if (!stats) return null;
 
+  const avgSeconds = stats.totalSessions > 0 ? Math.floor(stats.totalPlayTime / stats.totalSessions) : 0;
   return {
     totalPlayTime: formatPlayTime(stats.totalPlayTime),
+    totalPlayTimeSeconds: stats.totalPlayTime || 0,
     totalSessions: stats.totalSessions,
+    averageSessionTime: avgSeconds > 0 ? formatPlayTime(avgSeconds) : "0h 0m",
+    averageSessionSeconds: avgSeconds,
     lastPlayedFormatted: stats.lastPlayed
       ? formatRelativeTime(stats.lastPlayed)
-      : "Never",
+      : i18n.t("games.never"),
     firstLaunchedFormatted: stats.firstLaunched
       ? new Date(stats.firstLaunched).toLocaleDateString()
-      : "Never",
-    averageSessionTime:
-      stats.totalSessions > 0
-        ? formatPlayTime(Math.floor(stats.totalPlayTime / stats.totalSessions))
-        : "0h 0m",
+      : i18n.t("games.never"),
   };
 }
 
@@ -207,12 +213,12 @@ function formatPlayTime(seconds) {
  */
 function formatRelativeTime(timestamp) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "Just now";
+  if (seconds < 60) return i18n.t("users.justNow");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return i18n.t("users.minutesAgo", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return i18n.t("users.hoursAgo", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return i18n.t("users.daysAgo", { count: days });
   return new Date(timestamp).toLocaleDateString();
 }

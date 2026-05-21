@@ -3,28 +3,43 @@
  */
 import { ipcMain, shell, app } from "electron";
 import store from "../store.js";
-import { isValidSender, isSafeForExternalOpen } from "../app/security.js";
+import { isSafeForExternalOpen } from "../app/security.js";
+import { secureHandle } from "./secureHandle.js";
+
+// Keys the main process writes exclusively — renderer must not overwrite them via store-set
+const RENDERER_BLOCKED_KEYS = new Set(["installedGamesCache", "installedMods"]);
 
 export const registerStoreHandlers = () => {
-  ipcMain.handle("store-get", (_, key, defaultValue) =>
+  // secureHandle validates the sender frame — prevents reads from injected frames
+  secureHandle("store-get", (_event, key, defaultValue) =>
     defaultValue !== undefined ? store.get(key, defaultValue) : store.get(key)
   );
-  ipcMain.handle("store-set", (_, key, value) => store.set(key, value));
-  ipcMain.handle("store-delete", (_, key) => store.delete(key));
-  ipcMain.handle("store-clear", () => store.clear());
+  secureHandle("store-set", (_event, key, value) => {
+    if (RENDERER_BLOCKED_KEYS.has(key)) throw new Error(`Protected store key: ${key}`);
+    store.set(key, value);
+  });
+  secureHandle("store-delete", (_event, key) => {
+    store.delete(key);
+  });
+  secureHandle("store-clear", () => {
+    const preserved = {};
+    for (const key of RENDERER_BLOCKED_KEYS) {
+      const val = store.get(key);
+      if (val !== undefined) preserved[key] = val;
+    }
+    store.clear();
+    for (const [key, val] of Object.entries(preserved)) {
+      store.set(key, val);
+    }
+  });
 
   ipcMain.handle("app:getLoginItem", () => app.getLoginItemSettings().openAtLogin);
-  ipcMain.handle("app:setLoginItem", (_, openAtLogin) => {
+  secureHandle("app:setLoginItem", (_event, openAtLogin) => {
     app.setLoginItemSettings({ openAtLogin, name: "Drathos" });
   });
 
-  ipcMain.handle("shell:openExternal", async (event, url) => {
-    if (!isValidSender(event.senderFrame)) {
-      throw new Error("Unauthorized sender");
-    }
-    if (!isSafeForExternalOpen(url)) {
-      throw new Error("Unsafe URL blocked");
-    }
+  secureHandle("shell:openExternal", async (_event, url) => {
+    if (!isSafeForExternalOpen(url)) throw new Error("Unsafe URL blocked");
     await shell.openExternal(url);
   });
 };

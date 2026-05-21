@@ -1,5 +1,5 @@
 // src/main/extractionEngine.js - Multi-format extraction engine
-// Supports: ZIP, TAR, TAR.GZ, TGZ, 7Z, RAR
+// Supports: ZIP, TAR, TAR.GZ, TGZ, TAR.BZ2, TBZ2, TAR.XZ, TXZ, 7Z, RAR, BZ2, XZ
 
 import fs from "fs";
 import path from "path";
@@ -9,10 +9,11 @@ import { createGunzip } from "zlib";
 import Seven from "node-7z";
 import sevenBin from "7zip-bin";
 import logger from "./utils/logger.js";
+import { validateAndResolvePath } from "./app/validation.js";
 
 export class ExtractionEngine {
   constructor() {
-    this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".7z", ".rar"];
+    this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz", ".7z", ".rar", ".bz2", ".xz"];
 
     // Get the path to embedded 7z binary
     let binPath = sevenBin.path7za;
@@ -67,6 +68,12 @@ export class ExtractionEngine {
 
       case ".7z":
       case ".rar":
+      case ".bz2":
+      case ".xz":
+      case ".tar.bz2":
+      case ".tbz2":
+      case ".tar.xz":
+      case ".txz":
         return await this.extract7z(archivePath, extractPath, onProgress);
 
       default:
@@ -91,7 +98,14 @@ export class ExtractionEngine {
     }
 
     for (const entry of directory.files) {
-      const outputPath = path.join(extractPath, entry.path);
+      let outputPath;
+      try {
+        outputPath = validateAndResolvePath(extractPath, entry.path);
+      } catch {
+        logger.warn(`[ExtractionEngine] Skipped unsafe ZIP entry: ${entry.path}`);
+        extractedCount++;
+        continue;
+      }
 
       try {
         if (entry.type === "Directory") {
@@ -183,7 +197,15 @@ export class ExtractionEngine {
       // Single pass: extract and count simultaneously
       extract.on("entry", async (header, stream, next) => {
         totalFiles++; // Count as we go
-        const outputPath = path.join(extractPath, header.name);
+        let outputPath;
+        try {
+          outputPath = validateAndResolvePath(extractPath, header.name);
+        } catch {
+          logger.warn(`[ExtractionEngine] Skipped unsafe TAR entry: ${header.name}`);
+          stream.resume();
+          next();
+          return;
+        }
 
         try {
           if (header.type === "directory") {
@@ -250,7 +272,7 @@ export class ExtractionEngine {
   }
 
   /**
-   * 🗜️ Extract TAR.GZ/TGZ archives (using tar-stream + zlib)
+   * 🗜️ Extract TAR.GZ/TGZ archives (using tar-stream + zlib) — single-pass
    */
   async extractTarGz(archivePath, extractPath, onProgress) {
     logger.info(`[ExtractionEngine] Extracting TAR.GZ: ${archivePath}`);
@@ -260,95 +282,73 @@ export class ExtractionEngine {
       let extractedCount = 0;
       let totalFiles = 0;
 
-      // First pass: count total files (with gunzip)
-      const countStream = tar.extract();
-      countStream.on("entry", (header, stream, next) => {
+      if (onProgress) {
+        onProgress(0, 0, 0, "Starting extraction...");
+      }
+
+      extract.on("entry", async (header, stream, next) => {
         totalFiles++;
-        stream.on("end", next);
-        stream.resume();
-      });
-
-      const countReadStream = fs
-        .createReadStream(archivePath)
-        .pipe(createGunzip());
-      countReadStream.pipe(countStream);
-
-      countStream.on("finish", () => {
-        logger.info(`[ExtractionEngine] TAR.GZ contains ${totalFiles} entries`);
-
-        if (onProgress) {
-          onProgress(0, 0, totalFiles, "Starting extraction...");
+        let outputPath;
+        try {
+          outputPath = validateAndResolvePath(extractPath, header.name);
+        } catch {
+          logger.warn(`[ExtractionEngine] Skipped unsafe TAR.GZ entry: ${header.name}`);
+          stream.resume();
+          next();
+          return;
         }
 
-        // Second pass: extract files
-        extract.on("entry", async (header, stream, next) => {
-          const outputPath = path.join(extractPath, header.name);
-
-          try {
-            if (header.type === "directory") {
-              await fs.promises.mkdir(outputPath, { recursive: true });
-              stream.resume();
-              next();
-            } else if (header.type === "file") {
-              await fs.promises.mkdir(path.dirname(outputPath), {
-                recursive: true,
-              });
-
-              const writeStream = fs.createWriteStream(outputPath);
-              stream.pipe(writeStream);
-
-              writeStream.on("finish", () => {
-                extractedCount++;
-                const progress = Math.round(
-                  (extractedCount / totalFiles) * 100,
-                );
-
-                if (
-                  onProgress &&
-                  (extractedCount % 10 === 0 ||
-                    progress % 5 === 0 ||
-                    extractedCount === totalFiles)
-                ) {
-                  onProgress(progress, extractedCount, totalFiles, header.name);
-                }
-
-                next();
-              });
-
-              writeStream.on("error", (err) => {
-                logger.warn(`[ExtractionEngine] Error writing ${header.name}: ${err.message}`);
-                extractedCount++;
-                next();
-              });
-            } else {
-              stream.resume();
-              next();
-            }
-          } catch (error) {
-            logger.warn(`[ExtractionEngine] Error extracting ${header.name}: ${error.message}`);
+        try {
+          if (header.type === "directory") {
+            await fs.promises.mkdir(outputPath, { recursive: true });
             stream.resume();
-            extractedCount++;
+            next();
+          } else if (header.type === "file") {
+            await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+
+            const writeStream = fs.createWriteStream(outputPath);
+            stream.pipe(writeStream);
+
+            writeStream.on("finish", () => {
+              extractedCount++;
+              const progress = Math.round((extractedCount / totalFiles) * 100);
+              if (onProgress && (extractedCount % 10 === 0 || progress % 5 === 0 || extractedCount === totalFiles)) {
+                onProgress(progress, extractedCount, totalFiles, header.name);
+              }
+              next();
+            });
+
+            writeStream.on("error", (err) => {
+              logger.warn(`[ExtractionEngine] Error writing ${header.name}: ${err.message}`);
+              extractedCount++;
+              next();
+            });
+          } else {
+            stream.resume();
             next();
           }
-        });
-
-        extract.on("finish", () => {
-          logger.info(`[ExtractionEngine] TAR.GZ extraction complete: ${extractedCount}/${totalFiles} files`);
-          resolve(extractPath);
-        });
-
-        extract.on("error", (err) => {
-          reject(new Error(`TAR.GZ extraction failed: ${err.message}`));
-        });
-
-        const readStream = fs
-          .createReadStream(archivePath)
-          .pipe(createGunzip());
-        readStream.pipe(extract);
+        } catch (error) {
+          logger.warn(`[ExtractionEngine] Error extracting ${header.name}: ${error.message}`);
+          stream.resume();
+          extractedCount++;
+          next();
+        }
       });
 
-      countStream.on("error", (err) => {
-        reject(new Error(`TAR.GZ analysis failed: ${err.message}`));
+      extract.on("finish", () => {
+        logger.info(`[ExtractionEngine] TAR.GZ extraction complete: ${extractedCount}/${totalFiles} files`);
+        resolve(extractPath);
+      });
+
+      extract.on("error", (err) => {
+        reject(new Error(`TAR.GZ extraction failed: ${err.message}`));
+      });
+
+      const readStream = fs.createReadStream(archivePath).pipe(createGunzip());
+      readStream.pipe(extract);
+
+      readStream.on("error", (err) => {
+        reject(new Error(`TAR.GZ read failed: ${err.message}`));
       });
     });
   }
@@ -469,15 +469,11 @@ export class ExtractionEngine {
   getFileExtension(filePath) {
     const fileName = path.basename(filePath).toLowerCase();
 
-    // Check for double extensions
-    if (fileName.endsWith(".tar.gz")) {
-      return ".tar.gz";
-    }
-    if (fileName.endsWith(".tgz")) {
-      return ".tgz";
+    const doubleExts = [".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
+    for (const ext of doubleExts) {
+      if (fileName.endsWith(ext)) return ext;
     }
 
-    // Standard extension
     return path.extname(filePath).toLowerCase();
   }
 

@@ -1,0 +1,163 @@
+[
+  {
+    "version": "0.9.0",
+    "title": {
+      "en": "Security Hardening & UI Overhaul",
+      "fr": "Durcissement sécurité & refonte UI"
+    },
+    "releaseDate": "2026-04-30",
+    "sections": [
+      {
+        "type": "features",
+        "items": {
+          "en": [
+            "Custom theme editor with color picker",
+            "Keyboard shortcuts modal (Ctrl+Shift+?)",
+            "Game status selector (backlog, in-progress, completed, dropped)",
+            "Game requests system — users can request games",
+            "Patch notes viewer in settings"
+          ],
+          "fr": [
+            "Éditeur de thème personnalisé avec sélecteur de couleur",
+            "Modal des raccourcis clavier (Ctrl+Maj+?)",
+            "Sélecteur de statut de jeu (backlog, en cours, terminé, abandonné)",
+            "Système de demandes de jeux — les utilisateurs peuvent demander des jeux",
+            "Visualiseur des notes de version dans les paramètres"
+          ]
+        }
+      },
+      {
+        "type": "improvements",
+        "items": {
+          "en": [
+            "Settings search bar with keyboard navigation",
+            "Virtualized game list for better performance",
+            "Profile picture upload with progress indicator",
+            "Enhanced download progress UI"
+          ],
+          "fr": [
+            "Barre de recherche dans les paramètres avec navigation clavier",
+            "Liste de jeux virtualisée pour de meilleures performances",
+            "Upload de photo de profil avec indicateur de progression",
+            "Interface de progression des téléchargements améliorée"
+          ]
+        }
+      },
+      {
+        "type": "fixes",
+        "items": {
+          "en": [
+            "Fixed store encryption key migration from pre-0.8.0",
+            "Fixed offline mode sync queue badge",
+            "Fixed game size calculation caching"
+          ],
+          "fr": [
+            "Correction de la migration de clé de chiffrement depuis les versions pré-0.8.0",
+            "Correction du badge de file d'attente en mode hors ligne",
+            "Correction du cache de calcul de taille des jeux"
+          ]
+        }
+      },
+      {
+        "type": "breaking",
+        "items": {
+          "en": [
+            "Electron store is now AES-256 encrypted — first launch will migrate automatically"
+          ],
+          "fr": [
+            "Le store Electron est maintenant chiffré AES-256 — le premier lancement migrera automatiquement"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "version": "0.8.0",
+    "title": {
+      "en": "Execution Path Management",
+      "fr": "Gestion des chemins d'exécution"
+    },
+    "releaseDate": "2026-03-15",
+    "sections": [
+      {
+        "type": "features",
+        "items": {
+          "en": [
+            "Auto-detect game executable on install",
+            "Manual executable override from game details",
+            "Launch at startup option"
+          ],
+          "fr": [
+            "Détection automatique de l'exécutable du jeu à l'installation",
+            "Remplacement manuel de l'exécutable depuis les détails du jeu",
+            "Option de lancement au démarrage"
+          ]
+        }
+      },
+      {
+        "type": "improvements",
+        "items": {
+          "en": [
+            "Better error messages during game installation",
+            "Faster game library loading with local cache"
+          ],
+          "fr": [
+            "Messages d'erreur améliorés lors de l'installation des jeux",
+            "Chargement plus rapide de la bibliothèque avec cache local"
+          ]
+        }
+      },
+      {
+        "type": "fixes",
+        "items": {
+          "en": [
+            "Fixed crash when game folder is missing",
+            "Fixed download resume after network loss"
+          ],
+          "fr": [
+            "Correction du crash lorsque le dossier du jeu est absent",
+            "Correction de la reprise de téléchargement après perte réseau"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "version": "0.7.0",
+    "title": {
+      "en": "Mods & Collections",
+      "fr": "Mods & Collections"
+    },
+    "releaseDate": "2026-01-20",
+    "sections": [
+      {
+        "type": "features",
+        "items": {
+          "en": [
+            "Mod upload and management (admin)",
+            "Game collections with drag-and-drop ordering",
+            "Smart collections (recently played, installed)"
+          ],
+          "fr": [
+            "Upload et gestion des mods (admin)",
+            "Collections de jeux avec tri par glisser-déposer",
+            "Collections intelligentes (récemment joués, installés)"
+          ]
+        }
+      },
+      {
+        "type": "improvements",
+        "items": {
+          "en": [
+            "New sidebar design with Framer Motion animations",
+            "French localization (i18n)"
+          ],
+          "fr": [
+            "Nouveau design de la barre latérale avec animations Framer Motion",
+            "Localisation française (i18n)"
+          ]
+        }
+      }
+    ]
+  }
+]

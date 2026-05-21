@@ -6,15 +6,18 @@
 
 import http from "http";
 import https from "https";
+import { MAX_HTTP_RESPONSE_SIZE, HTTP_REQUEST_TIMEOUT_MS } from "../app/constants.js";
 
 /**
- * Makes an HTTP/HTTPS request to the backend with optional self-signed cert support.
+ * Makes an HTTP/HTTPS request to the backend.
+ * Always allows self-signed certificates — this client is only used for the
+ * configured self-hosted server, never for external services.
  * Returns a fetch-like response object: { ok, status, headers, json(), text(), arrayBuffer() }
  *
  * @param {string} url
- * @param {{ method?, headers?, body?, allowSelfSigned? }} options
+ * @param {{ method?, headers?, body?, timeout? }} options
  */
-export const apiRequest = (url, { method = "GET", headers = {}, body = null, allowSelfSigned = false } = {}) => {
+export const apiRequest = (url, { method = "GET", headers = {}, body = null, timeout = HTTP_REQUEST_TIMEOUT_MS } = {}) => {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
     const isHttps = parsedUrl.protocol === "https:";
@@ -35,11 +38,19 @@ export const apiRequest = (url, { method = "GET", headers = {}, body = null, all
       },
     };
 
-    if (isHttps && allowSelfSigned) options.rejectUnauthorized = false;
+    if (isHttps) options.rejectUnauthorized = false;
 
     const req = transport.request(options, (res) => {
       const chunks = [];
-      res.on("data", (chunk) => chunks.push(chunk));
+      let bytesReceived = 0;
+      res.on("data", (chunk) => {
+        bytesReceived += chunk.length;
+        if (bytesReceived > MAX_HTTP_RESPONSE_SIZE) {
+          res.destroy(new Error(`Response exceeds ${MAX_HTTP_RESPONSE_SIZE} bytes`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       res.on("end", () => {
         const buf = Buffer.concat(chunks);
         resolve({
@@ -53,6 +64,7 @@ export const apiRequest = (url, { method = "GET", headers = {}, body = null, all
       });
     });
 
+    req.setTimeout(timeout, () => req.destroy(new Error(`Request timed out after ${timeout}ms`)));
     req.on("error", reject);
     if (bodyBuf) req.write(bodyBuf);
     req.end();

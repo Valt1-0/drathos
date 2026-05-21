@@ -92,6 +92,29 @@ const buildIcon = () => {
 
 const icon = buildIcon();
 
+// === TRAY ICON ===
+// The main `icon` is a multi-res image sized for the window (large logical pixels).
+// Windows tray needs 16×16 (1× DPI) / 32×32 (2× HiDPI) — provide them explicitly
+// so the OS doesn't have to crush a 512px image down to 16px, which causes blur.
+const buildTrayIcon = () => {
+  if (process.platform === "linux") return icon;
+  const p = resolveIconPath(iconPathPng, "icon.png");
+  if (!p) return icon;
+  try {
+    const source = nativeImage.createFromPath(p);
+    const trayImg = nativeImage.createEmpty();
+    const img16 = source.resize({ width: 16, height: 16, quality: "best" });
+    const img32 = source.resize({ width: 32, height: 32, quality: "best" });
+    trayImg.addRepresentation({ scaleFactor: 1.0, dataURL: img16.toDataURL() });
+    trayImg.addRepresentation({ scaleFactor: 2.0, dataURL: img32.toDataURL() });
+    return trayImg.isEmpty() ? icon : trayImg;
+  } catch {
+    return icon;
+  }
+};
+
+const trayIcon = buildTrayIcon();
+
 // === WINDOW CREATION ===
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -110,6 +133,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
       nodeIntegrationInWorker: false,
+      webSecurity: true,
       partition: "persist:drathos",
       zoomFactor: 1.0,
     },
@@ -138,13 +162,23 @@ const setupCSP = () => {
         "connect-src 'self' ws: http: https:; object-src 'none'; base-uri 'self'; form-action 'self';"
       : (() => {
           const igdb = "https://images.igdb.com";
-          const clean = serverAddress.replace(/^https?:\/\//, "");
-          const backendHttp = clean ? `http://${clean}` : "";
+          // Strip scheme and reject addresses containing characters that could
+          // break the CSP header (quotes, spaces, semicolons, etc.)
+          const stripped = serverAddress.replace(/^https?:\/\//, "").split(/[?#\s]/)[0];
+          const clean = /^[\w.\-:\[\]]+$/.test(stripped) ? stripped : "";
+          const backendHttp  = clean ? `http://${clean}`  : "";
           const backendHttps = clean ? `https://${clean}` : "";
+          const backendWs    = clean ? `ws://${clean}`    : "";
+          const backendWss   = clean ? `wss://${clean}`   : "";
+          // If no server is configured yet allow all origins as fallback so the
+          // setup screen can reach any host the user types in.
+          const connectSrc = clean
+            ? `'self' ${backendHttp} ${backendHttps} ${backendWs} ${backendWss}`
+            : `'self' http: https: ws: wss:`;
           return (
             `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; ` +
             `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps}; font-src 'self' data:; ` +
-            `connect-src 'self' http: https: ws: wss:; object-src 'none'; ` +
+            `connect-src ${connectSrc}; object-src 'none'; ` +
             `base-uri 'self'; form-action 'self'; frame-ancestors 'none';`
           );
         })();
@@ -166,15 +200,15 @@ const setupCSP = () => {
 const setupSecurity = () => {
   const appSession = session.fromPartition("persist:drathos");
 
-  // Allow self-signed certificates for the configured self-hosted backend.
-  // Only bypasses cert validation for requests matching the server address —
-  // external URLs (IGDB, etc.) are still validated normally.
+  // Always allow self-signed certificates for the configured self-hosted backend.
+  // External URLs (IGDB, etc.) are still validated normally.
   appSession.on("certificate-error", (event, _webContents, url, _error, _cert, callback) => {
     const serverAddress = store.get("serverAddress", "");
     try {
       const serverHostname = new URL(serverAddress.startsWith("http") ? serverAddress : `https://${serverAddress}`).hostname;
       const requestHostname = new URL(url).hostname;
       if (serverAddress && serverHostname && serverHostname === requestHostname) {
+        logger.warn(`[Security] Accepting self-signed certificate for configured server: ${serverHostname}`);
         event.preventDefault();
         callback(true);
         return;
@@ -229,11 +263,11 @@ const setupShortcuts = () => {
 
 // === TRAY SETUP ===
 const setupTray = (mainWindow) => {
-  if (!icon) {
+  if (!trayIcon) {
     logger.warn("[App] Icon not found, tray disabled");
     return null;
   }
-  const tray = new Tray(icon);
+  const tray = new Tray(trayIcon);
   tray.setToolTip("Drathos");
 
   tray.setContextMenu(

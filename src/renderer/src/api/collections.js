@@ -25,7 +25,7 @@ export const getUserCollections = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    logger.info("[API] Collections unavailable (offline mode)");
+    logger.debug("[API] getUserCollections failed:", error.message);
     return null;
   }
 };
@@ -51,7 +51,7 @@ export const getCollectionById = async (collectionId) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    logger.error("[API] Error fetching collection:", error);
+    logger.debug("[API] getCollectionById failed:", error.message);
     return null;
   }
 };
