@@ -56,29 +56,27 @@ Drathos is a **self-hosted, DRM-free game library client** built with Electron a
 
 ## Getting Started
 
-> **Pre-built releases** will be available for download on the Drathos website — coming soon.
+### Download
 
-### Prerequisites
+Pre-built installers for Windows and Linux are available on the [Releases page](https://github.com/Valt1-0/drathos/releases).
 
-- **Node.js** ≥ 18
-- A running **[Drathos backend](https://github.com/Valt1-0/drathos-backend)** instance
+### Build from source
 
-### Install & Run
+**Prerequisites**: Node.js ≥ 18 · A running [Drathos backend](https://github.com/Valt1-0/drathos-backend) instance
 
 ```bash
-# Install dependencies
+git clone https://github.com/Valt1-0/drathos.git
+cd drathos
 npm install
-
-# Start in development mode
-npm run dev
+cp .env.example .env   # set your backend URL
+npm run dev            # development mode
 ```
 
-### Build
-
 ```bash
-npm run build          # Current platform
-npm run build:win      # Windows
-npm run build:linux    # Linux
+npm run dist           # build for current platform
+npm run dist:win       # Windows (NSIS + ZIP)
+npm run dist:linux     # Linux (AppImage + DEB + PACMAN)
+npm run dist:mac       # macOS (DMG)
 ```
 
 <br />
@@ -86,6 +84,8 @@ npm run build:linux    # Linux
 ---
 
 ## Changelog
+
+**v1.0.0** — Open source release · GPL-3.0 licence · Security hardening (safeStorage, token refresh, CSP) · 4-language i18n (EN / FR / DE / ES) · Auto-update via GitHub Releases · Performance improvements
 
 **v0.8.0** — Desktop shortcuts · Loading animations · Accessibility improvements · Disk space monitoring · Game watchdog
 
@@ -105,9 +105,19 @@ npm run build:linux    # Linux
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and pull request guidelines.
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+To report a vulnerability privately, see [SECURITY.md](SECURITY.md).
+
+<br />
+
+---
+
 <div align="center">
   <br />
-  <sub>Built with ❤️ by <strong>Valt</strong>
+  <sub>Built with ❤️ by <strong>Valt</strong></sub>
   <br />
   <sub><a href="https://github.com/Valt1-0/drathos">github.com/Valt1-0/drathos</a></sub>
   <br /><br />
