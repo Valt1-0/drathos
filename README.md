@@ -105,6 +105,18 @@ npm run dist:mac       # macOS (DMG)
 
 ---
 
+## Legal Disclaimer
+
+Drathos is a **self-hosted client application** — it does not host, distribute, or provide access to any games or content. It connects exclusively to a backend server that you own and operate yourself.
+
+You are solely responsible for ensuring that any content uploaded to your server complies with applicable copyright laws and the terms of any relevant licenses. The developers of Drathos do not condone piracy or any unauthorized distribution of copyrighted material.
+
+This software is provided "as is", without warranty of any kind. See the [LICENSE](LICENSE) for details.
+
+<br />
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and pull request guidelines.
