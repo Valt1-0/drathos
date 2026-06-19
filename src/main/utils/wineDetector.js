@@ -1,8 +1,8 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import logger from "./logger.js";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class WineDetector {
   constructor() {
@@ -26,7 +26,7 @@ export class WineDetector {
 
     for (const cmd of commands) {
       try {
-        const { stdout } = await execAsync(`which ${cmd}`);
+        const { stdout } = await execFileAsync("which", [cmd]);
         if (stdout.trim()) {
           logger.info(`[Wine] Wine detected: ${cmd}`);
           this.wineCommand = cmd;
@@ -50,7 +50,7 @@ export class WineDetector {
     }
 
     try {
-      const { stdout } = await execAsync(`${wineCmd} --version`);
+      const { stdout } = await execFileAsync(wineCmd, ["--version"]);
       return stdout.trim();
     } catch (error) {
       logger.error("[Wine] Error getting Wine version:", error.message);

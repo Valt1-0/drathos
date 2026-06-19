@@ -27,6 +27,8 @@ import {
 import { SearchBar } from "../components/ui";
 import GB from "country-flag-icons/react/3x2/GB";
 import FR from "country-flag-icons/react/3x2/FR";
+import DE from "country-flag-icons/react/3x2/DE";
+import ES from "country-flag-icons/react/3x2/ES";
 import { useAuth } from "../contexts/authContext";
 import { useUpdate } from "../contexts/updateContext";
 import { useTheme } from "../contexts/themeContext";
@@ -58,7 +60,7 @@ const SETTINGS_ENTRIES = [
     category: "general",
     icon: FiGlobe,
     labelKey: "settings.language",
-    keywords: ["language", "langue", "english", "french", "anglais", "français", "locale", "translation", "traduction"],
+    keywords: ["language", "langue", "english", "french", "anglais", "français", "german", "deutsch", "spanish", "español", "locale", "translation", "traduction"],
   },
   {
     id: "theme",
@@ -364,41 +366,55 @@ const SettingsPage = () => {
     }
   }, [t]);
 
+  // Static settings — only need to load once on mount
   useEffect(() => {
+    let isMounted = true;
     const fetchSettings = async () => {
       const storedPath = await window.store.get("downloadPath");
-      if (storedPath) setDownloadPath(storedPath);
+      if (isMounted && storedPath) setDownloadPath(storedPath);
 
       const loginItem = await window.api.app.getLoginItem();
-      setOpenAtLogin(loginItem ?? false);
+      if (isMounted) setOpenAtLogin(loginItem ?? false);
 
       try {
-        setCacheSize(await imageCacheService.getCacheSize());
+        setCacheLoading(true);
+        const size = await imageCacheService.getCacheSize();
+        if (isMounted) setCacheSize(size);
       } catch (error) {
         logger.error("[Settings] Error fetching cache size", error);
+      } finally {
+        if (isMounted) setCacheLoading(false);
       }
 
       try {
         const status = await window.api.updater.getStatus();
-        if (status.success) setCurrentVersion(status.currentVersion);
+        if (isMounted && status.success) setCurrentVersion(status.currentVersion);
       } catch (error) {
         logger.error("[Settings] Error fetching app version", error);
       }
-
-      if (user?.role === 'admin' && isOnline) {
-        try {
-          setLimitsLoading(true);
-          const limits = await getServerLimits();
-          setServerLimits(limits);
-        } catch (error) {
-          logger.error("[Settings] Error fetching server limits", error);
-        } finally {
-          setLimitsLoading(false);
-        }
-      }
     };
     fetchSettings();
+    return () => { isMounted = false; };
   }, []);
+
+  // Server limits — re-fetch whenever auth state or connectivity changes
+  useEffect(() => {
+    if (user?.role !== 'admin' || !isOnline) return;
+    let isMounted = true;
+    const fetchServerLimits = async () => {
+      try {
+        setLimitsLoading(true);
+        const limits = await getServerLimits();
+        if (isMounted) setServerLimits(limits);
+      } catch (error) {
+        logger.error("[Settings] Error fetching server limits", error);
+      } finally {
+        if (isMounted) setLimitsLoading(false);
+      }
+    };
+    fetchServerLimits();
+    return () => { isMounted = false; };
+  }, [user?.role, isOnline]);
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-background text-text">
@@ -662,6 +678,8 @@ const SettingsPage = () => {
                           {[
                             { code: 'en', Flag: GB, label: t('settings.languageEnglish') },
                             { code: 'fr', Flag: FR, label: t('settings.languageFrench') },
+                            { code: 'de', Flag: DE, label: t('settings.languageGerman') },
+                            { code: 'es', Flag: ES, label: t('settings.languageSpanish') },
                           ].map(({ code, Flag, label }) => (
                             <motion.button
                               key={code}

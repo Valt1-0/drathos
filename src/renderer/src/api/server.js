@@ -9,6 +9,7 @@ export const checkServerStatus = async (serverAddress, autoDetect = true) => {
     if (autoDetect && !serverAddress.startsWith('http://') && !serverAddress.startsWith('https://')) {
       const detection = await detectServerProtocol(serverAddress);
       protocol = detection.protocol;
+      if (detection.confirmed) return { online: true, protocol };
       url = buildServerUrl(serverAddress, '/api/server/status', protocol);
     } else {
       url = buildServerUrl(serverAddress, '/api/server/status');

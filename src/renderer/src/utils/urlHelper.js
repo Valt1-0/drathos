@@ -1,9 +1,14 @@
+const ALLOWED_PROTOCOLS = new Set(["http", "https"]);
+
 export const buildServerUrl = (serverAddress, path = '', protocol = null) => {
   if (!serverAddress) throw new Error('Server address is required');
   if (serverAddress.startsWith('http://') || serverAddress.startsWith('https://')) {
     return `${serverAddress}${path}`;
   }
-  if (protocol) return `${protocol}://${serverAddress}${path}`;
+  if (protocol) {
+    if (!ALLOWED_PROTOCOLS.has(protocol)) throw new Error(`Invalid protocol: ${protocol}`);
+    return `${protocol}://${serverAddress}${path}`;
+  }
 
   // Smart detection: HTTPS for domains, HTTP for IPs
   const addressWithoutPort = serverAddress.split(':')[0];
@@ -41,27 +46,23 @@ export const detectServerProtocol = async (serverAddress, testPath = '/api/serve
   // For domains, prefer HTTPS (reverse proxy, certificates)
   // For IPs, prefer HTTP (local servers)
   if (isDomain) {
-    // Test HTTPS first for domains
     const httpsUrl = `https://${serverAddress}${testPath}`;
-    if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}` };
+    if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}`, confirmed: true };
 
-    // Fallback to HTTP if HTTPS fails
     const httpUrl = `http://${serverAddress}${testPath}`;
-    if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}` };
+    if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}`, confirmed: true };
   } else {
-    // Test HTTP first for IPs
     const httpUrl = `http://${serverAddress}${testPath}`;
-    if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}` };
+    if (await testUrl(httpUrl)) return { protocol: 'http', url: `http://${serverAddress}`, confirmed: true };
 
-    // Fallback to HTTPS if HTTP fails
     const httpsUrl = `https://${serverAddress}${testPath}`;
-    if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}` };
+    if (await testUrl(httpsUrl)) return { protocol: 'https', url: `https://${serverAddress}`, confirmed: true };
   }
 
-  // If none work, smart fallback based on type
   return {
     protocol: isDomain ? 'https' : 'http',
-    url: `${isDomain ? 'https' : 'http'}://${serverAddress}`
+    url: `${isDomain ? 'https' : 'http'}://${serverAddress}`,
+    confirmed: false,
   };
 };
 

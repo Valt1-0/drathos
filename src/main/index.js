@@ -176,7 +176,7 @@ const setupCSP = () => {
             ? `'self' ${backendHttp} ${backendHttps} ${backendWs} ${backendWss}`
             : `'self' http: https: ws: wss:`;
           return (
-            `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; ` +
+            `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; ` +
             `img-src 'self' data: blob: ${igdb} ${backendHttp} ${backendHttps}; font-src 'self' data:; ` +
             `connect-src ${connectSrc}; object-src 'none'; ` +
             `base-uri 'self'; form-action 'self'; frame-ancestors 'none';`

@@ -13,8 +13,9 @@ export class AutoUpdateManager {
     this.mainWindow = null;
     this.checkInterval = null;
 
-    // Determine if we are in production
-    this.isProduction = app.isPackaged && process.env.NODE_ENV === 'production';
+    // app.isPackaged is the canonical production check for Electron.
+    // process.env.NODE_ENV is NOT set to "production" by electron-builder.
+    this.isProduction = app.isPackaged;
 
     // Basic configuration
     autoUpdater.autoDownload = false;
@@ -23,24 +24,31 @@ export class AutoUpdateManager {
     // Always configure events (even in dev for debugging)
     this.setupEvents();
 
-    // Auto-update temporarily disabled
-    // Feed configuration only in production
-    // if (this.isProduction) {
-    //   try {
-    //     autoUpdater.setFeedURL({
-    //       provider: 'generic',
-    //       url: 'https://drathos.gg/downloads',
-    //       // Ou utiliser votre backend:
-    //       // url: 'https://api.drathos.gg/updates',
-    //     });
-    //     logger.info('[AutoUpdater] Generic feed configured');
-    //   } catch (error) {
-    //     logger.error('[AutoUpdater] Failed to configure feed:', error);
-    //   }
-    // } else {
-    //   logger.info('[AutoUpdater] Dev mode - updates disabled');
-    // }
-    logger.info('[AutoUpdater] Auto-update disabled - no feed configured');
+    // electron-builder embeds app-update.yml at build time (from electron-builder.yml publish config).
+    // electron-updater reads it automatically — no setFeedURL needed for the default GitHub flow.
+    //
+    // Fork override: set UPDATE_GITHUB_OWNER + UPDATE_GITHUB_REPO env vars to point
+    // auto-update at a different GitHub repository without rebuilding.
+    this.hasFeedConfigured = this.isProduction;
+
+    if (this.isProduction) {
+      const owner = process.env.UPDATE_GITHUB_OWNER;
+      const repo  = process.env.UPDATE_GITHUB_REPO;
+      if (owner && repo) {
+        try {
+          autoUpdater.setFeedURL({ provider: 'github', owner, repo });
+          logger.info(`[AutoUpdater] Feed overridden: github/${owner}/${repo}`);
+        } catch (error) {
+          logger.error('[AutoUpdater] Failed to apply feed override:', error);
+          this.hasFeedConfigured = false;
+        }
+      } else {
+        // Default: reads app-update.yml embedded by electron-builder
+        logger.info('[AutoUpdater] Using embedded GitHub feed (app-update.yml)');
+      }
+    } else {
+      logger.info('[AutoUpdater] Dev mode — auto-update disabled');
+    }
   }
 
   setMainWindow(window) {
@@ -90,6 +98,14 @@ export class AutoUpdateManager {
     });
 
     autoUpdater.on('error', (error) => {
+      // 404 = no releases published yet on GitHub — silent, not a real error for end users
+      const is404 = error.message?.includes('404') || error.statusCode === 404;
+      if (is404) {
+        logger.info('[AutoUpdater] No releases found (404) — skipping update check silently');
+        this.status = 'idle';
+        return;
+      }
+
       logger.error('[AutoUpdater] Error:', error);
       this.status = 'error';
       this.emit('error', { message: error.message });
@@ -120,6 +136,11 @@ export class AutoUpdateManager {
         currentVersion: app.getVersion(),
         reason: 'Development mode',
       };
+    }
+
+    if (!this.hasFeedConfigured) {
+      logger.warn('[AutoUpdater] No feed URL configured — skipping update check');
+      return { success: true, available: false, currentVersion: app.getVersion(), reason: 'No feed configured' };
     }
 
     try {

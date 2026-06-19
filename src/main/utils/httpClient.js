@@ -1,72 +1,54 @@
 /**
  * Internal HTTP client for Drathos backend API.
- * Supports self-signed certificates (self-hosted servers).
- * Do NOT use for external services (Discord, IGDB, etc.) — use fetch() for those.
+ * Main-process only — uses electron-store for serverAddress and safeStorage for tokens.
+ * For worker threads, import rawRequest.js directly.
  */
-
-import http from "http";
-import https from "https";
-import { MAX_HTTP_RESPONSE_SIZE, HTTP_REQUEST_TIMEOUT_MS } from "../app/constants.js";
+import store from "../store.js";
+import { getRefreshToken, setToken, setRefreshToken, deleteToken, deleteRefreshToken } from "./tokenStore.js";
+import { buildServerUrl } from "./urlHelper.js";
+import { rawRequest } from "./rawRequest.js";
 
 /**
  * Makes an HTTP/HTTPS request to the backend.
- * Always allows self-signed certificates — this client is only used for the
- * configured self-hosted server, never for external services.
+ * On 401, attempts a token refresh and retries the original request once.
  * Returns a fetch-like response object: { ok, status, headers, json(), text(), arrayBuffer() }
  *
  * @param {string} url
  * @param {{ method?, headers?, body?, timeout? }} options
  */
-export const apiRequest = (url, { method = "GET", headers = {}, body = null, timeout = HTTP_REQUEST_TIMEOUT_MS } = {}) => {
-  return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const isHttps = parsedUrl.protocol === "https:";
-    const transport = isHttps ? https : http;
+export const apiRequest = async (url, options = {}) => {
+  const serverAddress = store.get("serverAddress", "");
+  const response = await rawRequest(url, { ...options, serverAddress });
 
-    const bodyBuf = body != null
-      ? Buffer.from(typeof body === "string" ? body : JSON.stringify(body))
-      : null;
+  if (response.status !== 401) return response;
 
-    const options = {
-      hostname: parsedUrl.hostname,
-      port: parsedUrl.port || (isHttps ? 443 : 80),
-      path: parsedUrl.pathname + (parsedUrl.search || ""),
-      method,
-      headers: {
-        ...headers,
-        ...(bodyBuf ? { "Content-Length": bodyBuf.length } : {}),
-      },
-    };
+  // Try to refresh the access token once
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return response;
 
-    if (isHttps) options.rejectUnauthorized = false;
-
-    const req = transport.request(options, (res) => {
-      const chunks = [];
-      let bytesReceived = 0;
-      res.on("data", (chunk) => {
-        bytesReceived += chunk.length;
-        if (bytesReceived > MAX_HTTP_RESPONSE_SIZE) {
-          res.destroy(new Error(`Response exceeds ${MAX_HTTP_RESPONSE_SIZE} bytes`));
-          return;
-        }
-        chunks.push(chunk);
-      });
-      res.on("end", () => {
-        const buf = Buffer.concat(chunks);
-        resolve({
-          ok: res.statusCode >= 200 && res.statusCode < 300,
-          status: res.statusCode,
-          headers: res.headers,
-          arrayBuffer: () => buf,
-          text: () => buf.toString("utf8"),
-          json: () => JSON.parse(buf.toString("utf8")),
-        });
-      });
+  try {
+    const refreshUrl = buildServerUrl(serverAddress, "/api/users/refresh");
+    const refreshResponse = await rawRequest(refreshUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+      serverAddress,
     });
 
-    req.setTimeout(timeout, () => req.destroy(new Error(`Request timed out after ${timeout}ms`)));
-    req.on("error", reject);
-    if (bodyBuf) req.write(bodyBuf);
-    req.end();
-  });
+    if (!refreshResponse.ok) {
+      deleteToken();
+      deleteRefreshToken();
+      return response;
+    }
+
+    const { token: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.json();
+    setToken(newAccessToken);
+    if (newRefreshToken) setRefreshToken(newRefreshToken);
+
+    // Retry with the new token, replacing the Authorization header
+    const retryHeaders = { ...options.headers, Authorization: `Bearer ${newAccessToken}` };
+    return rawRequest(url, { ...options, headers: retryHeaders, serverAddress });
+  } catch {
+    return response;
+  }
 };

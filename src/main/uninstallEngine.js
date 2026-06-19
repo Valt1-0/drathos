@@ -3,6 +3,7 @@ import path from "path";
 import https from "https";
 import http from "http";
 import { buildServerUrl } from "./utils/urlHelper.js";
+import { isTrustedServerHost } from "./utils/tlsHelper.js";
 import logger from "./utils/logger.js";
 
 export class UninstallEngine {
@@ -258,27 +259,21 @@ export class UninstallEngine {
       const itemPath = path.join(dirPath, item.name);
 
       try {
-        if (item.isDirectory()) {
-          // Recursive deletion of subfolders
-          await this.deleteDirectory(itemPath, () => {}); // No sub-progress
-          await fs.promises.rmdir(itemPath);
-        } else {
-          // Delete the file
-          await fs.promises.unlink(itemPath);
-        }
+        // fs.promises.rm handles both files and non-empty directories uniformly.
+        // Replaces the deprecated fs.promises.rmdir (removed support for non-empty
+        // dirs in Node 16+) and the manual recursive traversal for subdirectories.
+        await fs.promises.rm(itemPath, { recursive: true, force: true });
 
         processedItems++;
-        const progress = (processedItems / totalItems) * 100;
-        progressCallback(progress);
+        progressCallback((processedItems / totalItems) * 100);
       } catch (error) {
         logger.warn(`[UninstallEngine] Error deleting ${itemPath}: ${error.message}`);
-        // Continue despite the error for individual files
         processedItems++;
       }
     }
 
-    // Delete the root folder
-    await fs.promises.rmdir(dirPath);
+    // Remove the now-empty root directory
+    await fs.promises.rm(dirPath, { recursive: true, force: true });
     logger.info(`[UninstallEngine] Directory deleted: ${dirPath}`);
   }
 
@@ -302,7 +297,7 @@ export class UninstallEngine {
         headers: {
           Authorization: `Bearer ${this.userToken}`,
         },
-        ...(isHttps ? { rejectUnauthorized: false } : {}),
+        ...(isHttps ? { rejectUnauthorized: !isTrustedServerHost(url.hostname, this.serverAddress) } : {}),
       };
 
       return await new Promise((resolve) => {

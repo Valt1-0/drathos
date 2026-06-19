@@ -6,6 +6,7 @@ import { Worker } from "node:worker_threads";
 import fs from "fs";
 import path from "path";
 import store from "../store.js";
+import { getToken } from "../utils/tokenStore.js";
 import { GameLauncher } from "../gameLauncher.js";
 import { SimpleExecutableDetector } from "../simpleExecutableDetector.js";
 import { isExecutableFile } from "../app/security.js";
@@ -13,6 +14,7 @@ import { secureHandle } from "./secureHandle.js";
 import workerPath from "../installWorker.js?modulePath";
 import logger from "../utils/logger.js";
 import uninstallWorkerPath from "../uninstallWorker.js?modulePath";
+import { calculateDirSize } from "../utils/dirSize.js";
 
 const gameLauncher = new GameLauncher();
 const activeWorkers = new Map();
@@ -39,6 +41,16 @@ const getDetector = () => {
 
 export const getGameLauncher = () => gameLauncher;
 
+// Returns true only when gamePath is strictly inside the user's configured download
+// directory. Prevents the renderer from targeting arbitrary filesystem locations.
+const isInsideDownloadDir = (gamePath) => {
+  const downloadDir = store.get("downloadPath", "");
+  if (!downloadDir || !gamePath) return false;
+  const resolved = path.resolve(gamePath);
+  const base = path.resolve(downloadDir);
+  return resolved === base || resolved.startsWith(base + path.sep);
+};
+
 export const terminateAllWorkers = () => {
   for (const [, worker] of activeWorkers) {
     try { worker.terminate(); } catch {}
@@ -50,12 +62,20 @@ export const registerGameHandlers = () => {
   // Installation
   secureHandle("installGame", async (event, { serverGame }) => {
     return new Promise((resolve, reject) => {
+      // Guard: a Promise can only settle once. The worker may send a terminal message
+      // (completed/cancelled/failed) and then still exit with a non-zero code — without
+      // this flag the exit handler would call reject() after resolve() already fired,
+      // producing an unhandled rejection in error-monitoring tools.
+      let settled = false;
+      const safeResolve = (v) => { if (settled) return; settled = true; resolve(v); };
+      const safeReject  = (e) => { if (settled) return; settled = true; reject(e); };
+
       const worker = new Worker(workerPath, {
         workerData: {
           serverGame,
           storeData: {
             serverAddress: store.get("serverAddress"),
-            userToken: store.get("userToken"),
+            userToken: getToken(),
             downloadPath: store.get("downloadPath"),
           },
         },
@@ -88,24 +108,22 @@ export const registerGameHandlers = () => {
             cache[serverGame._id] = data.cacheData;
             store.set("installedGamesCache", cache);
           }
-          resolve({ success: true, path: data.finalPath });
+          safeResolve({ success: true, path: data.finalPath });
         }
-        if (stage === "cancelled") {
-          resolve({ success: false, error: "CANCELLED" });
-        }
-        if (stage === "failed") reject(new Error(data.error));
+        if (stage === "cancelled") safeResolve({ success: false, error: "CANCELLED" });
+        if (stage === "failed") safeReject(new Error(data.error));
       });
 
       worker.on("error", (err) => {
         if (!event.sender.isDestroyed()) {
           event.sender.send("downloadProgress", { id: serverGame._id, progress: 0, stage: "Failed", error: err.message });
         }
-        reject(err);
+        safeReject(err);
       });
 
       worker.on("exit", (code) => {
         activeWorkers.delete(serverGame._id);
-        if (code !== 0) reject(new Error(`Worker exited with code ${code}`));
+        if (code !== 0) safeReject(new Error(`Worker exited with code ${code}`));
       });
     });
   });
@@ -184,9 +202,10 @@ export const registerGameHandlers = () => {
 
   secureHandle("getActiveGames", () => gameLauncher.getActiveGames());
   secureHandle("isGameRunning", (_event, { gameId }) => gameLauncher.isGameRunning(gameId));
-  secureHandle("openGameFolder", (_event, gamePath) =>
-    gameLauncher.openGameFolder(gamePath)
-  );
+  secureHandle("openGameFolder", (_event, gamePath) => {
+    if (!isInsideDownloadDir(gamePath)) return { success: false, error: "Access denied" };
+    return gameLauncher.openGameFolder(gamePath);
+  });
   secureHandle("getGameProcess", (_event, { gameId }) => gameLauncher.getGameProcess(gameId));
 
   // Stop
@@ -227,6 +246,7 @@ export const registerGameHandlers = () => {
 
   // Uninstall
   secureHandle("uninstallGame", async (event, { gameId, gamePath, gameName }) => {
+    if (!isInsideDownloadDir(gamePath)) return { success: false, error: "Access denied" };
 
     if (gameLauncher.isGameRunning(gameId)) {
       await gameLauncher.stopGame(gameId, true);
@@ -234,13 +254,17 @@ export const registerGameHandlers = () => {
     }
 
     return new Promise((resolve, reject) => {
+      let settled = false;
+      const safeResolve = (v) => { if (settled) return; settled = true; resolve(v); };
+      const safeReject  = (e) => { if (settled) return; settled = true; reject(e); };
+
       const worker = new Worker(uninstallWorkerPath, {
         workerData: {
           gameId,
           gamePath,
           storeData: {
             serverAddress: store.get("serverAddress"),
-            userToken: store.get("userToken"),
+            userToken: getToken(),
           },
         },
       });
@@ -256,7 +280,7 @@ export const registerGameHandlers = () => {
           const installedMods = store.get("installedMods") || {};
           if (installedMods[gameId]) {
             for (const [modId, modInfo] of Object.entries(installedMods[gameId])) {
-              if (modInfo?.path) {
+              if (modInfo?.path && isInsideDownloadDir(modInfo.path)) {
                 await fs.promises.rm(modInfo.path, { recursive: true, force: true }).catch(() => {});
               }
             }
@@ -268,25 +292,26 @@ export const registerGameHandlers = () => {
           const cache = store.get("installedGamesCache", {});
           if (cache[gameId]) { delete cache[gameId]; store.set("installedGamesCache", cache); }
 
-          resolve({ success: true });
+          safeResolve({ success: true });
         }
-        if (data.stage === "failed") reject(new Error(data.error));
+        if (data.stage === "failed") safeReject(new Error(data.error));
       });
 
       worker.on("error", (err) => {
         if (!event.sender.isDestroyed()) {
           event.sender.send("uninstallProgress", { id: gameId, progress: 0, stage: "Failed", error: err.message });
         }
-        reject(err);
+        safeReject(err);
       });
 
       worker.on("exit", (code) => {
-        if (code !== 0) reject(new Error(`Worker exited with code ${code}`));
+        if (code !== 0) safeReject(new Error(`Worker exited with code ${code}`));
       });
     });
   });
 
   secureHandle("canUninstallGame", async (_event, { gameId, gamePath }) => {
+    if (!isInsideDownloadDir(gamePath)) return { canUninstall: false, reason: "Access denied" };
     try {
       await fs.promises.access(gamePath);
       const isRunning = gameLauncher.isGameRunning(gameId);
@@ -297,11 +322,12 @@ export const registerGameHandlers = () => {
   });
 
   secureHandle("getGameSize", async (_event, { gamePath }) => {
+    if (!isInsideDownloadDir(gamePath)) return { success: false, error: "Access denied" };
     try {
       await fs.promises.access(gamePath);
       const counter = { files: 0, truncated: false };
-      const size = await calculateDirectorySize(gamePath, 0, counter);
-      if (counter.truncated) logger.warn(`[getGameSize] Size truncated at ${DIR_SIZE_MAX_FILES} files for ${gamePath}`);
+      const size = await calculateDirSize(gamePath, 0, counter);
+      if (counter.truncated) logger.warn(`[getGameSize] Size truncated at 50 000 files for ${gamePath}`);
       return { success: true, sizeBytes: size, sizeMB: Math.round(size / (1024 * 1024)),
         sizeGB: Math.round((size / (1024 ** 3)) * 10) / 10, truncated: counter.truncated };
     } catch {
@@ -310,36 +336,3 @@ export const registerGameHandlers = () => {
   });
 };
 
-const DIR_SIZE_MAX_DEPTH = 12;
-const DIR_SIZE_MAX_FILES = 50_000;
-
-async function calculateDirectorySize(dirPath, depth = 0, counter = { files: 0, truncated: false }) {
-  if (depth > DIR_SIZE_MAX_DEPTH || counter.files >= DIR_SIZE_MAX_FILES) {
-    counter.truncated = true;
-    return 0;
-  }
-  try {
-    const items = await fs.promises.readdir(dirPath);
-    const sizes = await Promise.all(items.map(async (item) => {
-      if (counter.files >= DIR_SIZE_MAX_FILES) {
-        counter.truncated = true;
-        return 0;
-      }
-      try {
-        const itemPath = path.join(dirPath, item);
-        const stats = await fs.promises.stat(itemPath);
-        if (stats.isDirectory()) {
-          return calculateDirectorySize(itemPath, depth + 1, counter);
-        }
-        counter.files++;
-        return stats.size;
-      } catch {
-        return 0;
-      }
-    }));
-    return sizes.reduce((sum, s) => sum + s, 0);
-  } catch (err) {
-    logger.warn(`[getGameSize] Cannot read directory ${dirPath}: ${err.message}`);
-    return 0;
-  }
-}

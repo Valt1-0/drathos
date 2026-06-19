@@ -6,15 +6,18 @@ import https from "https";
 import { jwtDecode } from "jwt-decode";
 import { extractionEngine } from "./extractionEngine.js";
 import { buildServerUrl } from "./utils/urlHelper.js";
+import { isTrustedServerHost } from "./utils/tlsHelper.js";
+import { calculateDirSize } from "./utils/dirSize.js";
+import { rawRequest } from "./utils/rawRequest.js";
 import logger from "./utils/logger.js";
-import { MAX_API_RESPONSE_SIZE, EXTRACTION_TIMEOUT_MS } from "./app/constants.js";
+import { EXTRACTION_TIMEOUT_MS } from "./app/constants.js";
 
 export class GameEngine {
   constructor() {
     this.config = {
       chunkSize: 64 * 1024,
       bufferSize: 512 * 1024,
-      progressUpdateInterval: 100,
+      progressUpdateInterval: 250,
       speedSamples: 10,
       maxRetries: 3,
       retryDelay: 1000,
@@ -181,7 +184,9 @@ export class GameEngine {
         reqHeaders["Range"] = `bytes=${downloadedBytes}-`;
       }
 
-      // Use http/https.request directly for better performance and proper HTTPS support
+      // rawRequest.js cannot be used here: the download requires a streaming IncomingMessage
+      // (piped directly to disk) rather than a buffered response. Progress tracking and
+      // Range-resume also need direct access to the underlying http/https response object.
       const parsedUrl = new URL(downloadUrl);
       const isHttps = parsedUrl.protocol === "https:";
       const transport = isHttps ? https : http;
@@ -194,7 +199,7 @@ export class GameEngine {
           method: "GET",
           headers,
         };
-        if (isHttps) options.rejectUnauthorized = false;
+        if (isHttps) options.rejectUnauthorized = !isTrustedServerHost(parsedUrl.hostname, this.serverAddress);
         const req = transport.request(options, resolve);
         req.on("error", reject);
         req.end();
@@ -459,7 +464,7 @@ export class GameEngine {
     // Calculate the installed size (in MB)
     let installSizeMB = 0;
     try {
-      const sizeBytes = await this.calculateDirSize(extractPath);
+      const sizeBytes = await calculateDirSize(extractPath);
       installSizeMB = Math.round(sizeBytes / (1024 * 1024));
       logger.info(`[GameEngine] Installed size: ${installSizeMB} MB`);
     } catch (err) {
@@ -484,40 +489,17 @@ export class GameEngine {
       installSize: installSizeMB,
     });
 
-    const { status, data: responseBody } = await new Promise((resolve, reject) => {
-      const parsedUrl = new URL(url);
-      const isHttps = parsedUrl.protocol === "https:";
-      const transport = isHttps ? https : http;
-      const options = {
-        hostname: parsedUrl.hostname,
-        port: parsedUrl.port || (isHttps ? 443 : 80),
-        path: parsedUrl.pathname + (parsedUrl.search || ""),
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.userToken}`,
-          "Content-Length": Buffer.byteLength(body),
-        },
-      };
-      if (isHttps) options.rejectUnauthorized = false;
-
-      const req = transport.request(options, (res) => {
-        let data = "";
-        let bytesReceived = 0;
-        res.on("data", (chunk) => {
-          bytesReceived += chunk.length;
-          if (bytesReceived > MAX_API_RESPONSE_SIZE) {
-            res.destroy(new Error("API response too large"));
-            return;
-          }
-          data += chunk;
-        });
-        res.on("end", () => resolve({ status: res.statusCode, data }));
-      });
-      req.on("error", reject);
-      req.write(body);
-      req.end();
+    const apiResponse = await rawRequest(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.userToken}`,
+      },
+      body,
+      serverAddress: this.serverAddress,
     });
+    const status = apiResponse.status;
+    const responseBody = apiResponse.text();
 
     if (status < 200 || status >= 300) {
       let errorMsg = `HTTP ${status}`;
@@ -635,37 +617,6 @@ export class GameEngine {
     }
 
     return false;
-  }
-
-  async calculateDirSize(dirPath, depth = 0, counter = { files: 0 }) {
-    const MAX_DEPTH = 12;
-    const MAX_FILES = 50_000;
-    const CONCURRENCY = 32;
-    if (depth > MAX_DEPTH || counter.files >= MAX_FILES) return 0;
-    try {
-      const items = await fs.promises.readdir(dirPath);
-      let total = 0;
-      for (let i = 0; i < items.length; i += CONCURRENCY) {
-        if (counter.files >= MAX_FILES) break;
-        const chunk = items.slice(i, i + CONCURRENCY);
-        const sizes = await Promise.all(chunk.map(async (item) => {
-          if (counter.files >= MAX_FILES) return 0;
-          try {
-            const itemPath = path.join(dirPath, item);
-            const stats = await fs.promises.stat(itemPath);
-            if (stats.isDirectory()) return this.calculateDirSize(itemPath, depth + 1, counter);
-            counter.files++;
-            return stats.size;
-          } catch {
-            return 0;
-          }
-        }));
-        total += sizes.reduce((sum, s) => sum + s, 0);
-      }
-      return total;
-    } catch {
-      return 0;
-    }
   }
 
   cleanupFiles(filePath, extractPath) {

@@ -39,9 +39,10 @@ export const registerUser = async (username, password) => {
     const data = await response.json();
     if (response.ok) {
       await window.store.set("userToken", data.token);
+      if (data.refreshToken) await window.store.set("refreshToken", data.refreshToken);
       return { success: true, token: data.token };
     }
-    return { success: false, error: data.msg };
+    return { success: false, error: data.message };
   } catch {
     return { success: false, error: "Server connection error" };
   }
@@ -62,11 +63,24 @@ export const loginUser = async (username, password) => {
     const data = await response.json();
     if (response.ok) {
       await window.store.set("userToken", data.token);
+      if (data.refreshToken) await window.store.set("refreshToken", data.refreshToken);
       return { success: true, token: data.token };
     }
-    return { success: false, error: data.msg };
+    return { success: false, error: data.message };
   } catch {
     return { success: false, error: "Server connection error" };
+  }
+};
+
+export const logoutUser = async () => {
+  try {
+    const { serverAddress, token } = await getConfig();
+    await fetchWithTimeout(buildServerUrl(serverAddress, "/api/users/logout"), {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // Best-effort — local logout proceeds regardless
   }
 };
 

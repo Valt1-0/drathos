@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "./authContext";
+import { useAuth, refreshAccessToken } from "./authContext";
 import { connectSocket, disconnectSocket } from "../services/socketService";
 
 const NotificationContext = createContext(null);
@@ -32,13 +32,18 @@ export function NotificationProvider({ children }) {
     }
 
     const init = async () => {
-      const [serverAddress, token] = await Promise.all([
-        window.store.get("serverAddress"),
-        window.store.get("userToken"),
-      ]);
-      if (!serverAddress || !token) return;
+      const serverAddress = await window.store.get("serverAddress");
+      if (!serverAddress) return;
 
-      const socket = connectSocket(serverAddress, token);
+      const socket = connectSocket(serverAddress, () => window.store.get("userToken"));
+
+      // If the socket is rejected due to an expired token, refresh and let socket.io
+      // reconnect automatically — the getter will pick up the new token.
+      socket.on("connect_error", (err) => {
+        const isAuthError = err.message?.toLowerCase().includes("auth")
+          || err.data?.type === "UnauthorizedError";
+        if (isAuthError) refreshAccessToken().catch(() => {});
+      });
 
       socket.on("game:added", ({ game, user: addedBy }) => {
         if (addedBy?.id === userRef.current?._id) return;

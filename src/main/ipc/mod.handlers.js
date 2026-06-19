@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import store from "../store.js";
+import { getToken } from "../utils/tokenStore.js";
 import { extractionEngine } from "../extractionEngine.js";
 import { validateFilename, validateAndResolvePath } from "../app/validation.js";
 import logger from "../utils/logger.js";
@@ -19,7 +20,7 @@ export const registerModHandlers = () => {
 
     try {
       const serverAddress = store.get("serverAddress");
-      const token = store.get("userToken");
+      const token = getToken();
       if (!serverAddress || !token) throw new Error("Server not configured");
 
       const installedGames = store.get("installedGamesCache") || {};

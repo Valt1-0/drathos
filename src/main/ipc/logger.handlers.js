@@ -5,10 +5,15 @@ import crashReporter from "../utils/crashReporter.js";
 import { secureHandle } from "./secureHandle.js";
 
 export const registerLoggerHandlers = () => {
+  const ALLOWED_LOG_LEVELS = new Set(["debug", "info", "warn", "error"]);
+
   secureHandle("logger:log", async (_, { level, message, data }) => {
     try {
-      const logFn = logger[level] || logger.info;
-      level === "error" ? logFn.call(logger, message, data?.error, data?.context) : logFn.call(logger, message, data);
+      const safeLevel = ALLOWED_LOG_LEVELS.has(level) ? level : "info";
+      const logFn = logger[safeLevel];
+      safeLevel === "error"
+        ? logFn.call(logger, message, data?.error, data?.context)
+        : logFn.call(logger, message, data);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

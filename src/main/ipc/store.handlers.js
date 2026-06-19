@@ -3,6 +3,7 @@
  */
 import { ipcMain, shell, app } from "electron";
 import store from "../store.js";
+import { getToken, setToken, deleteToken, getRefreshToken, setRefreshToken, deleteRefreshToken } from "../utils/tokenStore.js";
 import { isSafeForExternalOpen } from "../app/security.js";
 import { secureHandle } from "./secureHandle.js";
 
@@ -11,14 +12,20 @@ const RENDERER_BLOCKED_KEYS = new Set(["installedGamesCache", "installedMods"]);
 
 export const registerStoreHandlers = () => {
   // secureHandle validates the sender frame — prevents reads from injected frames
-  secureHandle("store-get", (_event, key, defaultValue) =>
-    defaultValue !== undefined ? store.get(key, defaultValue) : store.get(key)
-  );
+  secureHandle("store-get", (_event, key, defaultValue) => {
+    if (key === "userToken") return getToken() ?? defaultValue;
+    if (key === "refreshToken") return getRefreshToken() ?? defaultValue;
+    return defaultValue !== undefined ? store.get(key, defaultValue) : store.get(key);
+  });
   secureHandle("store-set", (_event, key, value) => {
     if (RENDERER_BLOCKED_KEYS.has(key)) throw new Error(`Protected store key: ${key}`);
+    if (key === "userToken") { setToken(value); return; }
+    if (key === "refreshToken") { setRefreshToken(value); return; }
     store.set(key, value);
   });
   secureHandle("store-delete", (_event, key) => {
+    if (key === "userToken") { deleteToken(); return; }
+    if (key === "refreshToken") { deleteRefreshToken(); return; }
     store.delete(key);
   });
   secureHandle("store-clear", () => {
@@ -28,12 +35,14 @@ export const registerStoreHandlers = () => {
       if (val !== undefined) preserved[key] = val;
     }
     store.clear();
+    deleteToken();
+    deleteRefreshToken();
     for (const [key, val] of Object.entries(preserved)) {
       store.set(key, val);
     }
   });
 
-  ipcMain.handle("app:getLoginItem", () => app.getLoginItemSettings().openAtLogin);
+  secureHandle("app:getLoginItem", () => app.getLoginItemSettings().openAtLogin);
   secureHandle("app:setLoginItem", (_event, openAtLogin) => {
     app.setLoginItemSettings({ openAtLogin, name: "Drathos" });
   });

@@ -6,10 +6,10 @@
   <p>Self-hosted · Cross-platform · Open Source</p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-0.8.0-3B82F6?style=flat-square" />
+    <img src="https://img.shields.io/badge/version-1.0.0-3B82F6?style=flat-square" />
     <img src="https://img.shields.io/badge/Windows-0078D4?style=flat-square&logo=windows11&logoColor=white" />
     <img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" />
-    <img src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" />
+    <img src="https://img.shields.io/badge/license-GPL--3.0-22C55E?style=flat-square" />
   </p>
 
   <p>
@@ -46,7 +46,7 @@ Drathos is a **self-hosted, DRM-free game library client** built with Electron a
 <tr><td><img src="https://api.iconify.design/lucide/bar-chart-3.svg?color=%23F59E0B" width="16" style="vertical-align: middle" /> &nbsp;<strong>Stats</strong></td><td>Total playtime, session count, recently played — all visible from the home screen</td></tr>
 <tr><td><img src="https://api.iconify.design/lucide/folder-open.svg?color=%238B5CF6" width="16" style="vertical-align: middle" /> &nbsp;<strong>Collections</strong></td><td>Group games into custom collections · Cover mosaic preview · Name, icon, and description per collection</td></tr>
 <tr><td><img src="https://api.iconify.design/lucide/users.svg?color=%2306B6D4" width="16" style="vertical-align: middle" /> &nbsp;<strong>User Management</strong></td><td>View all users, assign roles (Admin / Moderator / Member), search and sort by playtime or activity <em>(admin only)</em></td></tr>
-<tr><td><img src="https://api.iconify.design/lucide/settings.svg?color=%236366F1" width="16" style="vertical-align: middle" /> &nbsp;<strong>Settings</strong></td><td>Profile picture · Language (EN / FR) · 5 built-in themes · Download path, notifications, cache, SSL</td></tr>
+<tr><td><img src="https://api.iconify.design/lucide/settings.svg?color=%236366F1" width="16" style="vertical-align: middle" /> &nbsp;<strong>Settings</strong></td><td>Profile picture · Language (EN / FR / DE / ES) · 5 built-in themes · Download path, notifications, cache, SSL</td></tr>
 <tr><td><img src="https://api.iconify.design/lucide/wifi-off.svg?color=%23F59E0B" width="16" style="vertical-align: middle" /> &nbsp;<strong>Offline Mode</strong></td><td>All installed games stay launchable · Pending actions sync automatically when the server is back</td></tr>
 </table>
 

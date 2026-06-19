@@ -58,7 +58,7 @@ linux:
     - pacman
   category: Game
   icon: build/icon_linux_512.png
-  maintainer: "Valt <contact@drathos.gg>"
+  maintainer: "Valt"
   synopsis: "DRM-free game library client"
   description: "Drathos is a modern client to manage your DRM-free game library. Download, install and launch your games easily."
   artifactName: ${productName}-${version}-${arch}.${ext}
@@ -98,8 +98,10 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
 
-# Auto-update désactivé temporairement
-# publish:
-#   provider: generic
-#   url: https://drathos.gg/downloads
+publish:
+  provider: github
+  owner: Valt1-0
+  repo: drathos
+  # public repo — no GH_TOKEN needed for auto-update reads
+  # GH_TOKEN is only required at release time (npm run release)
 
