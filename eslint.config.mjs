@@ -68,6 +68,17 @@ export default [
     },
   },
 
+  // Tests — Node runtime (Vitest) exercising both main and renderer code
+  {
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: "module",
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: sharedRules,
+  },
+
   // Config files at repo root
   {
     files: ["*.mjs", "*.js"],
