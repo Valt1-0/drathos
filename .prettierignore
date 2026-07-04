@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-electron/
+build/
+resources/
+package-lock.json
+src/renderer/src/i18n/locales/
+src/renderer/src/data/

@@ -119,7 +119,7 @@ class ErrorBoundaryClass extends Component {
                   </div>
                 </div>
 
-                {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+                {import.meta.env.DEV && this.state.errorInfo && (
                   <details className="group">
                     <summary className={`cursor-pointer transition-colors font-medium ${
                       isLight

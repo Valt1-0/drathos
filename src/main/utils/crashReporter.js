@@ -7,7 +7,7 @@ import { app } from 'electron';
 import os from 'os';
 import logger from './logger.js';
 
-/* global __DISCORD_WEBHOOK__ */
+// __DISCORD_WEBHOOK__ is injected at build time by electron-vite (declared in eslint.config.mjs)
 
 class CrashReporter {
   constructor() {

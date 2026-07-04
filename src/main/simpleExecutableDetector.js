@@ -59,12 +59,13 @@ export class SimpleExecutableDetector {
       case 'win32':
         return lower.endsWith('.exe') || lower.endsWith('.bat') || lower.endsWith('.cmd');
 
-      case 'linux':
+      case 'linux': {
         // On Linux: .sh, .run, .bin, .AppImage, or files with executable permissions
         const hasExecutableExtension = lower.endsWith('.sh') || lower.endsWith('.run') ||
                                        lower.endsWith('.bin') || lower.endsWith('.appimage');
         const hasExecutablePermission = stats && (stats.mode & 0o111) !== 0;
         return hasExecutableExtension || hasExecutablePermission;
+      }
 
       default:
         return false;

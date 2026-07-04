@@ -165,7 +165,7 @@ const setupCSP = () => {
           // Strip scheme and reject addresses containing characters that could
           // break the CSP header (quotes, spaces, semicolons, etc.)
           const stripped = serverAddress.replace(/^https?:\/\//, "").split(/[?#\s]/)[0];
-          const clean = /^[\w.\-:\[\]]+$/.test(stripped) ? stripped : "";
+          const clean = /^[\w.\-:[\]]+$/.test(stripped) ? stripped : "";
           const backendHttp  = clean ? `http://${clean}`  : "";
           const backendHttps = clean ? `https://${clean}` : "";
           const backendWs    = clean ? `ws://${clean}`    : "";

@@ -4,6 +4,7 @@
 import path from "path";
 
 const RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i;
+// eslint-disable-next-line no-control-regex -- control chars are deliberately rejected in paths
 const DANGEROUS_CHARS = /[<>:"|?*\x00-\x1f]/g;
 
 export const validateFilename = (filename) => {
