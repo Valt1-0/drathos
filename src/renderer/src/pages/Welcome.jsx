@@ -35,7 +35,11 @@ const Welcome = () => {
     username: "",
     password: "",
     confirmPassword: "",
+    inviteCode: "",
   });
+  // Null = unknown (older server or not yet checked). Only false hides open registration.
+  const registrationEnabled = serverStatus?.registrationEnabled;
+  const inviteRequired = registrationEnabled === false;
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -141,9 +145,16 @@ const Welcome = () => {
         return;
       }
 
-      const result = await register(formData.username, formData.password);
+      if (inviteRequired && !formData.inviteCode.trim()) {
+        setError(t('welcome.inviteRequired'));
+        return;
+      }
+
+      const result = await register(formData.username, formData.password, formData.inviteCode.trim());
       if (result.success) {
         navigate("/");
+      } else if (result.code === "REGISTRATION_DISABLED" || result.code === "INVALID_INVITE") {
+        setError(result.error || t('welcome.inviteRequired'));
       } else {
         setError(result.error || t('welcome.registerFailed'));
       }
@@ -670,6 +681,35 @@ const Welcome = () => {
                           {showConfirmPassword ? <FaEyeSlash className="text-lg" /> : <FaEye className="text-lg" />}
                         </motion.div>
                       </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Invitation Code (register only, when registration is closed) */}
+                {authMode === "register" && inviteRequired && (
+                  <motion.div
+                    className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-blue-500/30 transition-all duration-300"
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.4 }}
+                    layout
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="relative z-10">
+                      <label className="text-sm text-slate-400 font-medium mb-2 block">
+                        {t('welcome.inviteCode')}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={t('welcome.inviteCodePlaceholder')}
+                        className="w-full p-3 text-base rounded-lg text-white bg-slate-700/50 border border-slate-600/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-slate-500 uppercase tracking-widest font-mono"
+                        value={formData.inviteCode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, inviteCode: e.target.value })
+                        }
+                        onKeyDown={handleAuthKeyDown}
+                      />
+                      <p className="text-xs text-slate-500 mt-2">{t('welcome.inviteCodeHint')}</p>
                     </div>
                   </motion.div>
                 )}

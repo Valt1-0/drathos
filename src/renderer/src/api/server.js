@@ -3,26 +3,29 @@ import { buildServerUrl, detectServerProtocol } from "../utils/urlHelper";
 
 export const checkServerStatus = async (serverAddress, autoDetect = true) => {
   try {
-    let url;
     let protocol = null;
 
     if (autoDetect && !serverAddress.startsWith('http://') && !serverAddress.startsWith('https://')) {
       const detection = await detectServerProtocol(serverAddress);
       protocol = detection.protocol;
-      if (detection.confirmed) return { online: true, protocol };
-      url = buildServerUrl(serverAddress, '/api/server/status', protocol);
     } else {
-      url = buildServerUrl(serverAddress, '/api/server/status');
       protocol = serverAddress.startsWith('https://') ? 'https' : 'http';
     }
 
+    // Always read the status body so we can surface registrationEnabled to the
+    // registration screen (defaults to open if the field is absent/unreadable).
+    const url = buildServerUrl(serverAddress, '/api/server/status', protocol);
     const response = await fetchWithTimeout(url);
+    const data = await response.json().catch(() => ({}));
 
     if (response.ok) {
-      return { online: true, protocol };
+      return {
+        online: true,
+        protocol,
+        registrationEnabled: data.registrationEnabled !== false,
+      };
     }
 
-    const data = await response.json();
     return {
       online: false,
       error: `Server responded with status: ${response.status}`,
@@ -58,6 +61,27 @@ export const updateServerLimits = async (settings) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(settings),
+    }
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || `Error updating settings: ${response.status}`);
+  }
+  return (await response.json()).settings;
+};
+
+export const setRegistrationEnabled = async (registrationEnabled) => {
+  const serverAddress = await window.store.get("serverAddress");
+  const token = await window.store.get("userToken");
+  const response = await fetchWithTimeout(
+    buildServerUrl(serverAddress, '/api/server/settings'),
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ registrationEnabled }),
     }
   );
   if (!response.ok) {

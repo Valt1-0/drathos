@@ -24,15 +24,17 @@ const authFetch = async (endpoint, options = {}) => {
 };
 
 // Auth
-export const registerUser = async (username, password) => {
+export const registerUser = async (username, password, inviteCode) => {
   try {
     const { serverAddress } = await getConfig();
+    const body = { username, password };
+    if (inviteCode) body.inviteCode = inviteCode;
     const response = await fetchWithTimeout(
       buildServerUrl(serverAddress, "/api/users/register"),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify(body)
       }
     );
 
@@ -42,7 +44,7 @@ export const registerUser = async (username, password) => {
       if (data.refreshToken) await window.store.set("refreshToken", data.refreshToken);
       return { success: true, token: data.token };
     }
-    return { success: false, error: data.message };
+    return { success: false, error: data.message, code: data.code };
   } catch {
     return { success: false, error: "Server connection error" };
   }
@@ -191,6 +193,33 @@ export const updateUserRole = async (userId, role) => {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || "Failed to update user role");
+  }
+  return response.json();
+};
+
+// Invitation codes (admin/moderator)
+export const listInvitations = async () => {
+  const response = await authFetch("/api/users/invitations");
+  if (!response.ok) throw new Error(`Error fetching invitations: ${response.status}`);
+  return (await response.json()).invitations;
+};
+
+export const createInvitation = async (expiresInDays) => {
+  const response = await authFetch("/api/users/invitations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(expiresInDays ? { expiresInDays } : {})
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to create invitation");
+  return data.invitation;
+};
+
+export const deleteInvitation = async (id) => {
+  const response = await authFetch(`/api/users/invitations/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to revoke invitation");
   }
   return response.json();
 };

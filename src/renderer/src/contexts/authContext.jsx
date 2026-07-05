@@ -122,15 +122,15 @@ export const AuthProvider = ({ children }) => {
     return { success: false, error };
   };
 
-  const register = async (username, password) => {
-    const { success, token, error } = await registerUser(username, password);
+  const register = async (username, password, inviteCode) => {
+    const { success, token, error, code } = await registerUser(username, password, inviteCode);
     if (success) {
       const decoded = jwtDecode(token);
       setUser(decoded.user);
       setIsAuthenticated(true);
       return { success: true };
     }
-    return { success: false, error };
+    return { success: false, error, code };
   };
 
   const logout = async () => {

@@ -44,6 +44,7 @@ import CustomThemeModal from "../components/modals/CustomThemeModal";
 import PatchNotesModal from "../components/modals/PatchNotesModal";
 import { Button, Card, Input, Toggle } from "../components/ui";
 import ProfileAvatar from "../components/ProfileAvatar";
+import RegistrationCard from "../components/settings/RegistrationCard";
 import { getServerLimits, updateServerLimits } from "../api/server";
 import { FiServer } from "react-icons/fi";
 
@@ -1090,6 +1091,9 @@ const SettingsPage = () => {
                       </div>
                     );
                   })()}
+
+                  {/* Inscriptions & codes d'invitation (admin uniquement) */}
+                  {user?.role === 'admin' && <RegistrationCard isOnline={isOnline} />}
 
                 </div>
               )}
