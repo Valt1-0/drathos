@@ -48,10 +48,19 @@ export const getGameLauncher = () => gameLauncher;
 const isInsideDownloadDir = (gamePath) => {
   if (!gamePath) return false;
   const resolved = path.resolve(gamePath);
-  if (isInside(resolveDownloadDir(store.get("downloadPath", "")), resolved)) return true;
+  const downloadDir = resolveDownloadDir(store.get("downloadPath", ""));
+  if (isInside(downloadDir, resolved)) return true;
 
   const cache = store.get("installedGamesCache") || {};
-  return Object.values(cache).some((entry) => entry?.path && pathsEqual(entry.path, resolved));
+  if (Object.values(cache).some((entry) => entry?.path && pathsEqual(entry.path, resolved))) {
+    return true;
+  }
+
+  logger.warn(
+    `[Security] Path denied — gamePath=${resolved} | downloadDir=${downloadDir} | ` +
+    `cachedPaths=${JSON.stringify(Object.values(cache).map((e) => e?.path).filter(Boolean))}`
+  );
+  return false;
 };
 
 export const terminateAllWorkers = () => {
