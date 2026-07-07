@@ -11,7 +11,6 @@ import {
 import {
   FiPlay,
   FiServer,
-  FiUser,
   FiCheck,
   FiX,
   FiLoader,
@@ -502,27 +501,16 @@ const Welcome = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              {/* Icon with animated title */}
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="relative flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl"
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ duration: 0.6, type: "spring" }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl blur-md opacity-50" />
-                  <FiUser className="relative z-10 text-white text-2xl" />
-                </motion.div>
-                <motion.h2
-                  className="text-3xl font-bold text-white"
-                  key={authMode}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {authMode === "login" ? t('welcome.login') : t('welcome.register')}
-                </motion.h2>
-              </div>
+              {/* Animated title */}
+              <motion.h2
+                className="text-3xl font-bold text-white"
+                key={authMode}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {authMode === "login" ? t('welcome.login') : t('welcome.register')}
+              </motion.h2>
 
               {/* Simple Toggle Switch */}
               <div className="bg-slate-800/50 rounded-lg p-1 inline-flex border border-slate-700/50">

@@ -6,6 +6,7 @@ import { Worker } from "node:worker_threads";
 import fs from "fs";
 import path from "path";
 import store from "../store.js";
+import { resolveDownloadDir, isInside, pathsEqual } from "../app/pathGuard.js";
 import { getToken } from "../utils/tokenStore.js";
 import { GameLauncher } from "../gameLauncher.js";
 import { SimpleExecutableDetector } from "../simpleExecutableDetector.js";
@@ -41,14 +42,20 @@ const getDetector = () => {
 
 export const getGameLauncher = () => gameLauncher;
 
-// Returns true only when gamePath is strictly inside the user's configured download
-// directory. Prevents the renderer from targeting arbitrary filesystem locations.
+// Returns true when gamePath is a location the app legitimately owns: either
+// inside the effective download directory (the configured path, or the shared
+// default gameEngine.js installs into when none is set — these MUST agree, or an
+// install into the default folder can't be uninstalled), or an exact path the
+// trusted main process itself recorded in the install cache (covers a download
+// folder changed after some games were already installed). Prevents the renderer
+// from targeting arbitrary filesystem locations.
 const isInsideDownloadDir = (gamePath) => {
-  const downloadDir = store.get("downloadPath", "");
-  if (!downloadDir || !gamePath) return false;
+  if (!gamePath) return false;
   const resolved = path.resolve(gamePath);
-  const base = path.resolve(downloadDir);
-  return resolved === base || resolved.startsWith(base + path.sep);
+  if (isInside(resolveDownloadDir(store.get("downloadPath", "")), resolved)) return true;
+
+  const cache = store.get("installedGamesCache") || {};
+  return Object.values(cache).some((entry) => entry?.path && pathsEqual(entry.path, resolved));
 };
 
 export const terminateAllWorkers = () => {
