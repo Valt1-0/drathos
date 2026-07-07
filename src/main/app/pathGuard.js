@@ -1,31 +1,23 @@
-/**
- * Pure path-containment helpers for the game install/uninstall guards.
- * No electron/store dependency, so this module is unit-testable in isolation.
- */
+// Pure path-containment helpers for the install/uninstall guards — no electron
+// or store dependency, so this module is unit-testable in isolation.
 import os from "os";
 import path from "path";
 
-// The default install location gameEngine.js falls back to when no download
-// path is configured. Kept here so the uninstall guard and the installer agree.
+// Must match gameEngine.js's fallback so the guard and the installer agree.
 export const defaultDownloadDir = () =>
   path.resolve(os.homedir(), "Documents", "Drathos", "Downloads");
 
-// The effective download directory for a given stored value (configured path,
-// or the shared default when unset/blank).
 export const resolveDownloadDir = (storedPath) =>
   storedPath && typeof storedPath === "string" && storedPath.trim() !== ""
     ? path.resolve(storedPath)
     : defaultDownloadDir();
 
-// True when `target` is `base` itself or nested inside it. path.relative is
-// separator-tolerant and, on Windows, case-insensitive — so a drive-letter
-// casing difference (C:\ vs c:\) no longer spuriously denies access, and a path
-// on another drive yields an absolute relative path and is correctly rejected.
+// path.relative is separator-tolerant and case-insensitive on Windows, so it
+// handles C:\ vs c:\ and rejects a different drive (absolute relative result).
 export const isInside = (base, target) => {
   const rel = path.relative(base, target);
   return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 };
 
-// True when two paths resolve to the same location (robust to separators/case).
 export const pathsEqual = (a, b) =>
   path.relative(path.resolve(a), path.resolve(b)) === "";

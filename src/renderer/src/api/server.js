@@ -12,8 +12,7 @@ export const checkServerStatus = async (serverAddress, autoDetect = true) => {
       protocol = serverAddress.startsWith('https://') ? 'https' : 'http';
     }
 
-    // Always read the status body so we can surface registrationEnabled to the
-    // registration screen (defaults to open if the field is absent/unreadable).
+    // Read the body to surface registrationEnabled (defaults to open if absent).
     const url = buildServerUrl(serverAddress, '/api/server/status', protocol);
     const response = await fetchWithTimeout(url);
     const data = await response.json().catch(() => ({}));

@@ -150,7 +150,6 @@ const RegistrationCard = ({ isOnline }) => {
                 }
               />
 
-              {/* Invitation codes — the mechanism for closed registration */}
               <div
                 className="rounded-xl p-3"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--app-border)" }}

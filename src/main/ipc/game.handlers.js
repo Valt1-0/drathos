@@ -42,13 +42,9 @@ const getDetector = () => {
 
 export const getGameLauncher = () => gameLauncher;
 
-// Returns true when gamePath is a location the app legitimately owns: either
-// inside the effective download directory (the configured path, or the shared
-// default gameEngine.js installs into when none is set — these MUST agree, or an
-// install into the default folder can't be uninstalled), or an exact path the
-// trusted main process itself recorded in the install cache (covers a download
-// folder changed after some games were already installed). Prevents the renderer
-// from targeting arbitrary filesystem locations.
+// Guards the renderer from targeting arbitrary paths: allow the effective
+// download dir, or any path the main process itself recorded at install time
+// (covers a download folder changed after some games were installed).
 const isInsideDownloadDir = (gamePath) => {
   if (!gamePath) return false;
   const resolved = path.resolve(gamePath);

@@ -36,7 +36,7 @@ const Welcome = () => {
     confirmPassword: "",
     inviteCode: "",
   });
-  // Null = unknown (older server or not yet checked). Only false hides open registration.
+  // undefined = unknown (older server); only an explicit false closes registration
   const registrationEnabled = serverStatus?.registrationEnabled;
   const inviteRequired = registrationEnabled === false;
   const [error, setError] = useState(null);
