@@ -9,6 +9,7 @@ import { buildServerUrl } from "./utils/urlHelper.js";
 import { isTrustedServerHost } from "./utils/tlsHelper.js";
 import { calculateDirSize } from "./utils/dirSize.js";
 import { rawRequest } from "./utils/rawRequest.js";
+import { sha256File, checksumMatches } from "./app/fileChecksum.js";
 import logger from "./utils/logger.js";
 import { EXTRACTION_TIMEOUT_MS } from "./app/constants.js";
 
@@ -72,6 +73,7 @@ export class GameEngine {
       this.initializeFromStore(store, sendProgress, gameId);
 
       const filePath = await this.downloadGameFile(serverGame);
+      await this.verifyGameFile(filePath, serverGame);
       const extractPath = await this.extractGameFile(filePath, serverGame);
       await this.finalizeInstallation(filePath, extractPath, serverGame);
 
@@ -361,6 +363,28 @@ export class GameEngine {
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/^\.+|\.+$/g, '');
+  }
+
+  // Verify the downloaded archive against the server-provided SHA-256. Skipped
+  // when the server has no checksum yet (older games, backfilled lazily).
+  async verifyGameFile(filePath, serverGame) {
+    const expected = serverGame.sha256;
+    if (!expected) return;
+
+    this.sendProgress({
+      id: serverGame._id,
+      stage: "verifying",
+      progress: 0,
+      message: "Verifying file integrity...",
+    });
+
+    const actual = await sha256File(filePath);
+    if (!checksumMatches(actual, expected)) {
+      try { fs.unlinkSync(filePath); } catch {}
+      logger.error(`[GameEngine] Checksum mismatch for ${serverGame.name}: expected ${expected}, got ${actual}`);
+      throw new Error("CHECKSUM_MISMATCH");
+    }
+    logger.info(`[GameEngine] Checksum verified for ${serverGame.name}`);
   }
 
   async extractGameFile(filePath, serverGame) {

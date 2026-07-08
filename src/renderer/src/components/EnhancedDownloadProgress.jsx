@@ -9,6 +9,7 @@ import {
   FiClock,
   FiPauseCircle,
   FiPlayCircle,
+  FiShield,
   FiX,
 } from "react-icons/fi";
 import { useTheme } from "../contexts/themeContext";
@@ -71,6 +72,8 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         return "bg-gradient-primary";
       case "downloading":
         return "bg-gradient-to-r from-success to-success";
+      case "verifying":
+        return "bg-gradient-secondary";
       case "extracting":
         return "bg-gradient-to-r from-warning to-warning";
       case "finalizing":
@@ -94,6 +97,8 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         return <FiDownload className="text-primary" />;
       case "downloading":
         return <FiDownload className="text-success animate-bounce" />;
+      case "verifying":
+        return <FiShield className="text-secondary animate-pulse" />;
       case "extracting":
         return <FiPackage className="text-warning" />;
       case "finalizing":
@@ -117,6 +122,8 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         return t("downloads.stagePreparing");
       case "downloading":
         return t("downloads.stageDownloading");
+      case "verifying":
+        return t("downloads.stageVerifying");
       case "extracting":
         return t("downloads.stageExtracting");
       case "finalizing":
@@ -380,7 +387,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
           <div className={`flex items-center gap-2 text-sm ${getTextClass('primary')}`}>
             <FiXCircle className="text-error" />
             <span className="font-semibold">{t("downloads.errorLabel")}</span>
-            <span>{download.error}</span>
+            <span>{download.error === "CHECKSUM_MISMATCH" ? t("downloads.errorChecksum") : download.error}</span>
           </div>
         </motion.div>
       )}
