@@ -60,6 +60,7 @@ export const DownloadProvider = ({ children }) => {
       );
 
       if (data.stage === "completed" || data.stage === "failed") {
+        const wasCompleted = data.stage === "completed";
         downloadCallbacksRef.current.delete(game._id);
         gamesCache.invalidate();
 
@@ -67,9 +68,22 @@ export const DownloadProvider = ({ children }) => {
           setDownloads((prev) => prev.filter((dl) => dl.id !== downloadId));
 
           try {
-            const installed = await getInstalledGames();
-            gamesCache.set({ installedGames: installed });
-            window.dispatchEvent(new CustomEvent("games:installed"));
+            // Retry until the freshly installed game shows up. A single fetch
+            // could land before the server row was visible, leaving the game
+            // absent from the list until a manual reload.
+            let installed = await getInstalledGames();
+            for (let attempt = 0; wasCompleted && attempt < 5; attempt++) {
+              if (Array.isArray(installed) && installed.some((g) => g.serverGameId?._id === game._id)) break;
+              await new Promise((r) => setTimeout(r, 400));
+              installed = await getInstalledGames();
+            }
+            if (Array.isArray(installed)) {
+              if (wasCompleted && !installed.some((g) => g.serverGameId?._id === game._id)) {
+                logger.warn(`[DownloadQueue] Installed game ${game._id} still missing after retries`);
+              }
+              gamesCache.set({ installedGames: installed });
+              window.dispatchEvent(new CustomEvent("games:installed"));
+            }
           } catch (err) {
             logger.warn("[DownloadQueue] Could not refresh installed games:", err);
           }
@@ -81,7 +95,7 @@ export const DownloadProvider = ({ children }) => {
             setQueue([...queueRef.current]);
             startDownloadRef.current(next);
           }
-        }, 1000);
+        }, 300);
       }
     });
 
@@ -182,7 +196,7 @@ export const useActiveDownloads = () => {
   const { downloads } = useContext(DownloadContext);
   return useMemo(
     () => downloads.filter((dl) =>
-      ["preparing", "downloading", "extracting", "finalizing", "paused"].includes(dl.stage)
+      ["preparing", "downloading", "verifying", "extracting", "finalizing", "paused"].includes(dl.stage)
     ),
     [downloads]
   );
