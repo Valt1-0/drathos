@@ -21,3 +21,7 @@ export const isInside = (base, target) => {
 
 export const pathsEqual = (a, b) =>
   path.relative(path.resolve(a), path.resolve(b)) === "";
+
+// gameEngine installs each game into `<name>_v<version>`. This marks a folder as
+// a Drathos install, so we never delete an arbitrary/system path a server sends.
+export const hasVersionSuffix = (basename) => /_v[0-9][\w.-]*$/i.test(basename);

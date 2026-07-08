@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import path from "path";
-import { isInside, pathsEqual, resolveDownloadDir, defaultDownloadDir } from "../src/main/app/pathGuard.js";
+import { isInside, pathsEqual, resolveDownloadDir, defaultDownloadDir, hasVersionSuffix } from "../src/main/app/pathGuard.js";
 
 describe("isInside", () => {
   const base = path.resolve("games", "library");
@@ -60,6 +60,22 @@ describe("resolveDownloadDir", () => {
     expect(resolveDownloadDir("   ")).toBe(def);
     expect(resolveDownloadDir(undefined)).toBe(def);
     expect(resolveDownloadDir(null)).toBe(def);
+  });
+});
+
+describe("hasVersionSuffix", () => {
+  it("matches Drathos install folder names", () => {
+    expect(hasVersionSuffix("Crumb Circuit Simulator_v1.0.0")).toBe(true);
+    expect(hasVersionSuffix("Some Game_v2")).toBe(true);
+    expect(hasVersionSuffix("game_v1.2.3-beta")).toBe(true);
+  });
+
+  it("rejects arbitrary and system folder names", () => {
+    expect(hasVersionSuffix("Windows")).toBe(false);
+    expect(hasVersionSuffix("Documents")).toBe(false);
+    expect(hasVersionSuffix("Program Files")).toBe(false);
+    expect(hasVersionSuffix("game_version")).toBe(false);
+    expect(hasVersionSuffix("_vtext")).toBe(false);
   });
 });
 

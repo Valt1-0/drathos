@@ -6,7 +6,7 @@ import { Worker } from "node:worker_threads";
 import fs from "fs";
 import path from "path";
 import store from "../store.js";
-import { resolveDownloadDir, isInside, pathsEqual } from "../app/pathGuard.js";
+import { resolveDownloadDir, isInside, pathsEqual, hasVersionSuffix } from "../app/pathGuard.js";
 import { getToken } from "../utils/tokenStore.js";
 import { GameLauncher } from "../gameLauncher.js";
 import { SimpleExecutableDetector } from "../simpleExecutableDetector.js";
@@ -54,6 +54,18 @@ const isInsideDownloadDir = (gamePath) => {
   const cache = store.get("installedGamesCache") || {};
   if (Object.values(cache).some((entry) => entry?.path && pathsEqual(entry.path, resolved))) {
     return true;
+  }
+
+  // Games installed under a since-changed/lost download path live outside both
+  // checks above. Trust the server-recorded path — as launch already does — but
+  // only for a real directory carrying Drathos's `_v<version>` install marker,
+  // never a drive root or arbitrary system path.
+  if (resolved !== path.parse(resolved).root && hasVersionSuffix(path.basename(resolved))) {
+    try {
+      if (fs.statSync(resolved).isDirectory()) return true;
+    } catch {
+      // not a real directory — fall through to denial
+    }
   }
 
   logger.warn(
