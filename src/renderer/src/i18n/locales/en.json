@@ -361,6 +361,8 @@
     "unknownError": "Unknown error",
     "stagePreparing": "Preparing download...",
     "stageDownloading": "Downloading",
+    "stageVerifying": "Verifying integrity",
+    "errorChecksum": "Downloaded file is corrupted (checksum mismatch). Please try again.",
     "stageExtracting": "Extracting files",
     "stageFinalizing": "Finalizing installation",
     "stageCompleted": "Completed",
@@ -514,8 +516,13 @@
     "inviteStatus": {
       "active": "Active",
       "used": "Used",
-      "expired": "Expired"
+      "expired": "Expired",
+      "revoked": "Revoked"
     },
+    "maxUses": "Max uses",
+    "usesLabel": "Uses",
+    "showUses": "Show who used it",
+    "deletedUser": "Deleted user",
     "limitsUpdated": "Upload limits updated",
     "limitsError": "Failed to update limits",
     "noResults": "No results for \"{{query}}\"",
@@ -738,6 +745,9 @@
     "fileTooLarge": "File is too large. Maximum size is {{size}}"
   },
   "errors": {
+    "certChangedTitle": "Server certificate changed",
+    "certChangedDesc": "The server's security certificate differs from the one previously trusted. This can happen after a legitimate renewal — or signal an interception attempt. Only trust it if you expected this change.",
+    "trustNewCert": "Trust new certificate",
     "somethingWrong": "Something went wrong",
     "unexpectedError": "The application encountered an unexpected error",
     "details": "Error Details",

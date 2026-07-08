@@ -177,6 +177,19 @@ const api = {
   // Reload the application completely
   reloadApp: () => ipcRenderer.send("reload-app"),
 
+  // Copy text to the system clipboard (main-process clipboard module)
+  copyToClipboard: (text) => ipcRenderer.invoke("clipboard:writeText", text),
+
+  // Certificate pinning
+  security: {
+    resetServerTrust: () => ipcRenderer.invoke("security:resetServerTrust"),
+    onCertificateChanged: (callback) => {
+      const listener = (_event, data) => callback(data);
+      ipcRenderer.on("security:certificate-changed", listener);
+      return () => ipcRenderer.removeListener("security:certificate-changed", listener);
+    },
+  },
+
   // Native notifications
   notification: {
     show: ({ title, body }) =>

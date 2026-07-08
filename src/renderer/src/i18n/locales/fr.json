@@ -361,6 +361,8 @@
     "unknownError": "Erreur inconnue",
     "stagePreparing": "Préparation du téléchargement...",
     "stageDownloading": "Téléchargement",
+    "stageVerifying": "Vérification de l'intégrité",
+    "errorChecksum": "Le fichier téléchargé est corrompu (empreinte invalide). Veuillez réessayer.",
     "stageExtracting": "Extraction des fichiers",
     "stageFinalizing": "Finalisation de l'installation",
     "stageCompleted": "Terminé",
@@ -514,8 +516,13 @@
     "inviteStatus": {
       "active": "Actif",
       "used": "Utilisé",
-      "expired": "Expiré"
+      "expired": "Expiré",
+      "revoked": "Révoqué"
     },
+    "maxUses": "Usages max",
+    "usesLabel": "Utilisations",
+    "showUses": "Voir qui l'a utilisé",
+    "deletedUser": "Utilisateur supprimé",
     "limitsUpdated": "Limites d'upload mises à jour",
     "limitsError": "Échec de la mise à jour des limites",
     "noResults": "Aucun résultat pour « {{query}} »",
@@ -738,6 +745,9 @@
     "fileTooLarge": "Fichier trop volumineux. Taille maximale : {{size}}"
   },
   "errors": {
+    "certChangedTitle": "Le certificat du serveur a changé",
+    "certChangedDesc": "Le certificat de sécurité du serveur diffère de celui approuvé précédemment. Cela peut arriver après un renouvellement légitime — ou signaler une tentative d'interception. Ne l'approuvez que si vous vous attendiez à ce changement.",
+    "trustNewCert": "Faire confiance au nouveau certificat",
     "somethingWrong": "Une erreur est survenue",
     "unexpectedError": "L'application a rencontré une erreur inattendue",
     "details": "Détails de l'erreur",

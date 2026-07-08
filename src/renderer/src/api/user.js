@@ -204,11 +204,14 @@ export const listInvitations = async () => {
   return (await response.json()).invitations;
 };
 
-export const createInvitation = async (expiresInDays) => {
+export const createInvitation = async ({ maxUses, expiresInDays } = {}) => {
+  const body = {};
+  if (maxUses) body.maxUses = maxUses;
+  if (expiresInDays) body.expiresInDays = expiresInDays;
   const response = await authFetch("/api/users/invitations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(expiresInDays ? { expiresInDays } : {})
+    body: JSON.stringify(body)
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || "Failed to create invitation");

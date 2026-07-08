@@ -10,7 +10,7 @@ const WineRequiredModal = ({ isOpen, onClose, instructions }) => {
   };
 
   const handleCopyCommand = () => {
-    navigator.clipboard.writeText(instructions.command);
+    window.api.copyToClipboard(instructions.command);
   };
 
   return (

@@ -1,9 +1,16 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, clipboard } from "electron";
 import { is } from "@electron-toolkit/utils";
 import { secureHandle, secureOn } from "./secureHandle.js";
 
 export const registerWindowHandlers = () => {
   const getWindow = () => BrowserWindow.getFocusedWindow();
+
+  // navigator.clipboard is blocked by the renderer permission handler; go
+  // through the main-process clipboard module instead.
+  secureHandle("clipboard:writeText", (_event, text) => {
+    clipboard.writeText(String(text ?? ""));
+    return true;
+  });
 
   secureOn("window-minimize", () => getWindow()?.minimize());
 

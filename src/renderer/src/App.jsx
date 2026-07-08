@@ -6,7 +6,7 @@ import {
   Navigate,
   useNavigate,
 } from "react-router";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { motion } from "framer-motion";
 import { FiLoader } from "react-icons/fi";
 import { I18nextProvider, useTranslation } from "react-i18next";
@@ -220,6 +220,29 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // A pinned server certificate changed — warn the user and let them re-trust
+  // (legitimate renewal) or leave it blocked (possible interception).
+  useEffect(() => {
+    const unsub = window.api?.security?.onCertificateChanged?.(() => {
+      toast.error(i18n.t("errors.certChangedTitle"), {
+        description: i18n.t("errors.certChangedDesc"),
+        duration: Infinity,
+        action: {
+          label: i18n.t("errors.trustNewCert"),
+          onClick: async () => {
+            try {
+              await window.api.security.resetServerTrust();
+            } catch {
+              /* ignore */
+            }
+            window.api.reloadApp?.();
+          },
+        },
+      });
+    });
+    return unsub;
   }, []);
 
   return (

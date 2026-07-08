@@ -361,6 +361,8 @@
     "unknownError": "Error desconocido",
     "stagePreparing": "Preparando descarga...",
     "stageDownloading": "Descargando",
+    "stageVerifying": "Verificando integridad",
+    "errorChecksum": "El archivo descargado está dañado (suma de verificación no coincide). Inténtalo de nuevo.",
     "stageExtracting": "Extrayendo archivos",
     "stageFinalizing": "Finalizando instalación",
     "stageCompleted": "Completado",
@@ -514,8 +516,13 @@
     "inviteStatus": {
       "active": "Activo",
       "used": "Usado",
-      "expired": "Expirado"
+      "expired": "Expirado",
+      "revoked": "Revocado"
     },
+    "maxUses": "Usos máx.",
+    "usesLabel": "Usos",
+    "showUses": "Ver quién lo usó",
+    "deletedUser": "Usuario eliminado",
     "limitsUpdated": "Límites de subida actualizados",
     "limitsError": "Error al actualizar los límites",
     "noResults": "Sin resultados para «{{query}}»",
@@ -738,6 +745,9 @@
     "fileTooLarge": "El archivo es demasiado grande. El tamaño máximo es {{size}}"
   },
   "errors": {
+    "certChangedTitle": "El certificado del servidor cambió",
+    "certChangedDesc": "El certificado de seguridad del servidor difiere del aprobado anteriormente. Puede ocurrir tras una renovación legítima — o indicar un intento de interceptación. Confía en él solo si esperabas este cambio.",
+    "trustNewCert": "Confiar en el nuevo certificado",
     "somethingWrong": "Algo salió mal",
     "unexpectedError": "La aplicación encontró un error inesperado",
     "details": "Detalles del Error",

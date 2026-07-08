@@ -361,6 +361,8 @@
     "unknownError": "Unbekannter Fehler",
     "stagePreparing": "Download wird vorbereitet...",
     "stageDownloading": "Herunterladen",
+    "stageVerifying": "Integrität wird geprüft",
+    "errorChecksum": "Die heruntergeladene Datei ist beschädigt (Prüfsumme stimmt nicht). Bitte erneut versuchen.",
     "stageExtracting": "Dateien extrahieren",
     "stageFinalizing": "Installation abschließen",
     "stageCompleted": "Abgeschlossen",
@@ -514,8 +516,13 @@
     "inviteStatus": {
       "active": "Aktiv",
       "used": "Verwendet",
-      "expired": "Abgelaufen"
+      "expired": "Abgelaufen",
+      "revoked": "Widerrufen"
     },
+    "maxUses": "Max. Nutzungen",
+    "usesLabel": "Nutzungen",
+    "showUses": "Anzeigen, wer ihn genutzt hat",
+    "deletedUser": "Gelöschter Benutzer",
     "limitsUpdated": "Upload-Limits aktualisiert",
     "limitsError": "Limits konnten nicht aktualisiert werden",
     "noResults": "Keine Ergebnisse für «{{query}}»",
@@ -738,6 +745,9 @@
     "fileTooLarge": "Datei ist zu groß. Maximalgröße ist {{size}}"
   },
   "errors": {
+    "certChangedTitle": "Serverzertifikat geändert",
+    "certChangedDesc": "Das Sicherheitszertifikat des Servers unterscheidet sich vom zuvor vertrauten. Das kann nach einer legitimen Erneuerung passieren — oder auf einen Abfangversuch hindeuten. Vertrauen Sie ihm nur, wenn Sie diese Änderung erwartet haben.",
+    "trustNewCert": "Neuem Zertifikat vertrauen",
     "somethingWrong": "Etwas ist schiefgelaufen",
     "unexpectedError": "Die Anwendung ist auf einen unerwarteten Fehler gestoßen",
     "details": "Fehlerdetails",
