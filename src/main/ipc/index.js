@@ -13,6 +13,7 @@ import { registerLoggerHandlers } from "./logger.handlers.js";
 import { registerUpdaterHandlers, setAutoUpdateManager, getAutoUpdateManager } from "./updater.handlers.js";
 import { registerNotificationHandlers } from "./notification.handlers.js";
 import { registerShortcutHandlers } from "./shortcut.handlers.js";
+import { registerSecurityHandlers } from "./security.handlers.js";
 
 export const registerAllHandlers = () => {
   registerWindowHandlers();
@@ -26,6 +27,7 @@ export const registerAllHandlers = () => {
   registerUpdaterHandlers();
   registerNotificationHandlers();
   registerShortcutHandlers();
+  registerSecurityHandlers();
 };
 
 export {

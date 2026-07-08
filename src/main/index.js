@@ -27,6 +27,7 @@ import { memoryManager } from "./utils/memoryManager.js";
 import { AutoUpdateManager } from "./autoUpdater.js";
 import { SplashWindow } from "./splashWindow.js";
 import { isSafeForExternalOpen } from "./app/security.js";
+import { getPinnedCert, setPinnedCert, evaluatePin, fingerprintOf } from "./app/certPinning.js";
 import {
   registerAllHandlers,
   getGameLauncher,
@@ -200,17 +201,37 @@ const setupCSP = () => {
 const setupSecurity = () => {
   const appSession = session.fromPartition("persist:drathos");
 
-  // Always allow self-signed certificates for the configured self-hosted backend.
-  // External URLs (IGDB, etc.) are still validated normally.
-  appSession.on("certificate-error", (event, _webContents, url, _error, _cert, callback) => {
+  // Self-signed certs for the configured backend are trusted on first use, then
+  // pinned: a later cert with a different fingerprint is blocked (MITM defense).
+  // External URLs (IGDB, etc.) are always validated normally.
+  appSession.on("certificate-error", (event, _webContents, url, _error, cert, callback) => {
     const serverAddress = store.get("serverAddress", "");
     try {
       const serverHostname = new URL(serverAddress.startsWith("http") ? serverAddress : `https://${serverAddress}`).hostname;
       const requestHostname = new URL(url).hostname;
       if (serverAddress && serverHostname && serverHostname === requestHostname) {
-        logger.warn(`[Security] Accepting self-signed certificate for configured server: ${serverHostname}`);
-        event.preventDefault();
-        callback(true);
+        const presented = fingerprintOf(cert);
+        const stored = getPinnedCert(requestHostname);
+        const decision = evaluatePin(stored, presented);
+
+        if (decision === "first-use") {
+          setPinnedCert(requestHostname, presented);
+          logger.warn(`[Security] Pinned certificate for ${requestHostname} on first use`);
+        }
+
+        if (decision === "first-use" || decision === "match") {
+          event.preventDefault();
+          callback(true);
+          return;
+        }
+
+        // mismatch — block and tell the renderer so it can warn the user and
+        // offer to re-trust (legitimate cert rotation) or bail (real MITM).
+        logger.error(`[Security] Certificate changed for ${requestHostname} — connection blocked`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("security:certificate-changed", { hostname: requestHostname });
+        }
+        callback(false);
         return;
       }
     } catch {}

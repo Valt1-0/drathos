@@ -22,6 +22,10 @@ const schema = {
     type: "object",
     default: {},
   },
+  pinnedCertificates: {
+    type: "object",
+    default: {},
+  },
 };
 
 /**
