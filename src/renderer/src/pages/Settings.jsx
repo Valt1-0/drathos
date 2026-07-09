@@ -8,7 +8,6 @@ import {
   FiDownload,
   FiCheck,
   FiActivity,
-  FiCircle,
   FiImage,
   FiTrash2,
   FiAlertTriangle,
@@ -16,8 +15,6 @@ import {
   FiGlobe,
   FiMonitor,
   FiLayers,
-  FiCamera,
-  FiUpload,
   FiBell,
   FiPower,
   FiFolder,
@@ -31,21 +28,19 @@ import DE from "country-flag-icons/react/3x2/DE";
 import ES from "country-flag-icons/react/3x2/ES";
 import { useAuth } from "../contexts/authContext";
 import { useUpdate } from "../contexts/updateContext";
-import { useTheme } from "../contexts/themeContext";
 import { useConnection } from "../contexts/connectionContext";
 import { useNotifications } from "../contexts/notificationContext";
-import { getThemesList, isColorLight } from "../config/themes";
 import imageCacheService from "../services/imageCacheService";
 import logger from "../services/logger";
-import { uploadProfilePicture, deleteProfilePicture } from "../api/user";
 import BugReportModal from "../components/modals/BugReportModal";
 import KeyboardShortcutsModal from "../components/modals/KeyboardShortcutsModal";
 import CustomThemeModal from "../components/modals/CustomThemeModal";
 import PatchNotesModal from "../components/modals/PatchNotesModal";
 import { Button, Card, Input, Toggle } from "../components/ui";
-import ProfileAvatar from "../components/ProfileAvatar";
 import RegistrationCard from "../components/settings/RegistrationCard";
-import { getServerLimits, updateServerLimits } from "../api/server";
+import AccountCard from "../components/settings/AccountCard";
+import ThemeCard from "../components/settings/ThemeCard";
+import ServerLimitsCard from "../components/settings/ServerLimitsCard";
 import { FiServer } from "react-icons/fi";
 
 const SETTINGS_ENTRIES = [
@@ -147,14 +142,10 @@ const HighlightMatch = ({ text, query }) => {
 const SettingsPage = () => {
   const { t, i18n } = useTranslation();
   const [downloadPath, setDownloadPath] = useState("");
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { checkForUpdates, updateStatus, updateInfo } = useUpdate();
-  const { currentTheme, changeTheme: changeAppTheme, theme, customThemes, deleteCustomTheme } = useTheme();
   const { isOnline } = useConnection();
   const { enabled: notificationsEnabled, setNotificationsEnabled } = useNotifications();
-  const themesList = getThemesList();
-
-  const isLightTheme = theme?.colors?.background && isColorLight(theme.colors.background);
 
   const [activeCategory, setActiveCategory] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,17 +161,7 @@ const SettingsPage = () => {
   const [updateChecking, setUpdateChecking] = useState(false);
   const [currentVersion, setCurrentVersion] = useState('');
   const [isPatchNotesOpen, setIsPatchNotesOpen] = useState(false);
-  const [profilePicture, setProfilePicture] = useState(user?.profilePicture || null);
-  const [uploadingPicture, setUploadingPicture] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
 
-  const [serverLimits, setServerLimits] = useState({ maxModSizeGB: 2, maxGameSizeGB: 50 });
-  const [limitsLoading, setLimitsLoading] = useState(false);
-  const [limitsSaving, setLimitsSaving] = useState(false);
-  const [limitUnits, setLimitUnits] = useState({ maxModSizeGB: 'GB', maxGameSizeGB: 'GB' });
-  const [limitDrafts, setLimitDrafts] = useState({ maxModSizeGB: '', maxGameSizeGB: '' });
-
-  const fileInputRef = useRef(null);
   const searchContainerRef = useRef(null);
   const contentRef = useRef(null);
 
@@ -262,70 +243,6 @@ const SettingsPage = () => {
     }
   }, [checkForUpdates]);
 
-  const handleProfilePictureUpload = useCallback(async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      toast.error(t('common.error'), { description: t('settings.invalidImageType') });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(t('common.error'), { description: t('settings.imageTooLarge') });
-      return;
-    }
-
-    setUploadingPicture(true);
-    setUploadProgress(0);
-    try {
-      const result = await uploadProfilePicture(file, setUploadProgress);
-      setProfilePicture(result.profilePicture);
-      updateUser({ profilePicture: result.profilePicture });
-      toast.success(t('settings.profilePictureUpdated'));
-    } catch (error) {
-      logger.error("[Settings] Error uploading profile picture", error);
-      toast.error(t('common.error'), { description: error.message || t('settings.profilePictureError') });
-    } finally {
-      setUploadingPicture(false);
-      setUploadProgress(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }, [t, updateUser]);
-
-  const handleDeleteProfilePicture = useCallback(async () => {
-    setUploadingPicture(true);
-    try {
-      await deleteProfilePicture();
-      setProfilePicture(null);
-      updateUser({ profilePicture: null });
-      toast.success(t('settings.profilePictureDeleted'));
-    } catch (error) {
-      logger.error("[Settings] Error deleting profile picture", error);
-      toast.error(t('common.error'), { description: error.message || t('settings.profilePictureError') });
-    } finally {
-      setUploadingPicture(false);
-    }
-  }, [t, updateUser]);
-
-  const handleSaveLimits = useCallback(async () => {
-    setLimitsSaving(true);
-    try {
-      const updated = await updateServerLimits(serverLimits);
-      setServerLimits(updated);
-      toast.success(t('settings.limitsUpdated'));
-    } catch (error) {
-      logger.error("[Settings] Error saving server limits", error);
-      toast.error(t('common.error'), { description: t('settings.limitsError') });
-    } finally {
-      setLimitsSaving(false);
-    }
-  }, [serverLimits, t]);
-
-  const handleQuickThemeToggle = useCallback(() => {
-    changeAppTheme(isLightTheme ? 'darkModern' : 'lightModern');
-  }, [changeAppTheme, isLightTheme]);
-
   const selectDownloadPath = useCallback(async () => {
     try {
       const newPath = await window.api.selectAndCreateFolder("DrathosGames");
@@ -397,25 +314,6 @@ const SettingsPage = () => {
     fetchSettings();
     return () => { isMounted = false; };
   }, []);
-
-  // Server limits — re-fetch whenever auth state or connectivity changes
-  useEffect(() => {
-    if (user?.role !== 'admin' || !isOnline) return;
-    let isMounted = true;
-    const fetchServerLimits = async () => {
-      try {
-        setLimitsLoading(true);
-        const limits = await getServerLimits();
-        if (isMounted) setServerLimits(limits);
-      } catch (error) {
-        logger.error("[Settings] Error fetching server limits", error);
-      } finally {
-        if (isMounted) setLimitsLoading(false);
-      }
-    };
-    fetchServerLimits();
-    return () => { isMounted = false; };
-  }, [user?.role, isOnline]);
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-background text-text">
@@ -594,78 +492,7 @@ const SettingsPage = () => {
               {/* General */}
               {activeCategory === 'general' && (
                 <div className="grid grid-cols-2 gap-3">
-                  <div id="setting-account">
-                    <Card variant="glass" hover>
-                      <Card.Header
-                        icon={<FiUser className="text-sm" />}
-                        title={t('settings.account')}
-                        subtitle={t('settings.manageProfile')}
-                      />
-                      <Card.Body>
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col items-center gap-2 shrink-0">
-                            <div className="relative group">
-                              <ProfileAvatar
-                                profilePicture={profilePicture}
-                                username={user.username}
-                                size="lg"
-                                className="rounded-xl"
-                              />
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                whileHover={{ opacity: isOnline ? 1 : 0 }}
-                                className={`absolute inset-0 rounded-xl flex items-center justify-center ${isOnline ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                                style={{ background: 'rgba(0, 0, 0, 0.6)' }}
-                                onClick={() => isOnline && !uploadingPicture && fileInputRef.current?.click()}
-                              >
-                                {uploadingPicture ? (
-                                  uploadProgress !== null && uploadProgress < 100 ? (
-                                    <span className="text-white text-xs font-bold">{uploadProgress}%</span>
-                                  ) : (
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  )
-                                ) : (
-                                  <FiCamera className="text-base text-white" />
-                                )}
-                              </motion.div>
-                            </div>
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              accept="image/jpeg,image/png,image/gif,image/webp"
-                              onChange={handleProfilePictureUpload}
-                              className="hidden"
-                              disabled={!isOnline}
-                            />
-                            <div className="flex gap-1.5">
-                              <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingPicture || !isOnline} icon={<FiUpload />} iconPosition="left">
-                                {t('settings.uploadPicture')}
-                              </Button>
-                              {profilePicture && (
-                                <Button variant="danger" size="sm" onClick={handleDeleteProfilePicture} disabled={uploadingPicture || !isOnline} icon={<FiTrash2 />} iconPosition="left">
-                                  {t('settings.deletePicture')}
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex-1 space-y-3 min-w-0">
-                            <Input label={t('settings.username')} value={user.username} icon={<FiUser />} disabled />
-                            {user.role && (
-                              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--app-background)' }}>
-                                <span className="text-xs" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.role')}:</span>
-                                <span className="text-xs font-semibold capitalize px-2 py-0.5 rounded" style={{ background: user.role === 'admin' ? 'var(--app-primary)' : 'var(--app-secondary)', color: '#fff' }}>
-                                  {user.role}
-                                </span>
-                              </div>
-                            )}
-                            <p className="text-xs" style={{ color: 'var(--app-textSecondary)' }}>
-                              {isOnline ? t('settings.pictureHint') : t('settings.offlineNoChanges')}
-                            </p>
-                          </div>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </div>
+                  <AccountCard />
 
                   <div id="setting-language">
                     <Card variant="glass" hover>
@@ -710,119 +537,7 @@ const SettingsPage = () => {
               {/* Appearance */}
               {activeCategory === 'appearance' && (
                 <div className="space-y-2">
-                  <div id="setting-theme">
-                    <Card variant="glass" hover>
-                      <Card.Header
-                        icon={<FiMonitor className="text-sm" />}
-                        title={t('settings.colorTheme')}
-                        subtitle={t('settings.colorThemeDesc')}
-                      />
-                      <Card.Body>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {/* Built-in themes */}
-                          {themesList.map((themeOption) => {
-                            const isActive = currentTheme === themeOption.id;
-                            return (
-                              <motion.button
-                                key={themeOption.id}
-                                whileHover={{ scale: 1.03, y: -2 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={() => changeAppTheme(themeOption.id)}
-                                className={`relative p-3 rounded-xl border-2 transition-all overflow-hidden ${isActive ? 'border-secondary shadow-lg shadow-secondary/30' : 'border-white/10 hover:border-secondary/50'}`}
-                                style={{
-                                  background: isActive
-                                    ? `linear-gradient(135deg, ${themeOption.colors.primary}15 0%, ${themeOption.colors.secondary}15 100%)`
-                                    : 'rgba(255, 255, 255, 0.03)',
-                                }}
-                              >
-                                <div className="flex gap-1.5 mb-2 justify-center">
-                                  <div className="w-5 h-5 rounded-full shadow-lg" style={{ background: themeOption.gradients.primary, boxShadow: `0 0 8px ${themeOption.colors.primary}60` }} />
-                                  <div className="w-5 h-5 rounded-full shadow-lg" style={{ background: themeOption.gradients.secondary, boxShadow: `0 0 8px ${themeOption.colors.secondary}60` }} />
-                                </div>
-                                <div className="text-center">
-                                  <div className="font-semibold text-xs" style={{ color: 'var(--app-text)' }}>{themeOption.name}</div>
-                                </div>
-                                {isActive && (
-                                  <motion.div
-                                    layoutId="activeThemeIndicator"
-                                    className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
-                                    style={{ background: themeOption.gradients.primary, boxShadow: `0 0 8px ${themeOption.colors.primary}80` }}
-                                  >
-                                    <FiCheck className="text-xs" style={{ color: '#FFFFFF' }} />
-                                  </motion.div>
-                                )}
-                              </motion.button>
-                            );
-                          })}
-
-                          {/* Custom themes */}
-                          {customThemes.map((themeOption) => {
-                            const isActive = currentTheme === themeOption.id;
-                            return (
-                              <motion.button
-                                key={themeOption.id}
-                                whileHover={{ scale: 1.03, y: -2 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={() => changeAppTheme(themeOption.id)}
-                                className={`relative p-3 rounded-xl border-2 transition-all overflow-hidden ${isActive ? 'border-secondary shadow-lg shadow-secondary/30' : 'border-white/10 hover:border-secondary/50'}`}
-                                style={{
-                                  background: isActive
-                                    ? `linear-gradient(135deg, ${themeOption.colors.primary}15 0%, ${themeOption.colors.secondary}15 100%)`
-                                    : 'rgba(255, 255, 255, 0.03)',
-                                }}
-                              >
-                                <div className="flex gap-1.5 mb-2 justify-center">
-                                  <div className="w-5 h-5 rounded-full shadow-lg" style={{ background: themeOption.gradients.primary, boxShadow: `0 0 8px ${themeOption.colors.primary}60` }} />
-                                  <div className="w-5 h-5 rounded-full shadow-lg" style={{ background: themeOption.gradients.secondary, boxShadow: `0 0 8px ${themeOption.colors.secondary}60` }} />
-                                </div>
-                                <div className="text-center">
-                                  <div className="font-semibold text-xs truncate" style={{ color: 'var(--app-text)' }}>{themeOption.name}</div>
-                                  <div className="text-[10px] mt-0.5" style={{ color: 'var(--app-textSecondary)' }}>{t('settings.customTheme')}</div>
-                                </div>
-                                {isActive && (
-                                  <motion.div
-                                    layoutId="activeThemeIndicator"
-                                    className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
-                                    style={{ background: themeOption.gradients.primary, boxShadow: `0 0 8px ${themeOption.colors.primary}80` }}
-                                  >
-                                    <FiCheck className="text-xs" style={{ color: '#FFFFFF' }} />
-                                  </motion.div>
-                                )}
-                                {/* Edit + Delete buttons on hover */}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setCustomThemeModal({ open: true, edit: themeOption }); }}
-                                    className="px-3 py-1.5 rounded-lg bg-primary/80 text-white text-xs font-medium hover:bg-primary transition-colors"
-                                  >
-                                    {t('common.edit')}
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); deleteCustomTheme(themeOption.id); if (isActive) changeAppTheme('default'); }}
-                                    className="px-3 py-1.5 rounded-lg bg-error/80 text-white text-xs font-medium hover:bg-error transition-colors"
-                                  >
-                                    {t('common.delete')}
-                                  </button>
-                                </div>
-                              </motion.button>
-                            );
-                          })}
-
-                          {/* Add custom theme card */}
-                          <motion.button
-                            whileHover={{ scale: 1.03, y: -2 }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => setCustomThemeModal({ open: true, edit: null })}
-                            className="relative p-3 rounded-xl border-2 border-dashed border-white/20 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 min-h-20"
-                          >
-                            <div className="w-8 h-8 rounded-full border-2 border-dashed border-current flex items-center justify-center text-text-secondary">
-                              <span className="text-lg leading-none">+</span>
-                            </div>
-                            <div className="text-xs font-medium text-text-secondary text-center">{t('settings.addCustomTheme')}</div>
-                          </motion.button>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </div>
+                  <ThemeCard onOpenModal={(edit) => setCustomThemeModal({ open: true, edit })} />
                 </div>
               )}
 
@@ -983,114 +698,7 @@ const SettingsPage = () => {
                   </Card>
 
                   {/* Limites serveur (admin uniquement) */}
-                  {user?.role === 'admin' && (() => {
-                    const configs = [
-                      { key: 'maxModSizeGB',  icon: <FiUpload />,  label: t('settings.maxModSize'),  ranges: { GB: { min: 0.1, max: 100,  step: 0.5 }, MB: { min: 100,  max: 102400,  step: 100 } } },
-                      { key: 'maxGameSizeGB', icon: <FiMonitor />, label: t('settings.maxGameSize'), ranges: { GB: { min: 1,   max: 2000, step: 1   }, MB: { min: 1000, max: 2048000, step: 500 } } },
-                    ];
-                    const toDisplay = (gb, unit) => unit === 'MB' ? Math.round(gb * 1024) : gb;
-                    const toGB = (val, unit) => unit === 'MB' ? val / 1024 : val;
-                    return (
-                      <div id="setting-server-limits">
-                        <Card variant="glass" hover>
-                          <Card.Header
-                            icon={<FiServer className="text-sm" />}
-                            title={t('settings.serverLimits')}
-                            subtitle={t('settings.serverLimitsDesc')}
-                            action={
-                              <Button
-                                size="sm"
-                                variant="primary"
-                                onClick={handleSaveLimits}
-                                disabled={limitsSaving || !isOnline}
-                                icon={limitsSaving
-                                  ? <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin border-white" />
-                                  : <FiCheck />}
-                                iconPosition="left"
-                              >
-                                {limitsSaving ? t('settings.savingLimits') : t('settings.saveLimits')}
-                              </Button>
-                            }
-                          />
-                          <Card.Body>
-                            {limitsLoading ? (
-                              <div className="flex items-center justify-center py-6">
-                                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--app-primary)', borderTopColor: 'transparent' }} />
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-3">
-                                {configs.map(({ key, icon, label, ranges }) => {
-                                  const unit = limitUnits[key];
-                                  const { min, max, step } = ranges[unit];
-                                  const displayVal = toDisplay(serverLimits[key], unit);
-                                  const draft = limitDrafts[key];
-                                  return (
-                                    <div
-                                      key={key}
-                                      className="rounded-xl p-3"
-                                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--app-border)' }}
-                                    >
-                                      <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                          <span style={{ color: 'var(--app-primary)' }}>{icon}</span>
-                                          <span className="text-sm font-medium" style={{ color: 'var(--app-text)' }}>{label}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                          <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={draft !== '' ? draft : String(unit === 'GB' ? parseFloat(displayVal.toFixed(key === 'maxModSizeGB' ? 1 : 0)) : displayVal)}
-                                            onFocus={() => setLimitDrafts(prev => ({ ...prev, [key]: String(unit === 'GB' ? parseFloat(displayVal.toFixed(key === 'maxModSizeGB' ? 1 : 0)) : displayVal) }))}
-                                            onChange={(e) => setLimitDrafts(prev => ({ ...prev, [key]: e.target.value }))}
-                                            onBlur={(e) => {
-                                              const parsed = parseFloat(e.target.value.replace(',', '.'));
-                                              const clamped = isNaN(parsed) ? min : Math.min(max, Math.max(min, parsed));
-                                              setServerLimits(prev => ({ ...prev, [key]: toGB(clamped, unit) }));
-                                              setLimitDrafts(prev => ({ ...prev, [key]: '' }));
-                                            }}
-                                            disabled={limitsSaving || !isOnline}
-                                            className="w-16 text-sm font-bold text-right bg-transparent outline-none"
-                                            style={{
-                                              color: 'var(--app-primary)',
-                                              borderBottom: '1px solid var(--app-border)',
-                                            }}
-                                          />
-                                          <button
-                                            onClick={() => {
-                                              setLimitUnits(prev => ({ ...prev, [key]: unit === 'GB' ? 'MB' : 'GB' }));
-                                              setLimitDrafts(prev => ({ ...prev, [key]: '' }));
-                                            }}
-                                            disabled={limitsSaving || !isOnline}
-                                            className="text-xs font-semibold px-1.5 py-0.5 rounded-md transition-colors"
-                                            style={{ color: 'var(--app-primary)', background: 'rgba(99,102,241,0.15)' }}
-                                          >
-                                            {unit}
-                                          </button>
-                                        </div>
-                                      </div>
-                                      <input
-                                        type="range"
-                                        min={min} max={max} step={step}
-                                        value={Math.min(max, Math.max(min, displayVal))}
-                                        onChange={(e) => {
-                                          const val = parseFloat(e.target.value);
-                                          setServerLimits(prev => ({ ...prev, [key]: toGB(val, unit) }));
-                                          setLimitDrafts(prev => ({ ...prev, [key]: '' }));
-                                        }}
-                                        disabled={limitsSaving || !isOnline}
-                                        className="w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-                                        style={{ accentColor: 'var(--app-primary)', height: '4px' }}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </Card.Body>
-                        </Card>
-                      </div>
-                    );
-                  })()}
+                  <ServerLimitsCard />
 
                   {/* Inscriptions & codes d'invitation (admin uniquement) */}
                   {user?.role === 'admin' && <RegistrationCard isOnline={isOnline} />}
