@@ -20,6 +20,7 @@ import { useGameStats } from "../hooks/games/useGameStats";
 import { useGameModals } from "../hooks/games/useGameModals";
 import useGameStatuses from "../hooks/games/useGameStatuses";
 import { useGamesActionHandlers } from "../hooks/games/useGamesActionHandlers";
+import { useGameFields } from "../hooks/games/useGameFields";
 import { useDebounce } from "../hooks/useDebounce";
 import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import { GamesContext } from "../contexts/gamesContext";
@@ -105,39 +106,7 @@ const Games = () => {
   const activeDownloads = useActiveDownloads();
   const { enqueueGame, queue } = useDownloadQueue();
 
-  const extractGenreName = useCallback(
-    (genre) => {
-      if (!genre) return t("games.unknown");
-      if (typeof genre === "string") return genre;
-      return genre.name || genre.slug || genre.id || t("games.unknown");
-    },
-    [t],
-  );
-
-  const extractPlatformName = useCallback(
-    (platform) => {
-      if (!platform) return t("games.unknown");
-      if (typeof platform === "string") return platform;
-      return platform.name || platform.slug || platform.id || t("games.unknown");
-    },
-    [t],
-  );
-
-  const getGenresArray = useCallback(
-    (game) => {
-      if (!game?.genres || !Array.isArray(game.genres)) return [];
-      return game.genres.map(extractGenreName);
-    },
-    [extractGenreName],
-  );
-
-  const getPlatformsArray = useCallback(
-    (game) => {
-      if (!game?.platforms || !Array.isArray(game.platforms)) return ["PC"];
-      return game.platforms.map(extractPlatformName);
-    },
-    [extractPlatformName],
-  );
+  const { getGenresArray, getPlatformsArray } = useGameFields();
 
   useEffect(() => {
     if (!games.length || selectedGame) return;
