@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import os from "os";
 import http from "http";
 import https from "https";
 import { jwtDecode } from "jwt-decode";
@@ -10,8 +9,11 @@ import { isTrustedServerHost } from "./utils/tlsHelper.js";
 import { calculateDirSize } from "./utils/dirSize.js";
 import { rawRequest } from "./utils/rawRequest.js";
 import { sha256File, checksumMatches } from "./app/fileChecksum.js";
+import { resolveDownloadDir } from "./app/pathGuard.js";
 import logger from "./utils/logger.js";
 import { EXTRACTION_TIMEOUT_MS } from "./app/constants.js";
+
+const MKDIR_TIMEOUT_MS = 10_000;
 
 export class GameEngine {
   constructor() {
@@ -71,6 +73,7 @@ export class GameEngine {
       }
 
       this.initializeFromStore(store, sendProgress, gameId);
+      this.downloadPath = await this.ensureDownloadPath(store);
 
       const filePath = await this.downloadGameFile(serverGame);
       await this.verifyGameFile(filePath, serverGame);
@@ -111,36 +114,26 @@ export class GameEngine {
   initializeFromStore(store, progressCallback, gameId) {
     this.store = store;
     this.sendProgress = progressCallback;
-    this.downloadPath = this.initializeDownloadPath(store);
     this.serverAddress = store.get("serverAddress");
     this.userToken = store.get("userToken");
     this.initializeMetrics(gameId);
   }
-  initializeDownloadPath(store) {
-    let downloadPath = store.get("downloadPath");
 
-    if (
-      downloadPath &&
-      typeof downloadPath === "string" &&
-      downloadPath.trim() !== ""
-    ) {
-      if (!fs.existsSync(downloadPath)) {
-        fs.mkdirSync(downloadPath, { recursive: true });
-      }
-      return downloadPath;
-    }
-
-    const defaultPath = path.join(
-      os.homedir(),
-      "Documents",
-      "Drathos",
-      "Downloads"
-    );
-    if (!fs.existsSync(defaultPath)) {
-      fs.mkdirSync(defaultPath, { recursive: true });
-    }
-
-    return defaultPath;
+  // Directory creation on cloud-managed folders (OneDrive Documents…) can
+  // block forever — race it against a timeout so the install fails with a
+  // visible error instead of hanging at 0%.
+  async ensureDownloadPath(store) {
+    const downloadPath = resolveDownloadDir(store.get("downloadPath"));
+    await Promise.race([
+      fs.promises.mkdir(downloadPath, { recursive: true }),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Download folder unreachable: ${downloadPath}`)),
+          MKDIR_TIMEOUT_MS
+        )
+      ),
+    ]);
+    return downloadPath;
   }
 
   async downloadGameFile(serverGame) {

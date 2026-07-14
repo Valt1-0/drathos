@@ -165,6 +165,8 @@ const api = {
   app: {
     getLoginItem: () => ipcRenderer.invoke("app:getLoginItem"),
     setLoginItem: (openAtLogin) => ipcRenderer.invoke("app:setLoginItem", openAtLogin),
+    getDefaultDownloadDir: () => ipcRenderer.invoke("app:getDefaultDownloadDir"),
+    getDisplays: () => ipcRenderer.invoke("app:getDisplays"),
   },
 
   // Window controls

@@ -16,6 +16,7 @@ import GameCover from "../GameCover";
 import ModManager from "../mods/ModManager";
 import GameStatusSelector from "./GameStatusSelector";
 import VersionSelector from "./VersionSelector";
+import LaunchOptions from "./LaunchOptions";
 import { ActionButtons } from "./GameActionButtons";
 import GameStatistics from "./GameStatistics";
 import GameInformation from "./GameInformation";
@@ -439,6 +440,9 @@ const GameDetails = ({
 
               {/* Mods */}
               {isInstalled && <CollapsibleMods gameId={game._id} />}
+
+              {/* Launch arguments */}
+              {isInstalled && <LaunchOptions gameId={game._id} />}
             </div>
 
             {/* Right Column */}

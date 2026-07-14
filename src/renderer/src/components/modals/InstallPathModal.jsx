@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { motion, AnimatePresence } from "framer-motion";
 import logger from "../../services/logger";
@@ -8,27 +9,37 @@ import {
   FiHardDrive,
   FiDownload,
   FiX,
+  FiZap,
 } from "react-icons/fi";
 
 const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
+  const { t } = useTranslation();
   const containerRef = useFocusTrap(isOpen);
   const [downloadPath, setDownloadPath] = useState("");
+  const [defaultPath, setDefaultPath] = useState("");
   const [diskSpace, setDiskSpace] = useState(null);
   const [isSelecting, setIsSelecting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    window.api.app.getDefaultDownloadDir().then(setDefaultPath).catch(() => {});
+  }, [isOpen]);
+
+  const applyPath = async (newPath) => {
+    setDownloadPath(newPath);
+    try {
+      const space = await window.api.getDiskSpace(newPath);
+      if (space.success) setDiskSpace(space);
+    } catch {
+      setDiskSpace(null);
+    }
+  };
 
   const selectDownloadPath = async () => {
     setIsSelecting(true);
     try {
       const newPath = await window.api.selectAndCreateFolder("DrathosGames");
-      if (newPath) {
-        setDownloadPath(newPath);
-
-        // Get available disk space for the selected path
-        const space = await window.api.getDiskSpace(newPath);
-        if (space.success) {
-          setDiskSpace(space);
-        }
-      }
+      if (newPath) await applyPath(newPath);
     } catch (error) {
       logger.error("Error selecting folder:", error);
     } finally {
@@ -83,10 +94,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-white">
-                      Before installing {gameName}
+                      {t("installPath.title", { name: gameName })}
                     </h2>
                     <p className="text-white/80 text-sm mt-1">
-                      Choose where to install your games
+                      {t("installPath.subtitle")}
                     </p>
                   </div>
                 </div>
@@ -110,13 +121,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   </div>
                   <div>
                     <h3 className="text-primary font-bold mb-1">
-                      Installation folder configuration
+                      {t("installPath.infoTitle")}
                     </h3>
                     <p className="text-text-secondary text-sm leading-relaxed">
-                      You must select a folder where all your games will be
-                      installed. Make sure to choose a disk with enough free
-                      space. A "DrathosGames" subfolder will be created
-                      automatically.
+                      {t("installPath.infoBody")}
                     </p>
                   </div>
                 </div>
@@ -126,17 +134,16 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
               <div className="bg-surface rounded-xl p-6 border border-border mb-4">
                 <label className="block">
                   <span className="text-text font-semibold text-base mb-3 block">
-                    Select your installation folder
+                    {t("installPath.selectLabel")}
                   </span>
                   <div className="flex gap-3">
                     <div className="flex-1 relative">
                       <FiFolder className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-lg" />
                       <input
                         type="text"
-                        value={downloadPath || "No folder selected"}
+                        value={downloadPath || t("installPath.noFolder")}
                         readOnly
                         className="w-full pl-10 pr-3 py-3 rounded-lg bg-background border border-border text-text-secondary text-sm cursor-not-allowed"
-                        placeholder="Click Browse..."
                       />
                     </div>
                     <button
@@ -147,17 +154,35 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                       {isSelecting ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                          <span>Selecting...</span>
+                          <span>{t("installPath.selecting")}</span>
                         </>
                       ) : (
                         <>
                           <FiFolder className="text-lg" />
-                          <span>Browse</span>
+                          <span>{t("installPath.browse")}</span>
                         </>
                       )}
                     </button>
                   </div>
                 </label>
+
+                {/* One-click safe default */}
+                {defaultPath && downloadPath !== defaultPath && (
+                  <button
+                    onClick={() => applyPath(defaultPath)}
+                    className="mt-3 w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+                  >
+                    <FiZap className="text-primary text-lg shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-text">
+                        {t("installPath.useDefault")}
+                      </span>
+                      <span className="block text-xs text-text-secondary truncate">
+                        {defaultPath}
+                      </span>
+                    </span>
+                  </button>
+                )}
 
                 {/* Disk Space Info */}
                 {downloadPath && diskSpace && (
@@ -171,13 +196,13 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                         <FiHardDrive className="text-success text-lg" />
                       </div>
                       <h4 className="text-text font-semibold text-sm">
-                        Available disk space
+                        {t("installPath.diskSpace")}
                       </h4>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-text-secondary">Free space</span>
+                        <span className="text-text-secondary">{t("installPath.freeSpace")}</span>
                         <span className="text-success font-bold">
                           {diskSpace.freeGB} GB
                         </span>
@@ -198,10 +223,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-text-secondary">
-                          {diskSpace.usedGB} GB used
+                          {t("installPath.usedGB", { value: diskSpace.usedGB })}
                         </span>
                         <span className="text-text-secondary">
-                          {diskSpace.usedPercent}% used
+                          {t("installPath.usedPercent", { value: diskSpace.usedPercent })}
                         </span>
                       </div>
                     </div>
@@ -211,11 +236,10 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                         <FiAlertCircle className="text-error text-base flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-error text-xs font-semibold mb-0.5">
-                            Warning: Low disk space
+                            {t("installPath.lowSpaceTitle")}
                           </p>
                           <p className="text-text-secondary text-xs">
-                            Your disk is almost full. Make sure you have
-                            enough space to install your games.
+                            {t("installPath.lowSpaceBody")}
                           </p>
                         </div>
                       </div>
@@ -230,7 +254,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   onClick={handleClose}
                   className="px-6 py-2.5 bg-surface hover:bg-surface/80 text-text rounded-lg font-medium transition-all duration-200"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleConfirm}
@@ -238,7 +262,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   className="px-6 py-2.5 bg-success hover:bg-success/80 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-glow-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center gap-2"
                 >
                   <FiDownload className="text-lg" />
-                  <span>Continue installation</span>
+                  <span>{t("installPath.confirm")}</span>
                 </button>
               </div>
             </div>
