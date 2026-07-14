@@ -17,6 +17,7 @@ import {
   FiLayers,
   FiBell,
   FiPower,
+  FiMinimize2,
   FiFolder,
   FiSearch,
   FiFileText,
@@ -87,6 +88,13 @@ const SETTINGS_ENTRIES = [
     keywords: ["startup", "démarrage", "autostart", "auto launch", "login", "boot"],
   },
   {
+    id: "tray",
+    category: "advanced",
+    icon: FiMinimize2,
+    labelKey: "settings.closeToTray",
+    keywords: ["tray", "systray", "barre système", "minimize", "réduire", "close", "fermer", "background"],
+  },
+  {
     id: "cache",
     category: "advanced",
     icon: FiImage,
@@ -152,6 +160,7 @@ const SettingsPage = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
   const [openAtLogin, setOpenAtLogin] = useState(false);
+  const [closeToTray, setCloseToTray] = useState(true);
 
   const [cacheSize, setCacheSize] = useState(0);
   const [cacheLoading, setCacheLoading] = useState(false);
@@ -293,6 +302,9 @@ const SettingsPage = () => {
 
       const loginItem = await window.api.app.getLoginItem();
       if (isMounted) setOpenAtLogin(loginItem ?? false);
+
+      const tray = await window.store.get("closeToTray", true);
+      if (isMounted) setCloseToTray(tray ?? true);
 
       try {
         setCacheLoading(true);
@@ -598,6 +610,14 @@ const SettingsPage = () => {
                           label: t('settings.launchAtStartup'),
                           desc: t('settings.launchAtStartupDesc'),
                           control: <Toggle checked={openAtLogin} onChange={(v) => { setOpenAtLogin(v); window.api.app.setLoginItem(v); }} />,
+                        },
+                        {
+                          id: 'setting-tray',
+                          Icon: FiMinimize2,
+                          iconColor: 'var(--app-primary)',
+                          label: t('settings.closeToTray'),
+                          desc: t('settings.closeToTrayDesc'),
+                          control: <Toggle checked={closeToTray} onChange={(v) => { setCloseToTray(v); window.store.set("closeToTray", v); }} />,
                         },
                         {
                           id: 'setting-cache',

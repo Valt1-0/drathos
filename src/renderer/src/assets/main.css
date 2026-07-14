@@ -278,3 +278,11 @@ html, body, #root {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* Gamepad navigation: strong focus ring while controller input is active
+   (body.gamepad-mode is toggled by useGamepadNav, cleared on mouse move) */
+body.gamepad-mode :focus {
+  outline: 2px solid var(--app-primary) !important;
+  outline-offset: 2px;
+  transition: outline-offset 0.1s ease;
+}

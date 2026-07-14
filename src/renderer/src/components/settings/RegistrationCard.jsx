@@ -36,7 +36,8 @@ const formatDate = (d) => (d ? new Date(d).toLocaleDateString() : "");
 const RegistrationCard = ({ isOnline }) => {
   const { t } = useTranslation();
   const [enabled, setEnabled] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [invites, setInvites] = useState([]);
   const [creating, setCreating] = useState(false);
@@ -44,6 +45,7 @@ const RegistrationCard = ({ isOnline }) => {
   const [expandedId, setExpandedId] = useState(null);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
     try {
       const [settings, invitations] = await Promise.all([
         getServerLimits(),
@@ -51,16 +53,19 @@ const RegistrationCard = ({ isOnline }) => {
       ]);
       setEnabled(settings.registrationEnabled !== false);
       setInvites(invitations);
+      setLoaded(true);
     } catch (err) {
-      logger.error("[RegistrationCard] load error", err);
+      logger.warn("[RegistrationCard] load error", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // isOnline in deps: refetch when the server comes back
   useEffect(() => {
+    if (!isOnline) return;
     refresh();
-  }, [refresh]);
+  }, [refresh, isOnline]);
 
   const handleToggle = useCallback(
     async (next) => {
@@ -146,7 +151,11 @@ const RegistrationCard = ({ isOnline }) => {
           subtitle={t("settings.registrationDesc")}
         />
         <Card.Body>
-          {loading ? (
+          {!loaded && !isOnline ? (
+            <p className="text-sm py-4 text-center" style={{ color: "var(--app-textSecondary)" }}>
+              {t("settings.offlineNoChanges")}
+            </p>
+          ) : loading ? (
             <div className="flex items-center justify-center py-6">
               <div
                 className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"

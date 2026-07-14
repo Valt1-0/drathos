@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
+import { IoGameControllerOutline } from "react-icons/io5";
 
 const BTN_BASE = {
   width: 48,
@@ -58,6 +59,18 @@ const TitleBar = () => {
 
       {/* Control buttons */}
       <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' }}>
+        {/* Big Picture mode */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("drathos:bigpicture"))}
+          onMouseEnter={() => setHovered('bp')}
+          onMouseLeave={() => setHovered(null)}
+          style={getButtonStyle('bp')}
+          aria-label={t('bigPicture.enter')}
+          title={t('bigPicture.enter')}
+        >
+          <IoGameControllerOutline size={16} style={{ color: getIconColor('bp') }} />
+        </button>
+
         {/* Minimize */}
         <button
           onClick={() => window.api.windowMinimize()}

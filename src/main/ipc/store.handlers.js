@@ -1,10 +1,11 @@
 /**
  * Store IPC handlers
  */
-import { ipcMain, shell, app } from "electron";
+import { ipcMain, shell, app, screen } from "electron";
 import store from "../store.js";
 import { getToken, setToken, deleteToken, getRefreshToken, setRefreshToken, deleteRefreshToken } from "../utils/tokenStore.js";
 import { isSafeForExternalOpen } from "../app/security.js";
+import { defaultDownloadDir } from "../app/pathGuard.js";
 import { secureHandle } from "./secureHandle.js";
 
 // Keys the main process writes exclusively — renderer must not overwrite them via store-set
@@ -43,6 +44,17 @@ export const registerStoreHandlers = () => {
   });
 
   secureHandle("app:getLoginItem", () => app.getLoginItemSettings().openAtLogin);
+  secureHandle("app:getDefaultDownloadDir", () => defaultDownloadDir());
+
+  // 1-based, same enumeration order the launcher uses to pick a target display
+  secureHandle("app:getDisplays", () =>
+    screen.getAllDisplays().map((d, i) => ({
+      index: i + 1,
+      primary: d.id === screen.getPrimaryDisplay().id,
+      width: d.bounds.width,
+      height: d.bounds.height,
+    }))
+  );
   secureHandle("app:setLoginItem", (_event, openAtLogin) => {
     app.setLoginItemSettings({ openAtLogin, name: "Drathos" });
   });

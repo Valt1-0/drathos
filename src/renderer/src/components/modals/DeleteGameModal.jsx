@@ -78,24 +78,6 @@ const DeleteGameModal = ({
 
                 <div className="bg-surface/50 rounded-lg p-4 text-left text-sm text-text-secondary mb-4 space-y-2 max-h-48 overflow-y-auto border border-border">
                   <div className="flex items-center gap-2">
-                    <span className="text-success">✓</span>
-                    <span>
-                      <span className="text-text font-semibold">
-                        {result.cleanup?.reviewsDeleted || 0}
-                      </span>{" "}
-                      reviews deleted
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-success">✓</span>
-                    <span>
-                      <span className="text-text font-semibold">
-                        {result.cleanup?.installationsDeleted || 0}
-                      </span>{" "}
-                      installations deleted
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <span className={result.cleanup?.fileDeleted ? "text-success" : "text-warning"}>
                       {result.cleanup?.fileDeleted ? "✓" : "⚠"}
                     </span>

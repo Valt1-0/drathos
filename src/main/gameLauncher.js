@@ -2,7 +2,7 @@ import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
 import path from "path";
-import { shell, BrowserWindow } from "electron";
+import { shell, BrowserWindow, screen } from "electron";
 import { wineDetector } from "./utils/wineDetector.js";
 import { validateAndResolvePath } from "./app/validation.js";
 import logger from "./utils/logger.js";
@@ -10,6 +10,81 @@ import logger from "./utils/logger.js";
 const execFileAsync = promisify(execFile);
 
 const SESSION_MAX_MS = 24 * 60 * 60 * 1000; // 24 h hard cap — cleans up if process dies without firing exit
+
+// "-monitor 1 --lang \"fr FR\"" → ["-monitor", "1", "--lang", "fr FR"]
+const parseLaunchArgs = (raw) => {
+  if (!raw || typeof raw !== "string") return [];
+  const args = [];
+  for (const match of raw.matchAll(/"([^"]*)"|(\S+)/g)) {
+    args.push(match[1] ?? match[2]);
+  }
+  return args;
+};
+
+const isUnityGame = (gamePath) => {
+  try {
+    return fs.existsSync(path.join(gamePath, "UnityPlayer.dll"));
+  } catch {
+    return false;
+  }
+};
+
+// Best-effort for non-Unity games on Windows: wait for the process (or a
+// descendant) to show a window, then move it onto the chosen display.
+// Exclusive-fullscreen games own their output and cannot be moved this way.
+const moveGameWindowToDisplay = (pid, bounds, gameId) => {
+  if (process.platform !== "win32") return;
+  const script = `
+$deadline = (Get-Date).AddSeconds(25)
+$hwnd = [IntPtr]::Zero
+while ((Get-Date) -lt $deadline -and $hwnd -eq [IntPtr]::Zero) {
+  # Fast path: the game itself owns the window (usual case, no WMI query)
+  $p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue
+  if ($p -and $p.MainWindowHandle -ne 0) { $hwnd = $p.MainWindowHandle; break }
+
+  # Slow path: launcher-style games hand the window to a child process
+  $ids = @(${pid})
+  $all = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId
+  do {
+    $next = @($all | Where-Object { $ids -contains $_.ParentProcessId -and $ids -notcontains $_.ProcessId } | ForEach-Object { $_.ProcessId })
+    $ids += $next
+  } while ($next.Count -gt 0)
+  foreach ($i in $ids) {
+    $p = Get-Process -Id $i -ErrorAction SilentlyContinue
+    if ($p -and $p.MainWindowHandle -ne 0) { $hwnd = $p.MainWindowHandle; break }
+  }
+  if ($hwnd -eq [IntPtr]::Zero) { Start-Sleep -Milliseconds 750 }
+}
+if ($hwnd -eq [IntPtr]::Zero) { exit 1 }
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public struct RECT { public int L, T, R, B; }
+public class Win32 {
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h, int x, int y, int w, int h2, bool repaint);
+}
+"@
+$r = New-Object RECT
+[Win32]::GetWindowRect($hwnd, [ref]$r) | Out-Null
+$w = $r.R - $r.L; $h = $r.B - $r.T
+$tx = ${bounds.x}; $ty = ${bounds.y}; $tw = ${bounds.width}; $th = ${bounds.height}
+if ($w -ge $tw -or $h -ge $th) { $w = $tw; $h = $th; $x = $tx; $y = $ty }
+else { $x = $tx + [int](($tw - $w) / 2); $y = $ty + [int](($th - $h) / 2) }
+[Win32]::MoveWindow($hwnd, $x, $y, $w, $h, $true) | Out-Null
+`;
+  // -EncodedCommand: the script contains nested quotes and here-strings that
+  // do not survive Windows command-line re-parsing via -Command
+  const encoded = Buffer.from(script, "utf16le").toString("base64");
+  const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded], {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  ps.on("exit", (code) => {
+    if (code !== 0) logger.debug(`[GameLauncher] Window move skipped for ${gameId} (no movable window found)`);
+  });
+  ps.unref();
+};
 
 export class GameLauncher {
   constructor() {
@@ -33,6 +108,28 @@ export class GameLauncher {
       const executablePath = validationResult.executablePath;
       const needsWine = wineDetector.isWineRequired(executablePath);
 
+      const options = store?.get("gameLaunchOptions")?.[gameId] || {};
+      const extraArgs = parseLaunchArgs(options.args);
+
+      // Per-game display: Unity honors -monitor N even in exclusive
+      // fullscreen; anything else gets the post-launch window mover.
+      const displayIndex = Number(options.display) || 0; // 1-based, 0 = auto
+      let targetBounds = null;
+      const target = displayIndex > 0 ? screen.getAllDisplays()[displayIndex - 1] : null;
+      if (target) {
+        if (isUnityGame(gamePath)) {
+          if (!extraArgs.some((a) => a.toLowerCase() === "-monitor")) {
+            extraArgs.push("-monitor", String(displayIndex));
+          }
+        } else {
+          targetBounds = target.bounds;
+        }
+      }
+
+      if (extraArgs.length > 0) {
+        logger.info(`[GameLauncher] Launch args for ${gameId}: ${extraArgs.join(" ")}`);
+      }
+
       if (needsWine) {
         const wineCmd = await wineDetector.detectWine();
         if (!wineCmd) {
@@ -43,9 +140,13 @@ export class GameLauncher {
         logger.info(`[GameLauncher] Wine detected: ${version}`);
       }
 
-      const gameProcess = await this._createGameProcess(executablePath, gamePath, needsWine);
+      const gameProcess = await this._createGameProcess(executablePath, gamePath, needsWine, extraArgs);
       const processInfo = this._createProcessInfo(gameProcess, gameId, gamePath, executableName, store, needsWine);
       this.activeProcesses.set(gameId, processInfo);
+
+      if (targetBounds && gameProcess.pid) {
+        moveGameWindowToDisplay(gameProcess.pid, targetBounds, gameId);
+      }
 
       this._setupProcessEvents(gameProcess, processInfo, onStatusChange);
 
@@ -112,10 +213,10 @@ export class GameLauncher {
     return { success: true, executablePath };
   }
 
-  async _createGameProcess(executablePath, gamePath, needsWine = false) {
+  async _createGameProcess(executablePath, gamePath, needsWine = false, extraArgs = []) {
     if (needsWine) {
       const wineCmd = await wineDetector.detectWine();
-      return spawn(wineCmd, [executablePath], {
+      return spawn(wineCmd, [executablePath, ...extraArgs], {
         cwd: gamePath,
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],
@@ -127,14 +228,14 @@ export class GameLauncher {
     }
 
     if (process.platform === 'win32') {
-      return spawn(executablePath, [], {
+      return spawn(executablePath, extraArgs, {
         cwd: gamePath,
         stdio: "ignore",
         env: { ...process.env },
       });
     }
 
-    return spawn(executablePath, [], {
+    return spawn(executablePath, extraArgs, {
       cwd: gamePath,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],

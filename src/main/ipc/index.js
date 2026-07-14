@@ -5,7 +5,7 @@
 import { registerWindowHandlers } from "./window.handlers.js";
 import { registerStoreHandlers } from "./store.handlers.js";
 import { registerDialogHandlers } from "./dialog.handlers.js";
-import { registerGameHandlers, getGameLauncher, terminateAllWorkers } from "./game.handlers.js";
+import { registerGameHandlers, getGameLauncher, terminateAllWorkers, getActiveDownloadCount } from "./game.handlers.js";
 import { registerModHandlers } from "./mod.handlers.js";
 import { registerArchiveHandlers } from "./archive.handlers.js";
 import { registerStatsHandlers } from "./stats.handlers.js";
@@ -33,6 +33,7 @@ export const registerAllHandlers = () => {
 export {
   getGameLauncher,
   terminateAllWorkers,
+  getActiveDownloadCount,
   setAutoUpdateManager,
   getAutoUpdateManager,
 };

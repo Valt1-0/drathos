@@ -59,7 +59,9 @@ export const DownloadProvider = ({ children }) => {
         )
       );
 
-      if (data.stage === "completed" || data.stage === "failed") {
+      // "cancelled" must clean up too — it used to leave isProcessingRef stuck
+      // true, silently queueing every later install until an app restart
+      if (data.stage === "completed" || data.stage === "failed" || data.stage === "cancelled") {
         const wasCompleted = data.stage === "completed";
         downloadCallbacksRef.current.delete(game._id);
         gamesCache.invalidate();
