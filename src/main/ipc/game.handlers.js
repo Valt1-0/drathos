@@ -6,7 +6,7 @@ import { Worker } from "node:worker_threads";
 import fs from "fs";
 import path from "path";
 import store from "../store.js";
-import { resolveDownloadDir, isInside, pathsEqual, hasVersionSuffix } from "../app/pathGuard.js";
+import { resolveDownloadDir, isInside, hasVersionSuffix } from "../app/pathGuard.js";
 import { getToken } from "../utils/tokenStore.js";
 import { GameLauncher } from "../gameLauncher.js";
 import { SimpleExecutableDetector } from "../simpleExecutableDetector.js";
@@ -42,6 +42,10 @@ const getDetector = () => {
 
 export const getGameLauncher = () => gameLauncher;
 
+// Workers stay registered from download start until exit — the count covers
+// the whole install (download + extraction), which is what quit-confirm needs.
+export const getActiveDownloadCount = () => activeWorkers.size;
+
 // Guards the renderer from targeting arbitrary paths: allow the effective
 // download dir, or any path the main process itself recorded at install time
 // (covers a download folder changed after some games were installed).
@@ -52,19 +56,21 @@ const isInsideDownloadDir = (gamePath) => {
   if (isInside(downloadDir, resolved)) return true;
 
   const cache = store.get("installedGamesCache") || {};
-  if (Object.values(cache).some((entry) => entry?.path && pathsEqual(entry.path, resolved))) {
+  if (Object.values(cache).some((entry) => entry?.path && isInside(path.resolve(entry.path), resolved))) {
     return true;
   }
 
   // Games installed under a since-changed/lost download path live outside both
-  // checks above. Trust the server-recorded path — as launch already does — but
-  // only for a real directory carrying Drathos's `_v<version>` install marker,
-  // never a drive root or arbitrary system path.
-  if (resolved !== path.parse(resolved).root && hasVersionSuffix(path.basename(resolved))) {
-    try {
-      if (fs.statSync(resolved).isDirectory()) return true;
-    } catch {
-      // not a real directory — fall through to denial
+  // checks above. Trust a real directory carrying Drathos's `_v<version>`
+  // install marker — on the path itself or an ancestor, so subfolders of an
+  // install stay browsable — never a drive root or arbitrary system path.
+  for (let dir = resolved; dir !== path.parse(dir).root; dir = path.dirname(dir)) {
+    if (hasVersionSuffix(path.basename(dir))) {
+      try {
+        if (fs.statSync(dir).isDirectory()) return true;
+      } catch {
+        // not a real directory — keep walking up
+      }
     }
   }
 
@@ -120,6 +126,14 @@ export const registerGameHandlers = () => {
         const done = ["completed", "cancelled", "failed"].includes(data.stage?.toLowerCase());
         if (done) {
           downloadProgressByGame.delete(serverGame._id);
+          // A worker wedged on a stuck fs op never exits on its own — grace
+          // terminate so it can't linger in activeWorkers after a terminal stage
+          setTimeout(() => {
+            if (activeWorkers.get(serverGame._id) === worker) {
+              try { worker.terminate(); } catch { /* ignore */ }
+              activeWorkers.delete(serverGame._id);
+            }
+          }, 3000);
         } else if (typeof data.progress === "number") {
           downloadProgressByGame.set(serverGame._id, data.progress);
         }
@@ -185,6 +199,7 @@ export const registerGameHandlers = () => {
 
   // Detection
   secureHandle("getBestExecutable", async (_event, { gamePath, gameName }) => {
+    if (!isInsideDownloadDir(gamePath)) return { success: false, error: "Access denied" };
     try {
       const exe = await getDetector().getBestExecutable(gamePath, gameName);
       return exe ? { success: true, executable: exe } : { success: false, error: "No executable found" };
@@ -194,6 +209,7 @@ export const registerGameHandlers = () => {
   });
 
   secureHandle("detectExecutables", async (_event, { gamePath, gameName }) => {
+    if (!isInsideDownloadDir(gamePath)) return { success: false, error: "Access denied", executables: [] };
     try {
       const exes = await getDetector().listAllExecutables(gamePath, gameName);
       return { success: true, executables: exes, count: exes.length };
@@ -211,6 +227,7 @@ export const registerGameHandlers = () => {
       gameName = gameName || params.name || params.title;
 
       if (!gameId || !gamePath) throw new Error("Missing gameId or gamePath");
+      if (!isInsideDownloadDir(gamePath)) throw new Error("Access denied");
 
       if (!executableName) {
         executableName = await getDetector().getBestExecutable(gamePath, gameName || "");
@@ -242,12 +259,8 @@ export const registerGameHandlers = () => {
 
   // Directory listing
   secureHandle("listGameDirectory", async (_event, { gamePath }) => {
+    if (!isInsideDownloadDir(gamePath)) return { success: false, error: "Access denied" };
     const normalized = path.normalize(gamePath);
-    // Check for traversal in the original path (normalize resolves '..' so checking
-    // normalized is useless — check the original segments instead)
-    if (!path.isAbsolute(normalized) || gamePath.split(/[/\\]/).includes('..')) {
-      return { success: false, error: "Invalid path" };
-    }
     try {
       await fs.promises.access(normalized);
       const items = await fs.promises.readdir(normalized);
