@@ -6,26 +6,42 @@ import logger from "../services/logger";
 
 let _serverGamesPending = null;
 
+const GAMES_PAGE_SIZE = 100;
+
 export const getAllServerGames = async () => {
   if (_serverGamesPending) return _serverGamesPending;
   _serverGamesPending = (async () => {
     try {
       const serverAddress = await window.store.get("serverAddress");
       const token = await window.store.get("userToken");
-      const response = await fetchWithTimeout(
-        buildServerUrl(serverAddress, '/api/serverGame/getAllGames'),
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      // Paginate past the server's 100-item cap. A server that predates
+      // pagination ignores the params and doesn't echo `page` back — return
+      // its single response as-is instead of looping on duplicates.
+      let all = [];
+      for (let page = 1; ; page++) {
+        const response = await fetchWithTimeout(
+          buildServerUrl(serverAddress, `/api/serverGame/getAllGames?page=${page}&limit=${GAMES_PAGE_SIZE}`),
+          { headers }
+        );
+        if (!response.ok) {
+          throw new Error(`Error fetching games: ${response.status}`);
         }
-      );
-      if (!response.ok) {
-        throw new Error(`Error fetching games: ${response.status}`);
+        const data = await response.json();
+        if (Array.isArray(data)) return data;
+
+        const games = data.games ?? [];
+        if (data.page === undefined) return games;
+
+        all = all.concat(games);
+        if (games.length < GAMES_PAGE_SIZE || page >= (data.totalPages ?? page)) {
+          return all;
+        }
       }
-      const data = await response.json();
-      return Array.isArray(data) ? data : (data.games ?? []);
     } catch (error) {
       logger.debug("[API] Server games unavailable (offline mode)");
       return null;
