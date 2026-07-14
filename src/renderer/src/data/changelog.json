@@ -1,28 +1,26 @@
 [
   {
-    "version": "0.9.0",
+    "version": "1.1.0",
     "title": {
-      "en": "Security Hardening & UI Overhaul",
-      "fr": "Durcissement sécurité & refonte UI"
+      "en": "Controller support, Big Picture & quality of life",
+      "fr": "Support manette, Big Picture & confort"
     },
-    "releaseDate": "2026-04-30",
+    "releaseDate": "2026-07-14",
     "sections": [
       {
         "type": "features",
         "items": {
           "en": [
-            "Custom theme editor with color picker",
-            "Keyboard shortcuts modal (Ctrl+Shift+?)",
-            "Game status selector (backlog, in-progress, completed, dropped)",
-            "Game requests system — users can request games",
-            "Patch notes viewer in settings"
+            "Full controller navigation — browse the entire app with a gamepad",
+            "Big Picture mode — full-screen, console-style library to launch and install from the couch",
+            "Per-game display selection — send a game to the monitor you choose",
+            "Custom launch arguments per game"
           ],
           "fr": [
-            "Éditeur de thème personnalisé avec sélecteur de couleur",
-            "Modal des raccourcis clavier (Ctrl+Maj+?)",
-            "Sélecteur de statut de jeu (backlog, en cours, terminé, abandonné)",
-            "Système de demandes de jeux — les utilisateurs peuvent demander des jeux",
-            "Visualiseur des notes de version dans les paramètres"
+            "Navigation complète à la manette — parcourez toute l'application au pad",
+            "Mode Big Picture — bibliothèque plein écran façon console, pour lancer et installer depuis le canapé",
+            "Choix de l'écran par jeu — envoyez un jeu sur le moniteur de votre choix",
+            "Arguments de lancement personnalisés par jeu"
           ]
         }
       },
@@ -30,16 +28,16 @@
         "type": "improvements",
         "items": {
           "en": [
-            "Settings search bar with keyboard navigation",
-            "Virtualized game list for better performance",
-            "Profile picture upload with progress indicator",
-            "Enhanced download progress UI"
+            "Close to system tray, with a confirmation when a download is running",
+            "Safer default install folder, and a folder prompt on the first install",
+            "Bug reports now open a pre-filled GitHub issue",
+            "Upgraded to Electron 43 — up-to-date Chromium and security fixes"
           ],
           "fr": [
-            "Barre de recherche dans les paramètres avec navigation clavier",
-            "Liste de jeux virtualisée pour de meilleures performances",
-            "Upload de photo de profil avec indicateur de progression",
-            "Interface de progression des téléchargements améliorée"
+            "Réduction dans la barre système, avec confirmation si un téléchargement est en cours",
+            "Dossier d'installation par défaut plus sûr, et choix du dossier au premier jeu",
+            "Les rapports de bug ouvrent désormais une issue GitHub pré-remplie",
+            "Passage à Electron 43 — Chromium à jour et correctifs de sécurité"
           ]
         }
       },
@@ -47,114 +45,14 @@
         "type": "fixes",
         "items": {
           "en": [
-            "Fixed store encryption key migration from pre-0.8.0",
-            "Fixed offline mode sync queue badge",
-            "Fixed game size calculation caching"
+            "Cancelling a download no longer blocks the queue",
+            "The game library is no longer capped at 100 games",
+            "Settings no longer fail when the server is offline"
           ],
           "fr": [
-            "Correction de la migration de clé de chiffrement depuis les versions pré-0.8.0",
-            "Correction du badge de file d'attente en mode hors ligne",
-            "Correction du cache de calcul de taille des jeux"
-          ]
-        }
-      },
-      {
-        "type": "breaking",
-        "items": {
-          "en": [
-            "Electron store is now AES-256 encrypted — first launch will migrate automatically"
-          ],
-          "fr": [
-            "Le store Electron est maintenant chiffré AES-256 — le premier lancement migrera automatiquement"
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "version": "0.8.0",
-    "title": {
-      "en": "Execution Path Management",
-      "fr": "Gestion des chemins d'exécution"
-    },
-    "releaseDate": "2026-03-15",
-    "sections": [
-      {
-        "type": "features",
-        "items": {
-          "en": [
-            "Auto-detect game executable on install",
-            "Manual executable override from game details",
-            "Launch at startup option"
-          ],
-          "fr": [
-            "Détection automatique de l'exécutable du jeu à l'installation",
-            "Remplacement manuel de l'exécutable depuis les détails du jeu",
-            "Option de lancement au démarrage"
-          ]
-        }
-      },
-      {
-        "type": "improvements",
-        "items": {
-          "en": [
-            "Better error messages during game installation",
-            "Faster game library loading with local cache"
-          ],
-          "fr": [
-            "Messages d'erreur améliorés lors de l'installation des jeux",
-            "Chargement plus rapide de la bibliothèque avec cache local"
-          ]
-        }
-      },
-      {
-        "type": "fixes",
-        "items": {
-          "en": [
-            "Fixed crash when game folder is missing",
-            "Fixed download resume after network loss"
-          ],
-          "fr": [
-            "Correction du crash lorsque le dossier du jeu est absent",
-            "Correction de la reprise de téléchargement après perte réseau"
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "version": "0.7.0",
-    "title": {
-      "en": "Mods & Collections",
-      "fr": "Mods & Collections"
-    },
-    "releaseDate": "2026-01-20",
-    "sections": [
-      {
-        "type": "features",
-        "items": {
-          "en": [
-            "Mod upload and management (admin)",
-            "Game collections with drag-and-drop ordering",
-            "Smart collections (recently played, installed)"
-          ],
-          "fr": [
-            "Upload et gestion des mods (admin)",
-            "Collections de jeux avec tri par glisser-déposer",
-            "Collections intelligentes (récemment joués, installés)"
-          ]
-        }
-      },
-      {
-        "type": "improvements",
-        "items": {
-          "en": [
-            "New sidebar design with Framer Motion animations",
-            "French localization (i18n)"
-          ],
-          "fr": [
-            "Nouveau design de la barre latérale avec animations Framer Motion",
-            "Localisation française (i18n)"
+            "L'annulation d'un téléchargement ne bloque plus la file",
+            "La bibliothèque n'est plus limitée à 100 jeux",
+            "Les paramètres ne plantent plus quand le serveur est hors ligne"
           ]
         }
       }
