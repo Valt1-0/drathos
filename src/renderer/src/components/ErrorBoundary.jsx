@@ -29,24 +29,15 @@ class ErrorBoundaryClass extends Component {
       errorInfo,
     });
 
-    // Log to service if available
+    // Log to the file service so it can be attached to a GitHub issue
     if (window.api?.logger) {
       window.api.logger.log({
         level: 'error',
         message: '[ErrorBoundary] Component crash',
         data: {
           error: { message: error.toString(), stack: error.stack },
-          context: { componentStack: errorInfo.componentStack },
+          context: { componentStack: errorInfo.componentStack, url: window.location.href },
         },
-      });
-    }
-
-    // Send crash report to Discord webhook
-    if (window.api?.crashReport) {
-      window.api.crashReport.send({
-        error: { message: error.toString(), stack: error.stack },
-        componentStack: errorInfo.componentStack,
-        context: { url: window.location.href },
       });
     }
   }

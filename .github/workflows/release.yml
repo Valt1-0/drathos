@@ -21,11 +21,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The crash-reporter webhook is inlined at bundle time — set the secret
-      # in the repo settings, or crash reports are silently disabled.
       - run: npm run build
-        env:
-          DRATHOS_DISCORD_WEBHOOK: ${{ secrets.DRATHOS_DISCORD_WEBHOOK }}
       # Each OS packages its native targets (win: nsis / linux: AppImage, deb,
       # pacman). Uploads go to a DRAFT GitHub release for the tag — review it,
       # then publish; that's what feeds the auto-updater and the download page.

@@ -104,14 +104,6 @@ const api = {
       ipcRenderer.invoke("logger:openLogsFolder"),
   },
 
-  // Crash Reporting (Discord webhook)
-  crashReport: {
-    send: ({ error, componentStack, context }) =>
-      ipcRenderer.invoke("crashReport:send", { error, componentStack, context }),
-    sendManual: ({ description, context }) =>
-      ipcRenderer.invoke("crashReport:send", { description, context }),
-  },
-
   // Auto Updater
   updater: {
     checkForUpdates: () =>

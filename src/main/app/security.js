@@ -13,6 +13,7 @@ const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 const ALLOWED_EXTERNAL_HOSTS = new Set([
   "wiki.winehq.org",  // Wine installation guide (WineRequiredModal)
   "winehq.org",
+  "github.com",       // Bug reports open a pre-filled issue (BugReportModal)
 ]);
 
 const EXECUTABLE_EXT = {

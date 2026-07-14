@@ -28,7 +28,6 @@ export default [
       sourceType: "module",
       globals: {
         ...globals.node,
-        __DISCORD_WEBHOOK__: "readonly", // injected by electron-vite define
       },
     },
     rules: sharedRules,

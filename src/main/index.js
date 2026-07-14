@@ -24,7 +24,6 @@ import iconPath3x from "../../resources/icon@3x.png?asset";
 import iconPathLinux from "../../resources/icon_linux_512.png?asset";
 import store from "./store.js";
 import logger from "./utils/logger.js";
-import crashReporter from "./utils/crashReporter.js";
 import { memoryManager } from "./utils/memoryManager.js";
 import { AutoUpdateManager } from "./autoUpdater.js";
 import { SplashWindow } from "./splashWindow.js";
@@ -403,7 +402,6 @@ const doCleanup = () => {
   terminateAllWorkers();
   getGameLauncher().cleanup();
   getAutoUpdateManager()?.cleanup();
-  crashReporter.cleanup();
   memoryManager.cleanup();
   globalShortcut.unregisterAll();
 };
@@ -415,13 +413,13 @@ app.on("before-quit", (event) => {
   app.exit(0);
 });
 
-// === CRASH REPORTING ===
+// === GLOBAL ERROR LOGGING ===
+// Crashes are written to the log file; users report them via GitHub issues
+// (the bug-report modal exports these logs to attach).
 Menu.setApplicationMenu(null);
-crashReporter.initialize();
 
 process.on("uncaughtException", (error) => {
   logger.error("[App] Uncaught exception", error);
-  crashReporter.reportUncaughtException(error);
 });
 
 process.on("unhandledRejection", (reason) => {
@@ -429,7 +427,6 @@ process.on("unhandledRejection", (reason) => {
     "[App] Unhandled rejection",
     reason instanceof Error ? reason : new Error(String(reason)),
   );
-  crashReporter.reportUnhandledRejection(reason);
 });
 
 // === APP INITIALIZATION ===

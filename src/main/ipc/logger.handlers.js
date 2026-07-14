@@ -1,7 +1,6 @@
 import { shell } from "electron";
 import fs from "fs";
 import logger from "../utils/logger.js";
-import crashReporter from "../utils/crashReporter.js";
 import { secureHandle } from "./secureHandle.js";
 
 export const registerLoggerHandlers = () => {
@@ -65,19 +64,6 @@ export const registerLoggerHandlers = () => {
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
-    }
-  });
-
-  secureHandle("crashReport:send", async (_, { error, componentStack, context, description }) => {
-    try {
-      if (description) {
-        await crashReporter.reportManual({ description, error, context });
-      } else {
-        await crashReporter.reportRendererError({ error, componentStack, context });
-      }
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message };
     }
   });
 };

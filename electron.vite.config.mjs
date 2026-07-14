@@ -1,18 +1,12 @@
 import { resolve } from "path";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
-import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), 'DRATHOS_');
-
+export default defineConfig(() => {
   return {
     main: {
       plugins: [externalizeDepsPlugin()],
-      define: {
-        '__DISCORD_WEBHOOK__': JSON.stringify(env.DRATHOS_DISCORD_WEBHOOK || ''),
-      },
       base: "./",
       build: {
         outDir: "dist-electron/main",

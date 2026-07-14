@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertTriangle, FiX, FiSend, FiFolder, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FiAlertTriangle, FiX, FiGithub, FiFolder, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import logger from '../../services/logger';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -30,6 +30,19 @@ const BugReportModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const openGitHubIssue = () => {
+    const sys = systemInfo
+      ? `App ${systemInfo.app?.version} · ${systemInfo.system?.platform} ${systemInfo.system?.osVersion}`
+      : '';
+    const firstLine = description.trim().split('\n')[0].slice(0, 70);
+    const body = `${description.trim()}\n\n---\n${sys}\n\n${t('modals.bugReport.issueLogsHint')}`;
+    const url =
+      'https://github.com/Valt1-0/drathos/issues/new' +
+      `?title=${encodeURIComponent(`[Bug] ${firstLine}`)}` +
+      `&body=${encodeURIComponent(body)}`;
+    window.electron.shell.openExternal(url).catch(() => {});
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -45,13 +58,10 @@ const BugReportModal = ({ isOpen, onClose }) => {
     setResult(null);
 
     try {
+      // Save a local report (system info + recent logs) the user can attach,
+      // then open a pre-filled GitHub issue — email stays out of the public issue.
       const response = await logger.exportBugReport(description, userEmail);
-
-      // Send to Discord webhook (non-blocking: don't let webhook failure affect local report)
-      window.api.crashReport.sendManual({
-        description,
-        context: { email: userEmail || undefined },
-      }).catch(() => {});
+      openGitHubIssue();
 
       if (response.success) {
         setResult({
@@ -64,10 +74,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
           hasEmail: !!userEmail,
           descriptionLength: description.length
         });
-
-        setTimeout(() => {
-          onClose();
-        }, 3000);
       } else {
         setResult({
           success: false,
@@ -261,8 +267,8 @@ const BugReportModal = ({ isOpen, onClose }) => {
                 </>
               ) : (
                 <>
-                  <FiSend className="w-4 h-4" />
-                  {t('modals.bugReport.send')}
+                  <FiGithub className="w-4 h-4" />
+                  {t('modals.bugReport.openIssue')}
                 </>
               )}
             </button>
