@@ -12,6 +12,8 @@ import {
   nativeImage,
   session,
   globalShortcut,
+  dialog,
+  Notification,
 } from "electron";
 import { join, resolve } from "path";
 import fs from "fs";
@@ -32,9 +34,60 @@ import {
   registerAllHandlers,
   getGameLauncher,
   terminateAllWorkers,
+  getActiveDownloadCount,
   setAutoUpdateManager,
   getAutoUpdateManager,
 } from "./ipc/index.js";
+
+// The main process has no i18n runtime — the renderer mirrors the i18next
+// language into the store so native dialogs/notifications can match it.
+const MAIN_STRINGS = {
+  en: {
+    quitTitle: "Download in progress",
+    quitMessage: "A download is in progress. Quit anyway?",
+    quit: "Quit",
+    cancel: "Cancel",
+    trayNoticeTitle: "Drathos is still running",
+    trayNoticeBody: "The app keeps running in the system tray. Use Quit in the tray menu to exit.",
+    trayOpen: "Open Drathos",
+    trayQuit: "Quit",
+  },
+  fr: {
+    quitTitle: "Téléchargement en cours",
+    quitMessage: "Un téléchargement est en cours. Quitter quand même ?",
+    quit: "Quitter",
+    cancel: "Annuler",
+    trayNoticeTitle: "Drathos est toujours ouvert",
+    trayNoticeBody: "L'application continue de tourner dans la barre système. Quittez via le menu de l'icône.",
+    trayOpen: "Ouvrir Drathos",
+    trayQuit: "Quitter",
+  },
+  de: {
+    quitTitle: "Download läuft",
+    quitMessage: "Ein Download läuft noch. Trotzdem beenden?",
+    quit: "Beenden",
+    cancel: "Abbrechen",
+    trayNoticeTitle: "Drathos läuft weiter",
+    trayNoticeBody: "Die App läuft im Infobereich weiter. Beenden über das Tray-Menü.",
+    trayOpen: "Drathos öffnen",
+    trayQuit: "Beenden",
+  },
+  es: {
+    quitTitle: "Descarga en curso",
+    quitMessage: "Hay una descarga en curso. ¿Salir de todos modos?",
+    quit: "Salir",
+    cancel: "Cancelar",
+    trayNoticeTitle: "Drathos sigue abierto",
+    trayNoticeBody: "La aplicación sigue ejecutándose en la bandeja del sistema. Salga desde el menú del icono.",
+    trayOpen: "Abrir Drathos",
+    trayQuit: "Salir",
+  },
+};
+
+const mainStrings = () => {
+  const lang = String(store.get("language", "en")).split("-")[0];
+  return MAIN_STRINGS[lang] || MAIN_STRINGS.en;
+};
 
 // Disable security warnings in development (needed for Vite HMR)
 if (process.env.NODE_ENV !== "production") {
@@ -283,6 +336,24 @@ const setupShortcuts = () => {
 };
 
 // === TRAY SETUP ===
+// Blocks quit while a download/installation is running unless the user confirms.
+const confirmQuit = () => {
+  if (getActiveDownloadCount() === 0) return true;
+  // A dialog parented to a hidden window can open invisible (tray quit) —
+  // surface the window first so the confirmation is actually seen
+  focusMainWindow();
+  const s = mainStrings();
+  const choice = dialog.showMessageBoxSync(mainWindow, {
+    type: "warning",
+    title: s.quitTitle,
+    message: s.quitMessage,
+    buttons: [s.quit, s.cancel],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  return choice === 0;
+};
+
 const setupTray = (mainWindow) => {
   if (!trayIcon) {
     logger.warn("[App] Icon not found, tray disabled");
@@ -291,10 +362,11 @@ const setupTray = (mainWindow) => {
   const tray = new Tray(trayIcon);
   tray.setToolTip("Drathos");
 
+  const s = mainStrings();
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: "Open Drathos",
+        label: s.trayOpen,
         click: () => {
           if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
@@ -302,7 +374,13 @@ const setupTray = (mainWindow) => {
         },
       },
       { type: "separator" },
-      { label: "Quit", click: () => app.quit() },
+      {
+        label: s.trayQuit,
+        click: () => {
+          if (!confirmQuit()) return;
+          app.quit();
+        },
+      },
     ]),
   );
 
@@ -449,12 +527,29 @@ app.whenReady().then(async () => {
   }, 3000);
 
   autoUpdateManager.startPeriodicCheck(120);
-  setupTray(mainWindow);
+  const tray = setupTray(mainWindow);
 
-  // User clicks X → cleanup then let Electron quit normally
-  // Guard prevents re-entry if app.quit() triggers close again
-  mainWindow.on("close", () => {
+  // User clicks X → hide to tray (default, launcher behavior) or quit.
+  // Guard prevents re-entry if app.quit() triggers close again.
+  mainWindow.on("close", (event) => {
     if (isExiting) return;
+
+    if (tray && store.get("closeToTray", true)) {
+      event.preventDefault();
+      mainWindow.hide();
+      // One-time heads-up that the app is now in the tray
+      if (!store.get("trayNoticeShown") && Notification.isSupported()) {
+        const s = mainStrings();
+        new Notification({ title: s.trayNoticeTitle, body: s.trayNoticeBody }).show();
+        store.set("trayNoticeShown", true);
+      }
+      return;
+    }
+
+    if (!confirmQuit()) {
+      event.preventDefault();
+      return;
+    }
     doCleanup();
     app.exit(0);
   });

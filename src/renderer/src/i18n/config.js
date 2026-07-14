@@ -53,4 +53,9 @@ i18n
     }
   });
 
+// Mirror the language into the electron store so the main process can
+// localize native dialogs (quit confirmation, tray menu)
+i18n.on('languageChanged', (lng) => window.store?.set('language', lng));
+if (i18n.language) window.store?.set('language', i18n.language);
+
 export default i18n;
