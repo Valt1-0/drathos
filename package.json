@@ -1,6 +1,6 @@
 {
   "name": "drathos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Game Library Client for DRM Free Games",
   "main": "dist-electron/main/index.js",
   "author": {
