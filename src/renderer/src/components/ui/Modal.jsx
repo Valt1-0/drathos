@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX } from "react-icons/fi";
 import Button from "./Button";
@@ -44,6 +45,20 @@ const Modal = ({
       onClose?.();
     }
   };
+
+  // Escape closes the modal — keyboard accessibility, also used by the
+  // gamepad B button
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
 
   return (
     <AnimatePresence>

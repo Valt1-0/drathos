@@ -31,6 +31,25 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import QuickLaunch from "./components/QuickLaunch";
 import KeyboardShortcutsModal from "./components/modals/KeyboardShortcutsModal";
 import useKeyboardShortcuts, { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useGamepadNav } from "./hooks/useGamepadNav";
+import BigPictureMode from "./components/BigPictureMode";
+
+const GamepadNav = () => {
+  useGamepadNav();
+  return null;
+};
+
+// Opened by the TitleBar button or the gamepad Start button (both dispatch
+// the same window event)
+const BigPictureHost = () => {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const toggle = () => setOpen((v) => !v);
+    window.addEventListener("drathos:bigpicture", toggle);
+    return () => window.removeEventListener("drathos:bigpicture", toggle);
+  }, []);
+  return <BigPictureMode isOpen={open} onClose={() => setOpen(false)} />;
+};
 
 // * Critical pages imported directly (no lazy loading)
 import Games from "./pages/Games";
@@ -263,6 +282,8 @@ export default function App() {
                               <AppRoutes />
                             </main>
                           </div>
+                          <GamepadNav />
+                          <BigPictureHost />
                           <UploadNotification />
                           <UpdateModal />
                           <DownloadTray />
