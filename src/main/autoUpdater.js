@@ -2,6 +2,13 @@ import { autoUpdater } from 'electron-updater';
 import { app } from 'electron';
 import logger from './utils/logger.js';
 
+// Update checks fail for benign reasons: no published release yet (404 / 406 /
+// "Unable to find latest version"), GitHub feed hiccups, or being offline.
+// None of these are errors the user should see — they just mean "no update".
+const isBenignUpdateError = (msg) =>
+  /\b(404|406)\b/.test(msg) ||
+  /Unable to find latest version|Cannot parse releases feed|ensure a production release|net::|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|getaddrinfo|ECONNRESET/i.test(msg);
+
 /**
  * Simple and efficient auto-updater
  */
@@ -98,22 +105,28 @@ export class AutoUpdateManager {
     });
 
     autoUpdater.on('error', (error) => {
-      // 404 = no releases published yet on GitHub — silent, not a real error for end users
-      const is404 = error.message?.includes('404') || error.statusCode === 404;
-      if (is404) {
-        logger.info('[AutoUpdater] No releases found (404) — skipping update check silently');
+      // First line only — electron-updater dumps the whole HTTP response
+      // (headers + release feed XML) into error.message otherwise.
+      const msg = (error?.message || String(error)).split('\n')[0].slice(0, 200);
+
+      // Only a failure during a download the user actively started is worth
+      // surfacing; everything else (check-time errors) stays quiet.
+      if (isBenignUpdateError(msg) || this.status !== 'downloading') {
+        logger.warn(`[AutoUpdater] Update check unavailable: ${msg}`);
         this.status = 'idle';
+        // Terminal event so the renderer leaves the "checking" state — otherwise
+        // the Settings refresh icon spins forever after a failed check.
+        this.emit('update-not-available');
         return;
       }
 
-      logger.error('[AutoUpdater] Error:', error);
+      logger.error(`[AutoUpdater] Download error: ${msg}`);
       this.status = 'error';
-      this.emit('error', { message: error.message });
+      this.emit('error', { message: msg });
 
       // Reset the status after 10 seconds to allow a new attempt
       setTimeout(() => {
         if (this.status === 'error') {
-          logger.info('[AutoUpdater] Resetting error status');
           this.status = 'idle';
           this.updateInfo = null;
         }
@@ -170,10 +183,21 @@ export class AutoUpdateManager {
         latestVersion: result.updateInfo.version,
       };
     } catch (error) {
-      logger.error('[AutoUpdater] Check failed:', error);
+      // Concise — the raw message carries the full HTTP response dump
+      const msg = (error?.message || String(error)).split('\n')[0].slice(0, 200);
+
+      // "No release yet / offline" is not a failure the user should see —
+      // report it as "no update available", like the automatic check does.
+      // The 'error' event handler already logs it, so keep this at debug.
+      if (isBenignUpdateError(msg)) {
+        logger.debug(`[AutoUpdater] Check unavailable: ${msg}`);
+        return { success: true, available: false, currentVersion: app.getVersion() };
+      }
+
+      logger.error(`[AutoUpdater] Check failed: ${msg}`);
       return {
         success: false,
-        error: error.message,
+        error: msg,
         currentVersion: app.getVersion(),
       };
     }
