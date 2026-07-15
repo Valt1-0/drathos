@@ -159,7 +159,6 @@ The desktop client is fully self-contained: it handles game launching, the downl
 - [x] Offline mode with background sync
 - [x] Automatic updates via GitHub Releases
 - [x] Collections, mods, and multi-user roles
-- [ ] macOS build
 - [ ] In-app patch notes viewer
 - [ ] Additional interface languages
 
