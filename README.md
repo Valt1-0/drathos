@@ -3,17 +3,15 @@
   <img src="resources/icon.png" alt="Drathos" width="100" />
   <h1>Drathos</h1>
   <p><strong>DRM-Free Game Library Client</strong></p>
-  <p><em>Own your library. Play without DRM. Host it yourself.</em></p>
   <p>Self-hosted · Cross-platform · Open Source</p>
 
   <p>
-    <a href="https://github.com/Valt1-0/drathos/releases/latest"><img src="https://img.shields.io/github/v/release/Valt1-0/drathos?style=flat-square&color=3B82F6&label=release" alt="Latest release" /></a>
-    <a href="https://github.com/Valt1-0/drathos/releases"><img src="https://img.shields.io/github/downloads/Valt1-0/drathos/total?style=flat-square&color=8B5CF6&label=downloads" alt="Downloads" /></a>
-    <a href="https://github.com/Valt1-0/drathos/stargazers"><img src="https://img.shields.io/github/stars/Valt1-0/drathos?style=flat-square&color=F59E0B" alt="Stars" /></a>
-    <img src="https://img.shields.io/github/last-commit/Valt1-0/drathos?style=flat-square&color=6366F1" alt="Last commit" />
-    <img src="https://img.shields.io/badge/Windows-0078D4?style=flat-square&logo=windows11&logoColor=white" alt="Windows" />
-    <img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux" />
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/Valt1-0/drathos?style=flat-square&color=22C55E" alt="License" /></a>
+    <a href="https://github.com/Valt1-0/drathos/releases/latest"><img src="https://img.shields.io/github/v/release/Valt1-0/drathos?style=flat&logo=github&logoColor=white&color=3B82F6&label=release" alt="Latest release" /></a>
+    <a href="https://github.com/Valt1-0/drathos/releases"><img src="https://img.shields.io/github/downloads/Valt1-0/drathos/total?style=flat&logo=github&logoColor=white&color=8B5CF6&label=downloads" alt="Downloads" /></a>
+    <a href="https://github.com/Valt1-0/drathos/stargazers"><img src="https://img.shields.io/github/stars/Valt1-0/drathos?style=flat&logo=github&logoColor=white&color=F59E0B&label=stars" alt="Stars" /></a>
+    <img src="https://img.shields.io/badge/Windows-0078D4?style=flat&logo=windows11&logoColor=white" alt="Windows" />
+    <img src="https://img.shields.io/badge/Linux-FCC624?style=flat&logo=linux&logoColor=black" alt="Linux" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat" alt="License" /></a>
   </p>
 
   <p>
@@ -138,15 +136,15 @@ The desktop client is fully self-contained: it handles game launching, the downl
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Runtime** | [Electron 43](https://www.electronjs.org/) (Chromium + Node.js) |
-| **UI** | [React 19](https://react.dev/) · [React Router 7](https://reactrouter.com/) · [Framer Motion](https://www.framer.com/motion/) |
-| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) with a themeable design system |
-| **Build** | [electron-vite](https://electron-vite.org/) · [Vite 7](https://vite.dev/) · [electron-builder](https://www.electron.build/) |
-| **State &amp; data** | React Context · [electron-store](https://github.com/sindresorhus/electron-store) · [Socket.IO](https://socket.io/) |
-| **i18n** | [i18next](https://www.i18next.com/) — English, French, German, Spanish |
-| **Quality** | [ESLint](https://eslint.org/) · [Prettier](https://prettier.io/) · [Vitest](https://vitest.dev/) · GitHub Actions CI |
+| Layer                | Technology                                                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Runtime**          | [Electron 43](https://www.electronjs.org/) (Chromium + Node.js)                                                               |
+| **UI**               | [React 19](https://react.dev/) · [React Router 7](https://reactrouter.com/) · [Framer Motion](https://www.framer.com/motion/) |
+| **Styling**          | [Tailwind CSS 4](https://tailwindcss.com/) with a themeable design system                                                     |
+| **Build**            | [electron-vite](https://electron-vite.org/) · [Vite 7](https://vite.dev/) · [electron-builder](https://www.electron.build/)   |
+| **State &amp; data** | React Context · [electron-store](https://github.com/sindresorhus/electron-store) · [Socket.IO](https://socket.io/)            |
+| **i18n**             | [i18next](https://www.i18next.com/) — English, French, German, Spanish                                                        |
+| **Quality**          | [ESLint](https://eslint.org/) · [Prettier](https://prettier.io/) · [Vitest](https://vitest.dev/) · GitHub Actions CI          |
 
 <br />
 
