@@ -63,6 +63,10 @@ linux:
   description: "Drathos is a modern client to manage your DRM-free game library. Download, install and launch your games easily."
   artifactName: ${productName}-${version}-${arch}.${ext}
   executableName: drathos
+  # Names the .desktop after executableName so it matches StartupWMClass and
+  # Electron's app_id — lets desktop environments link the running window to the
+  # launcher icon (the Linux equivalent of the Windows AppUserModelID fix).
+  syncDesktopName: true
   vendor: Valt
   packageCategory: games
   desktop:
