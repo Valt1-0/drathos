@@ -22,6 +22,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # pacman packaging shells out to bsdtar, which isn't preinstalled on the
+      # GitHub Ubuntu runner (fpm fails with exit code 127 otherwise)
+      - name: Install bsdtar for pacman packaging
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools
       # Each OS packages its native targets (win: nsis / linux: AppImage, deb,
       # pacman). Uploads go to a DRAFT GitHub release for the tag — review it,
       # then publish; that's what feeds the auto-updater and the download page.
