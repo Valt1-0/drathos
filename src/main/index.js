@@ -435,7 +435,10 @@ app.whenReady().then(async () => {
   logger.info("[App] Starting Drathos...", { version: app.getVersion() });
 
   app.setName("Drathos");
-  electronApp.setAppUserModelId("com.drathos.app");
+  // Must match electron-builder's appId — the installer registers the shortcut
+  // with that AUMID, and a mismatch makes Windows show the lowercase package
+  // name in the taskbar instead of "Drathos".
+  electronApp.setAppUserModelId("com.valt.drathos");
   setupCSP();
   setupSecurity();
   setupShortcuts();
