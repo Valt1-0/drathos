@@ -20,7 +20,6 @@ const StepIntro = ({ onNext }) => {
       exit={{ opacity: 0, x: 50 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Hero Section */}
       <motion.div
         className="text-center space-y-4"
         initial={{ opacity: 0, y: 20 }}
@@ -62,7 +61,6 @@ const StepIntro = ({ onNext }) => {
         </motion.p>
       </motion.div>
 
-      {/* Features Grid */}
       <motion.div
         className="grid grid-cols-3 gap-4 max-w-5xl mx-auto w-full"
         initial={{ opacity: 0, y: 30 }}
@@ -94,7 +92,6 @@ const StepIntro = ({ onNext }) => {
         ))}
       </motion.div>
 
-      {/* Start Button */}
       <motion.div
         className="max-w-2xl mx-auto w-full"
         initial={{ opacity: 0, y: 20 }}

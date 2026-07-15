@@ -1,14 +1,10 @@
 import { buildServerUrl } from "../utils/urlHelper";
 import logger from "../services/logger";
 
-// In-memory cache for IGDB search results
 const searchCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 const pendingRequests = new Map(); // Prevent duplicate concurrent requests
 
-/**
- * Clear expired cache entries
- */
 const cleanExpiredCache = () => {
   const now = Date.now();
   for (const [key, entry] of searchCache.entries()) {
@@ -18,9 +14,6 @@ const cleanExpiredCache = () => {
   }
 };
 
-/**
- * Get cached search result if available and not expired
- */
 const getCachedResult = (query) => {
   cleanExpiredCache();
   const cacheKey = query.toLowerCase().trim();
@@ -34,9 +27,6 @@ const getCachedResult = (query) => {
   return null;
 };
 
-/**
- * Cache search result
- */
 const cacheResult = (query, data) => {
   const cacheKey = query.toLowerCase().trim();
   searchCache.set(cacheKey, {
@@ -47,7 +37,6 @@ const cacheResult = (query, data) => {
 
 export const searchGamesFromIGDB = async (query) => {
   try {
-    // Check cache first
     const cached = getCachedResult(query);
     if (cached) {
       return cached;
@@ -55,13 +44,11 @@ export const searchGamesFromIGDB = async (query) => {
 
     const cacheKey = query.toLowerCase().trim();
 
-    // Check if request is already in progress
     if (pendingRequests.has(cacheKey)) {
       logger.info(`[IGDB] Waiting for pending request for "${query}"`);
       return await pendingRequests.get(cacheKey);
     }
 
-    // Create new request
     const requestPromise = (async () => {
       try {
         const serverAddress = await window.store.get("serverAddress");
@@ -80,17 +67,14 @@ export const searchGamesFromIGDB = async (query) => {
 
         const data = await response.json();
 
-        // Cache the result
         cacheResult(query, data);
 
         return data;
       } finally {
-        // Remove from pending requests
         pendingRequests.delete(cacheKey);
       }
     })();
 
-    // Store pending request
     pendingRequests.set(cacheKey, requestPromise);
 
     return await requestPromise;
@@ -100,9 +84,6 @@ export const searchGamesFromIGDB = async (query) => {
   }
 };
 
-/**
- * Clear the IGDB search cache (useful for testing or manual refresh)
- */
 export const clearIGDBCache = () => {
   searchCache.clear();
   logger.info("[IGDB] Cache cleared");

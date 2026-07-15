@@ -40,7 +40,6 @@ const DownloadTray = () => {
           boxShadow: "var(--app-shadow-primary)",
         }}
       >
-        {/* Header */}
         <div
           className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:opacity-90 transition-opacity"
           style={{ background: "var(--app-surface)" }}
@@ -74,7 +73,6 @@ const DownloadTray = () => {
           </button>
         </div>
 
-        {/* Liste des downloads */}
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.div

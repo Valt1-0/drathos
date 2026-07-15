@@ -55,7 +55,6 @@ const StepServer = ({ serverAddress, onAddressChange, onKeyDown, isChecking, ser
       exit={{ opacity: 0, x: 50 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Header */}
       <motion.div className="flex items-center justify-center gap-3 mb-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
         <motion.div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl" initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ duration: 0.6, type: "spring" }}>
           <FiServer className="text-white text-2xl" />
@@ -63,7 +62,6 @@ const StepServer = ({ serverAddress, onAddressChange, onKeyDown, isChecking, ser
         <h2 className="text-4xl font-bold text-white">{t("welcome.serverSetup")}</h2>
       </motion.div>
 
-      {/* Server Input Card */}
       <motion.div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 border border-slate-700/50 transition-all duration-300" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} whileHover={{ scale: 1.01 }}>
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="relative z-10">
@@ -98,7 +96,6 @@ const StepServer = ({ serverAddress, onAddressChange, onKeyDown, isChecking, ser
         </div>
       </motion.div>
 
-      {/* Check Connection Button */}
       <motion.button
         onClick={onCheck}
         disabled={isChecking || !serverAddress}
@@ -123,7 +120,6 @@ const StepServer = ({ serverAddress, onAddressChange, onKeyDown, isChecking, ser
 
       <ServerStatus serverStatus={serverStatus} t={t} />
 
-      {/* Navigation Buttons */}
       <motion.div className="grid grid-cols-2 gap-4 mt-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
         <motion.button onClick={onBack} className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <div className="absolute inset-0 bg-gradient-to-br from-slate-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

@@ -21,7 +21,6 @@ export const UpdateProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  // Listen to auto-updater events
   useEffect(() => {
     if (!window.api?.updater) return;
 
@@ -88,7 +87,6 @@ export const UpdateProvider = ({ children }) => {
     return () => unsubs.forEach((fn) => fn?.());
   }, []);
 
-  // Check for updates manually
   const checkForUpdates = useCallback(async () => {
     try {
       setError(null);
@@ -119,7 +117,6 @@ export const UpdateProvider = ({ children }) => {
     }
   }, []);
 
-  // Download and install the update
   const downloadAndInstall = useCallback(async () => {
     try {
       setError(null);
@@ -141,7 +138,6 @@ export const UpdateProvider = ({ children }) => {
     }
   }, []);
 
-  // Quit and install
   const quitAndInstall = useCallback(async () => {
     try {
       await window.api.updater.quitAndInstall();
@@ -154,7 +150,6 @@ export const UpdateProvider = ({ children }) => {
     }
   }, []);
 
-  // Skip a version
   const skipVersion = useCallback(async (version) => {
     try {
       await window.api.updater.skipVersion({ version });
@@ -172,7 +167,6 @@ export const UpdateProvider = ({ children }) => {
     }
   }, []);
 
-  // Get the status
   const getStatus = useCallback(async () => {
     try {
       const result = await window.api.updater.getStatus();

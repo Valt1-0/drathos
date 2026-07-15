@@ -1,16 +1,5 @@
 import { useEffect, useRef } from 'react';
 
-/**
- * Hook for handling keyboard shortcuts
- * @param {Object} shortcuts - Object mapping key combinations to handlers
- *
- * Example usage:
- * useKeyboardShortcuts({
- *   'ctrl+s': () => navigate('/settings'),
- *   'escape': () => closeModal(),
- *   'ctrl+shift+d': () => toggleDevTools(),
- * });
- */
 const useKeyboardShortcuts = (shortcuts, enabled = true) => {
   const shortcutsRef = useRef(shortcuts);
   useEffect(() => { shortcutsRef.current = shortcuts; }, [shortcuts]);
@@ -25,7 +14,6 @@ const useKeyboardShortcuts = (shortcuts, enabled = true) => {
         event.target?.isContentEditable;
       if (isTyping && !event.ctrlKey && !event.metaKey && !event.altKey) return;
 
-      // Build key combination string
       const modifiers = [];
       if (event.ctrlKey) modifiers.push('ctrl');
       if (event.shiftKey) modifiers.push('shift');
@@ -38,15 +26,11 @@ const useKeyboardShortcuts = (shortcuts, enabled = true) => {
       // Also try the combo without "shift" so that "ctrl+?" matches Ctrl+Shift+/.
       const combinationNoShift = [...modifiers.filter(m => m !== 'shift'), key].join('+');
 
-      // Check if this combination has a handler
       const handler = shortcutsRef.current[combination] || shortcutsRef.current[combinationNoShift] || shortcutsRef.current[key];
 
       if (handler) {
-        // Prevent default browser behavior
         event.preventDefault();
         event.stopPropagation();
-
-        // Execute handler
         handler(event);
       }
     };
@@ -56,18 +40,13 @@ const useKeyboardShortcuts = (shortcuts, enabled = true) => {
   }, [enabled]);
 };
 
-/**
- * Global keyboard shortcuts that work across the entire app
- */
 export const useGlobalShortcuts = (navigate) => {
   useKeyboardShortcuts({
-    // Navigation shortcuts
     'ctrl+h': () => navigate('/'),
     'ctrl+g': () => navigate('/games'),
     'ctrl+d': () => navigate('/download'),
-    'ctrl+,': () => navigate('/settings'), // Common settings shortcut
+    'ctrl+,': () => navigate('/settings'),
 
-    // DevTools (F12 is handled in App.jsx)
     'f11': () => window.api?.windowToggleFullscreen?.(),
   });
 };

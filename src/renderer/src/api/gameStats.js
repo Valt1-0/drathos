@@ -1,5 +1,3 @@
-// drathos/src/renderer/src/api/gameStats.js
-
 import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 import logger from "../services/logger";
@@ -33,13 +31,6 @@ export async function getGameStats(gameId) {
   return p;
 }
 
-/**
- * Synchronizes local statistics to the server
- * @param {string} gameId - Game ID
- * @param {Object} localStats - Complete local statistics
- * @param {number} sessionDuration - Duration of the last session in seconds
- * @returns {Promise<Object>} Synchronization result
- */
 export async function syncStatsToServer(gameId, localStats, sessionDuration) {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
@@ -69,11 +60,6 @@ export async function syncStatsToServer(gameId, localStats, sessionDuration) {
   return await response.json();
 }
 
-/**
- * Retrieves local statistics for a game
- * @param {string} gameId - Game ID
- * @returns {Promise<Object|null>} Local statistics or null
- */
 export async function getLocalStats(gameId) {
   try {
     return await window.api.getLocalStats({ gameId });
@@ -83,12 +69,6 @@ export async function getLocalStats(gameId) {
   }
 }
 
-/**
- * Saves session statistics locally
- * @param {string} gameId - Game ID
- * @param {Object} sessionData - Session data { duration, startTime }
- * @returns {Promise<Object>} Save result
- */
 export async function saveLocalStats(gameId, sessionData) {
   try {
     return await window.api.saveLocalStats({ gameId, sessionData });
@@ -98,40 +78,24 @@ export async function saveLocalStats(gameId, sessionData) {
   }
 }
 
-/**
- * Retrieves and merges local and server statistics
- * @param {string} gameId - Game ID
- * @returns {Promise<Object>} Merged statistics
- */
 export async function getMergedStats(gameId) {
-  // 1️⃣ Load local stats (always available)
   const localStats = await getLocalStats(gameId);
 
   try {
-    // 2️⃣ Try to fetch server stats (online mode)
     const remoteStats = await getGameStats(gameId);
-
-    // 3️⃣ MERGE: Take the most recent data
     return mergeStats(localStats, remoteStats);
   } catch {
-    // 4️⃣ Offline mode: use only local stats
     return localStats;
   }
 }
 
-/**
- * Helper to merge local/remote stats
- * @private
- */
 function mergeStats(local, remote) {
   if (!local) return remote;
   if (!remote) return local;
 
-  // Convert timestamps if necessary
   const localLastPlayed = local.lastPlayed || 0;
   const remoteLastPlayed = remote.lastPlayed ? new Date(remote.lastPlayed).getTime() : 0;
 
-  // Take the maximum values (the most up to date)
   return {
     totalPlayTime: Math.max(local.totalPlayTime || 0, parsePlayTimeToSeconds(remote.totalPlayTime) || 0),
     totalSessions: Math.max(local.totalSessions || 0, remote.totalSessions || 0),
@@ -146,10 +110,7 @@ function mergeStats(local, remote) {
   };
 }
 
-/**
- * Helper to parse the formatted play time from the server (e.g., "2h 30m" -> 9000 seconds)
- * @private
- */
+// Parses the server's formatted play time, e.g. "2h 30m" -> 9000 seconds
 function parsePlayTimeToSeconds(formatted) {
   if (!formatted || formatted === "< 1 minute") return 0;
 
@@ -166,11 +127,6 @@ function parsePlayTimeToSeconds(formatted) {
   return 0;
 }
 
-/**
- * Formats raw statistics into a display format
- * @param {Object} stats - Raw statistics (in seconds, timestamps)
- * @returns {Object} Formatted statistics for display
- */
 export function formatStats(stats) {
   if (!stats) return null;
 
@@ -190,27 +146,17 @@ export function formatStats(stats) {
   };
 }
 
-/**
- * Formats a duration in seconds into a human-readable format
- * @private
- */
 function formatPlayTime(seconds) {
-  // Strict validation: check that seconds is a valid number
   if (!seconds || isNaN(seconds) || seconds < 60) return "< 1 minute";
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
-  // Double-check to avoid NaN in the display
   if (isNaN(hours) || isNaN(minutes)) return "< 1 minute";
 
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
-/**
- * Formats a timestamp as relative time
- * @private
- */
 function formatRelativeTime(timestamp) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
   if (seconds < 60) return i18n.t("users.justNow");

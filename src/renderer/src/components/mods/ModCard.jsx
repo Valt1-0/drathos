@@ -11,7 +11,6 @@ const ModCard = ({ mod, installed, installing, installProgress, onInstall, onUni
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // Get progress message for display
   const getProgressMessage = () => {
     if (!installProgress) return t('mods.installing');
     return installProgress.message || t('mods.installing');
@@ -40,7 +39,6 @@ const ModCard = ({ mod, installed, installing, installProgress, onInstall, onUni
       >
         <div className="p-3 relative z-10">
           <div className="flex items-start justify-between gap-2">
-            {/* Mod Info */}
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white transition-all relative"
@@ -120,7 +118,6 @@ const ModCard = ({ mod, installed, installing, installProgress, onInstall, onUni
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
               {installed ? (
                 <Button
@@ -160,7 +157,6 @@ const ModCard = ({ mod, installed, installing, installProgress, onInstall, onUni
             </div>
           </div>
 
-          {/* Progress bar during installation */}
           {installing && installProgress && (
             <div className="mt-2">
               <div className="flex items-center justify-between mb-1">

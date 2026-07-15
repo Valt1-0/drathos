@@ -1,16 +1,10 @@
-/**
- * Renderer-side logging service
- * Sends logs to the main process for writing to a file
- */
-
+// Renderer logger — mirrors to the console and forwards to the main process,
+// which writes the log file.
 class Logger {
   constructor() {
     this.isAvailable = typeof window !== 'undefined' && window.api?.logger;
   }
 
-  /**
-   * DEBUG level log
-   */
   debug(message, data = null) {
     console.debug(`[DEBUG] ${message}`, data || '');
 
@@ -23,9 +17,6 @@ class Logger {
     }
   }
 
-  /**
-   * INFO level log
-   */
   info(message, data = null) {
     console.log(`[INFO] ${message}`, data || '');
 
@@ -38,9 +29,6 @@ class Logger {
     }
   }
 
-  /**
-   * WARN level log
-   */
   warn(message, data = null) {
     console.warn(`[WARN] ${message}`, data || '');
 
@@ -53,9 +41,6 @@ class Logger {
     }
   }
 
-  /**
-   * ERROR level log
-   */
   error(message, error = null, context = null) {
     console.error(`[ERROR] ${message}`, error || '', context || '');
 
@@ -75,9 +60,6 @@ class Logger {
     }
   }
 
-  /**
-   * Gets recent logs
-   */
   async getLogs(lines = 100) {
     if (!this.isAvailable) {
       return { success: false, error: 'Logger not available' };
@@ -91,9 +73,6 @@ class Logger {
     }
   }
 
-  /**
-   * Gets system information
-   */
   async getSystemInfo() {
     if (!this.isAvailable) {
       return { success: false, error: 'Logger not available' };
@@ -107,9 +86,6 @@ class Logger {
     }
   }
 
-  /**
-   * Exports a bug report
-   */
   async exportBugReport(description, userEmail = '') {
     if (!this.isAvailable) {
       return { success: false, error: 'Logger not available' };
@@ -126,9 +102,6 @@ class Logger {
     }
   }
 
-  /**
-   * Opens the logs folder
-   */
   async openLogsFolder() {
     if (!this.isAvailable) {
       return { success: false, error: 'Logger not available' };
@@ -143,7 +116,6 @@ class Logger {
   }
 }
 
-// Singleton instance
 const logger = new Logger();
 
 export default logger;

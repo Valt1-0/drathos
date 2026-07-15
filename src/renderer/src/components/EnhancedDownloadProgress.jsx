@@ -51,11 +51,9 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     };
   }, [download.progress, download.stage]);
 
-  // Update metrics with smooth transitions
   useEffect(() => {
     setDisplaySpeed(download.speed ?? 0);
 
-    // Formatted ETA calculation
     if (download.eta && download.eta > 0) {
       const minutes = Math.floor(download.eta / 60);
       const seconds = Math.floor(download.eta % 60);
@@ -65,7 +63,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   }, [download.speed, download.eta]);
 
-  // Dynamic colors by stage
   const getStageColor = (stage) => {
     switch (stage) {
       case "preparing":
@@ -90,7 +87,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   };
 
-  // Icons by stage
   const getStageIcon = (stage) => {
     switch (stage) {
       case "preparing":
@@ -115,7 +111,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   };
 
-  // Dynamic messages
   const getStageMessage = (stage) => {
     switch (stage) {
       case "preparing":
@@ -141,7 +136,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
     }
   };
 
-  // Border color by stage
   const getBorderColor = (stage) => {
     switch (stage) {
       case "preparing":
@@ -173,10 +167,8 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         download.stage
       )} shadow-xl hover:shadow-2xl transition-all duration-300 bg-surface`}
     >
-      {/* Glow effect on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      {/* Header with image and basic info */}
       <div className="relative z-10 flex items-center gap-4 mb-4">
         <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border bg-background-secondary border-border">
           <img
@@ -187,7 +179,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
               e.target.style.display = "none";
             }}
           />
-          {/* Stage icon overlay */}
           <div className="absolute top-1 right-1 w-8 h-8 backdrop-blur-sm rounded-lg flex items-center justify-center border bg-surface/80 border-border">
             {getStageIcon(download.stage)}
           </div>
@@ -199,9 +190,7 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
               {download.name}
             </h3>
 
-            {/* Control buttons */}
             <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
-              {/* Pause/Resume button - only during downloading */}
               {download.stage === "downloading" && onPause && (
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -227,7 +216,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
                 </motion.button>
               )}
 
-              {/* Cancel button - during downloading, paused, extracting, finalizing */}
               {["preparing", "downloading", "paused", "extracting", "finalizing"].includes(download.stage) && onCancel && (
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -261,7 +249,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
             )}
           </div>
 
-          {/* Progress percentage and ETA */}
           <div className="flex items-center gap-3 text-sm">
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/20 rounded-lg">
               <span className="text-primary font-bold text-base">
@@ -281,11 +268,8 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </div>
       </div>
 
-      {/* Animated Progress Bar */}
       <div className="relative z-10">
-        {/* Background */}
         <div className="w-full h-3 rounded-full overflow-hidden border bg-background-secondary border-border">
-          {/* Main progress with gradient */}
           <motion.div
             className={`h-full ${getStageColor(
               download.stage
@@ -294,7 +278,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
             animate={{ width: `${animatedProgress}%` }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            {/* Animated shine effect */}
             {download.stage === "downloading" && (
               <motion.div
                 className="absolute top-0 right-0 h-full w-20 bg-gradient-to-r from-transparent via-white/30 to-transparent"
@@ -311,7 +294,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
           </motion.div>
         </div>
 
-        {/* Progress labels */}
         <div className="flex justify-between mt-3 text-xs">
           <div className={`flex items-center gap-2 ${getTextClass('secondary')}`}>
             <FiDownload className="text-xs" />
@@ -342,7 +324,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </div>
       </div>
 
-      {/* Detailed metrics (downloading) */}
       {download.stage === "downloading" && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -377,7 +358,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </motion.div>
       )}
 
-      {/* Error message */}
       {download.stage === "failed" && download.error && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -392,7 +372,6 @@ const EnhancedDownloadProgress = ({ download, onCancel, onPause }) => {
         </motion.div>
       )}
 
-      {/* Success information */}
       {download.stage === "completed" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -448,5 +427,4 @@ const arePropsEqual = (prevProps, nextProps) => {
   );
 };
 
-// Export the memoized component
 export default memo(EnhancedDownloadProgress, arePropsEqual);

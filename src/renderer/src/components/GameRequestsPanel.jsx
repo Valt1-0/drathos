@@ -138,7 +138,6 @@ const GameRequestsPanel = ({ isOpen, onClose }) => {
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -148,7 +147,6 @@ const GameRequestsPanel = ({ isOpen, onClose }) => {
               onClick={onClose}
             />
 
-            {/* Panel */}
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -157,7 +155,6 @@ const GameRequestsPanel = ({ isOpen, onClose }) => {
               className="fixed right-0 top-0 bottom-0 z-50 flex flex-col w-96 shadow-2xl"
               style={{ background: "var(--app-backgroundSecondary)", borderLeft: "1px solid var(--app-border)" }}
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--app-gradient-primary)" }}>
@@ -188,7 +185,6 @@ const GameRequestsPanel = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Search */}
               <div className="px-4 py-2 border-b" style={{ borderColor: "var(--app-border)" }}>
                 <div className="relative">
                   <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-text-secondary pointer-events-none" />
@@ -203,7 +199,6 @@ const GameRequestsPanel = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Content */}
               <div className="flex-1 overflow-y-auto">
                 {loading && (
                   <div className="flex items-center justify-center h-32">

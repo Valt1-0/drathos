@@ -151,7 +151,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
     return (
       <div className="flex items-center gap-1.5 flex-wrap overflow-visible">
 
-        {/* Sort */}
         <FilterDropdown
           ref={sortRef}
           triggerContent={<span className="flex items-center gap-1.5">{currentSort.icon && <span className="opacity-60">{currentSort.icon}</span>}<span>{currentSort.label}</span></span>}
@@ -163,7 +162,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
           minWidth="min-w-35"
         />
 
-        {/* Status */}
         <FilterDropdown
           ref={statusRef}
           triggerContent={<span className="flex items-center gap-1.5">{currentStatus.dot ? <div className={`w-2 h-2 rounded-full shrink-0 ${currentStatus.dot}`} /> : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />}<span>{currentStatus.label}</span></span>}
@@ -176,7 +174,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
           minWidth="min-w-35"
         />
 
-        {/* Genres */}
         {allGenres.length > 0 && (
           <div ref={toolbarGenresRef} className="relative">
             <button
@@ -217,7 +214,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
           </div>
         )}
 
-        {/* More filters (multiplayer, user status, playtime) */}
         <div ref={toolbarMoreRef} className="relative">
           <button
             onClick={() => { setMfOpen(!mfOpen); setSortOpen(false); setStatusOpen(false); setToolbarGenresOpen(false); }}
@@ -235,7 +231,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
           {mfOpen && (
             <div className="absolute top-full left-0 mt-1 rounded-lg z-50 p-3 bg-background-secondary min-w-55 space-y-3" style={dropdownStyle}>
 
-              {/* Multiplayer */}
               <button
                 onClick={() => update("showOnlyMultiplayer", !filters.showOnlyMultiplayer)}
                 className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.showOnlyMultiplayer ? "bg-secondary/15 text-secondary ring-1 ring-secondary/30" : "bg-surface/60 text-text-secondary hover:text-text"}`}
@@ -250,7 +245,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
                 </div>
               </button>
 
-              {/* User status */}
               <div ref={userStatusRef} className="relative">
                 <p className="text-xs text-text-secondary mb-1 font-medium">{t("games.userStatusLabel")}</p>
                 <button
@@ -282,7 +276,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
                 )}
               </div>
 
-              {/* Playtime */}
               <div>
                 <p className="text-xs text-text-secondary mb-1 font-medium flex items-center gap-1">
                   <FiClock className="w-3 h-3" />{t("games.playtime")}
@@ -304,7 +297,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
           )}
         </div>
 
-        {/* Reset */}
         {activeFilterCount > 0 && (
           <button onClick={resetFilters} className="flex items-center gap-1 px-2 py-1.5 text-xs text-primary hover:text-primary/70 transition-colors">
             <FiX className="w-3 h-3" />
@@ -320,7 +312,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
   return (
     <div className="space-y-2">
 
-      {/* Sort */}
       <FilterDropdown
         ref={sortRef}
         triggerContent={<span className="flex items-center gap-1.5 truncate">{currentSort.icon && <span className="opacity-50 shrink-0">{currentSort.icon}</span>}<span className="truncate">{currentSort.label}</span></span>}
@@ -332,7 +323,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
         minWidth="left-0 right-0"
       />
 
-      {/* Status */}
       <FilterDropdown
         ref={statusRef}
         triggerContent={<span className="flex items-center gap-1.5 truncate">{currentStatus.dot ? <div className={`w-2 h-2 rounded-full shrink-0 ${currentStatus.dot}`} /> : <span className="w-2 h-2 rounded-full border border-current opacity-40 shrink-0" />}<span className={filters.statusFilter !== "all" ? "text-primary" : ""}>{currentStatus.label}</span></span>}
@@ -345,7 +335,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
         minWidth="left-0 right-0"
       />
 
-      {/* Genres */}
       {allGenres.length > 0 && (
         <div>
           <button
@@ -388,7 +377,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
         </div>
       )}
 
-      {/* More filters toggle */}
       <button
         onClick={() => setMoreFiltersOpen(!moreFiltersOpen)}
         className="flex items-center gap-1.5 w-full text-xs text-text-secondary hover:text-text transition-colors py-0.5"
@@ -411,7 +399,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
       {moreFiltersOpen && (
         <div className="space-y-2 pt-0.5">
 
-          {/* Multiplayer toggle */}
           <button
             onClick={() => update("showOnlyMultiplayer", !filters.showOnlyMultiplayer)}
             role="switch"
@@ -435,7 +422,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
             </div>
           </button>
 
-          {/* User status — compact dropdown */}
           <div ref={userStatusRef} className="relative">
             <p className="text-xs text-text-secondary mb-1 font-medium">{t("games.userStatusLabel")}</p>
             <button
@@ -487,7 +473,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
             )}
           </div>
 
-          {/* Playtime */}
           <div>
             <p className="text-xs text-text-secondary mb-1 font-medium">{t("games.playtime")}</p>
             <div className="flex flex-wrap gap-1">
@@ -513,7 +498,6 @@ const GameFilters = ({ filters, onFiltersChange, allGenres, activeFilterCount, v
         </div>
       )}
 
-      {/* Reset */}
       {activeFilterCount > 0 && (
         <button
           onClick={resetFilters}

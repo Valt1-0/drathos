@@ -21,7 +21,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  // Load data on open
   useEffect(() => {
     if (!isOpen) return;
     setQuery("");
@@ -62,7 +61,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
     setSelectedIndex(0);
   }, [query, installedCache]);
 
-  // Scroll selected item into view
   useEffect(() => {
     const el = listRef.current?.children[selectedIndex];
     el?.scrollIntoView({ block: "nearest" });
@@ -145,7 +143,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
           className="w-full max-w-lg mx-4 rounded-2xl overflow-hidden shadow-2xl"
           style={{ background: "var(--app-backgroundSecondary)", border: "1px solid var(--app-border)" }}
         >
-          {/* Search input */}
           <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: "1px solid var(--app-border)" }}>
             <FiSearch className="w-4 h-4 text-text-secondary shrink-0" />
             <input
@@ -165,7 +162,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
             )}
           </div>
 
-          {/* Results */}
           <div
             ref={listRef}
             className="overflow-y-auto py-1.5 scrollbar-thin scrollbar-thumb-surface scrollbar-track-background"
@@ -191,7 +187,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
                       isSelected ? "bg-primary/10" : "hover:bg-surface/50"
                     }`}
                   >
-                    {/* Cover */}
                     <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-surface">
                       <GameCover
                         src={game.coverUrl}
@@ -204,7 +199,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
                       )}
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium truncate ${isSelected ? "text-text" : "text-text"}`}>
                         {game.name}
@@ -224,7 +218,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
                       </div>
                     </div>
 
-                    {/* Action */}
                     <div className={`flex items-center gap-1 text-xs font-medium shrink-0 ${action.color} ${isSelected ? "opacity-100" : "opacity-0"}`}>
                       {action.icon}
                       <span>{action.label}</span>
@@ -235,7 +228,6 @@ const QuickLaunch = ({ isOpen, onClose, navigate }) => {
             )}
           </div>
 
-          {/* Footer */}
           <div
             className="flex items-center justify-between px-4 py-2 text-[11px] text-text-secondary"
             style={{ borderTop: "1px solid var(--app-border)" }}

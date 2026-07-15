@@ -1,7 +1,6 @@
 import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl, buildProfilePictureUrlSync } from "../utils/urlHelper";
 
-// Helper functions
 const getConfig = async () => {
   const [serverAddress, token] = await Promise.all([
     window.store.get("serverAddress"),
@@ -23,7 +22,6 @@ const authFetch = async (endpoint, options = {}) => {
   });
 };
 
-// Auth
 export const registerUser = async (username, password, inviteCode) => {
   try {
     const { serverAddress } = await getConfig();
@@ -86,7 +84,6 @@ export const logoutUser = async () => {
   }
 };
 
-// Profiles
 export const getAllUsers = async ({ search = "", page = 1, limit = 20 } = {}) => {
   try {
     const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });

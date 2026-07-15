@@ -49,7 +49,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
 
   const handleConfirm = async () => {
     if (downloadPath) {
-      // Save the path to the store
       await window.store.set("downloadPath", downloadPath);
       onConfirm(downloadPath);
       onClose();
@@ -68,7 +67,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -77,7 +75,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           />
 
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -85,7 +82,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
             transition={{ duration: 0.2 }}
             className="relative w-full max-w-2xl glass backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden"
           >
-            {/* Header */}
             <div className="bg-gradient-primary p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -111,9 +107,7 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
               </div>
             </div>
 
-            {/* Content */}
             <div className="p-6">
-              {/* Info Banner */}
               <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-6">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
@@ -130,7 +124,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                 </div>
               </div>
 
-              {/* Folder Selection */}
               <div className="bg-surface rounded-xl p-6 border border-border mb-4">
                 <label className="block">
                   <span className="text-text font-semibold text-base mb-3 block">
@@ -166,7 +159,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   </div>
                 </label>
 
-                {/* One-click safe default */}
                 {defaultPath && downloadPath !== defaultPath && (
                   <button
                     onClick={() => applyPath(defaultPath)}
@@ -184,7 +176,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                   </button>
                 )}
 
-                {/* Disk Space Info */}
                 {downloadPath && diskSpace && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -208,7 +199,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                         </span>
                       </div>
 
-                      {/* Progress bar */}
                       <div className="w-full bg-surface rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
@@ -248,7 +238,6 @@ const InstallPathModal = ({ isOpen, onClose, onConfirm, gameName }) => {
                 )}
               </div>
 
-              {/* Actions */}
               <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={handleClose}

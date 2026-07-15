@@ -21,7 +21,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
   const [selectedGameIds, setSelectedGameIds] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch user's games
   useEffect(() => {
     const fetchGames = async () => {
       try {
@@ -29,7 +28,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
         const response = await getAllServerGames();
 
         if (response) {
-          // Response is directly an array of games
           const allGames = Array.isArray(response) ? response : (response.serverGames || []);
 
           // Filter out games already in the collection
@@ -53,7 +51,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
     fetchGames();
   }, [collection]);
 
-  // Filter games based on search
   const filteredGames = useMemo(() => {
     if (!searchQuery.trim()) {
       return games;
@@ -93,7 +90,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -102,7 +98,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
-      {/* Modal */}
       <motion.div
         ref={containerRef}
         role="dialog"
@@ -114,7 +109,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
         className="relative glass rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[80vh] flex flex-col"
         style={{ border: '1px solid var(--app-border)' }}
       >
-          {/* Header */}
           <div className={`p-6 border-b ${isLight ? 'border-gray-300' : 'border-gray-700'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -136,7 +130,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
               </motion.button>
             </div>
 
-            {/* Search Bar */}
             <div className="relative">
               <FiSearch className={`absolute left-4 top-1/2 -translate-y-1/2 text-lg ${getTextClass('secondary')}`} />
               <input
@@ -150,7 +143,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
               />
             </div>
 
-            {/* Selected count */}
             <p className={`text-sm mt-3 ${getTextClass('secondary')}`}>
               {selectedGameIds.length > 0
                 ? t('collections.selectedGames', { count: selectedGameIds.length })
@@ -159,7 +151,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
             </p>
           </div>
 
-          {/* Games List */}
           <div className="flex-1 overflow-y-auto p-6">
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -190,7 +181,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
                           : 'border-gray-700 hover:border-gray-600'
                       }`}
                     >
-                      {/* Game Cover */}
                       <div className="w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-surface">
                         {game.coverUrl && /^https?:\/\//i.test(game.coverUrl) ? (
                           <img
@@ -210,7 +200,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
                         )}
                       </div>
 
-                      {/* Game Info */}
                       <div className="flex-1 text-left min-w-0">
                         <h3 className={`font-medium truncate ${getTextClass('primary')}`}>
                           {game.name}
@@ -220,7 +209,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
                         </p>
                       </div>
 
-                      {/* Checkbox */}
                       <div
                         className={`w-6 h-6 rounded flex items-center justify-center border-2 transition-colors ${
                           isSelected
@@ -239,7 +227,6 @@ const AddGamesToCollectionModal = ({ collection, onClose }) => {
             )}
           </div>
 
-          {/* Footer */}
           <div className={`p-6 border-t ${isLight ? 'border-gray-300' : 'border-gray-700'}`}>
             <div className="flex gap-3">
               <Button variant="ghost" className="flex-1" onClick={onClose}>

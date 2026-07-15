@@ -9,7 +9,6 @@ import { getModsForGame, installMod, uninstallMod, getInstalledMods, deleteMod, 
 import ModCard from "./ModCard";
 import { Button, SearchBar } from "../ui";
 
-// Sort configuration
 const SORT_CONFIG = {
   NAME_ASC: { key: 'name', dir: 1 },
   NAME_DESC: { key: 'name', dir: -1 },
@@ -19,7 +18,6 @@ const SORT_CONFIG = {
   SIZE_ASC: { key: 'size', dir: 1 },
 };
 
-// Reusable filter select
 const FilterSelect = ({ label, value, onChange, options }) => (
   <div className="flex items-center gap-1.5">
     <span className="text-[10px] font-medium" style={{ color: 'var(--app-textSecondary)' }}>{label}:</span>
@@ -34,7 +32,6 @@ const FilterSelect = ({ label, value, onChange, options }) => (
   </div>
 );
 
-// Empty state component
 const EmptyState = ({ icon: Icon, title, subtitle }) => (
   <div className="text-center py-8">
     <Icon className="w-10 h-10 mx-auto mb-2" style={{ color: 'var(--app-textSecondary)' }} />
@@ -43,7 +40,6 @@ const EmptyState = ({ icon: Icon, title, subtitle }) => (
   </div>
 );
 
-// Error message helper
 const getErrorMessage = (error, t, ctx) => {
   const msg = (error?.message || "").toLowerCase();
   if (msg.includes("network") || msg.includes("fetch")) return t(ctx === "download" ? 'mods.errorDownload' : 'mods.errorNetwork');
@@ -67,20 +63,17 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Sort and filter states
   const [sortOption, setSortOption] = useState('NAME_ASC');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
   const resetFilters = () => { setTypeFilter('all'); setSortOption('NAME_ASC'); };
 
-  // Pagination state
   const [pagination, setPagination] = useState({
     available: { page: 1, totalPages: 1, totalMods: 0 },
     installed: { page: 1, totalPages: 1, totalMods: 0 }
   });
 
-  // Helper to filter installed mods for current game
   const filterInstalledModsForGame = useCallback((mods) => {
     const normalizedGameId = normalizeGameId(gameId);
     return mods.filter((im) => normalizeGameId(im.gameId) === normalizedGameId);
@@ -224,7 +217,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
     [installedMods]
   );
 
-  // Filter and sort mods
   const filterAndSortMods = useCallback((mods) => {
     const { key, dir } = SORT_CONFIG[sortOption];
     const query = debouncedSearchQuery?.toLowerCase();
@@ -256,7 +248,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
 
   return (
     <div>
-      {/* Clickable Header */}
       {onToggle ? (
         <button
           onClick={onToggle}
@@ -325,7 +316,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
         </div>
       )}
 
-      {/* Collapsible content */}
       <AnimatePresence initial={false}>
       {isOpen && (
       <motion.div
@@ -342,9 +332,7 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
         transition={{ duration: 0.18, delay: 0.06 }}
       >
       <div className="p-4 pt-3">
-      {/* Compact Search & Tabs */}
       <div className="flex items-center gap-2 mb-2">
-        {/* Tabs */}
         <div className="flex gap-1">
           {allowDownload && (
             <Button
@@ -366,7 +354,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
           </Button>
         </div>
 
-        {/* Compact Search Bar */}
         <SearchBar
           placeholder={t('mods.searchPlaceholder')}
           value={searchQuery}
@@ -375,7 +362,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
           className="flex-1"
         />
 
-        {/* Filter Toggle Button */}
         <Button
           variant={showFilters ? "primary" : "ghost"}
           size="sm"
@@ -386,7 +372,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
         />
       </div>
 
-      {/* Sort and Filter Controls */}
       <AnimatePresence>
         {showFilters && (
           <motion.div
@@ -400,7 +385,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
               className="flex flex-wrap items-center gap-2 p-2 rounded-lg"
               style={{ background: 'var(--app-backgroundSecondary)' }}
             >
-              {/* Sort Dropdown */}
               <FilterSelect
                 label={t('mods.sortBy')}
                 value={sortOption}
@@ -415,7 +399,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
                 ]}
               />
 
-              {/* Type Filter */}
               <FilterSelect
                 label={t('mods.modType')}
                 value={typeFilter}
@@ -430,7 +413,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
                 ]}
               />
 
-              {/* Reset button */}
               {(typeFilter !== 'all' || sortOption !== 'NAME_ASC') && (
                 <button
                   onClick={resetFilters}
@@ -445,7 +427,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
         )}
       </AnimatePresence>
 
-      {/* Content */}
       <AnimatePresence mode="wait">
         {allowDownload && activeTab === "available" && (
           <motion.div
@@ -476,7 +457,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
                   />
                 ))}
 
-                {/* Load More Button */}
                 {pagination.available.page < pagination.available.totalPages && (
                   <div className="flex justify-center pt-2">
                     <Button

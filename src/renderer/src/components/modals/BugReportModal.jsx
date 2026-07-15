@@ -100,7 +100,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div ref={containerRef} role="dialog" aria-modal="true" className="glass rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col backdrop-blur-xl">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-error/20 flex items-center justify-center">
@@ -121,10 +120,8 @@ const BugReportModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
                 {t('modals.bugReport.descriptionLabel')} <span className="text-error">{t('modals.bugReport.required')}</span>
@@ -143,7 +140,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
               </p>
             </div>
 
-            {/* Email (optional) */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
                 {t('modals.bugReport.emailLabel')}
@@ -161,7 +157,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
               </p>
             </div>
 
-            {/* System Info Toggle */}
             <div className="bg-surface rounded-lg p-4 border border-border">
               <button
                 type="button"
@@ -206,7 +201,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            {/* Result Message */}
             {result && (
               <div className={`rounded-lg p-4 border ${
                 result.success
@@ -233,7 +227,6 @@ const BugReportModal = ({ isOpen, onClose }) => {
           </form>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-border bg-background/50">
           <button
             type="button"

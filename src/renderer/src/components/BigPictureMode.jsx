@@ -273,7 +273,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
         className="fixed inset-0 z-[9999] flex flex-col overflow-hidden select-none"
         style={{ background: "var(--app-background)" }}
       >
-        {/* Ambient backdrop from the focused cover */}
         <AnimatePresence mode="wait">
           {focused?.coverUrl && (
             <motion.img
@@ -294,7 +293,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
           style={{ background: "linear-gradient(to bottom, transparent 0%, var(--app-background) 90%)" }}
         />
 
-        {/* Header: brand · section tabs · clock */}
         <header className="relative z-10 flex items-center justify-between px-12 pt-8 pb-4">
           <span className="text-xl font-black tracking-[0.25em] uppercase" style={{ color: "var(--app-text)" }}>
             Drathos
@@ -330,7 +328,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
           </div>
         </header>
 
-        {/* Focused game banner */}
         <div className="relative z-10 px-12 h-16">
           {focused && (
             <div className="flex items-baseline gap-4">
@@ -356,7 +353,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* Cover grid */}
         <div ref={gridRef} className="relative z-10 flex-1 overflow-y-auto px-12 pb-6 pt-2">
           {games.length === 0 ? (
             <p className="pt-20 text-center text-lg" style={{ color: "var(--app-textSecondary)" }}>
@@ -388,7 +384,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
                     }}
                   >
                     <GameCover src={game.coverUrl} alt={game.name} className="w-full h-full object-cover" size="cover_big" />
-                    {/* State badges */}
                     {activeGames.has(game._id) && (
                       <span className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-success text-white">
                         <FiZap size={10} /> {t("bigPicture.running")}
@@ -411,7 +406,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* First-install path prompt */}
         <AnimatePresence>
           {pathPrompt && (
             <motion.div
@@ -474,7 +468,6 @@ const BigPictureMode = ({ isOpen, onClose }) => {
           )}
         </AnimatePresence>
 
-        {/* Button hint bar */}
         <footer
           className="relative z-10 flex items-center justify-center gap-8 px-12 py-4 text-sm"
           style={{ borderTop: "1px solid var(--app-border)", color: "var(--app-textSecondary)", background: "var(--app-backgroundSecondary)" }}

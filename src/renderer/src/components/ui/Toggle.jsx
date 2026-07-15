@@ -1,18 +1,5 @@
 import { motion } from "framer-motion";
 
-/**
- * Toggle Component - Drathos design system
- *
- * Switch component with smooth animations.
- *
- * @param {boolean} checked - Toggle state
- * @param {Function} onChange - Callback on change
- * @param {boolean} disabled - Disabled state
- * @param {string} size - Size: 'sm', 'md', 'lg'
- * @param {string} label - Toggle label
- * @param {string} description - Description below the label
- * @param {string} className - Additional CSS classes
- */
 const Toggle = ({
   checked = false,
   onChange,
@@ -23,7 +10,6 @@ const Toggle = ({
   className = '',
   ...props
 }) => {
-  // Sizes (container width/height, thumb size, offset when checked)
   const sizes = {
     sm: {
       width: 36,
@@ -56,7 +42,6 @@ const Toggle = ({
 
   return (
     <div className={`flex items-center gap-4 ${className}`}>
-      {/* Toggle Switch */}
       <button
         type="button"
         role="switch"
@@ -106,7 +91,6 @@ const Toggle = ({
         />
       </button>
 
-      {/* Label and Description */}
       {(label || description) && (
         <div className="flex-1">
           {label && (

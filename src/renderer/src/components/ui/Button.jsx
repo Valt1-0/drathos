@@ -16,7 +16,6 @@ const Button = ({
 }) => {
   const isDisabled = disabled || loading;
 
-  // Compact and modern sizes
   const sizes = {
     xs: iconOnly ? 'w-6 h-6' : 'px-2 py-1 text-[10px]',
     sm: iconOnly ? 'w-7 h-7' : 'px-2.5 py-1 text-xs',
@@ -27,7 +26,6 @@ const Button = ({
 
   const iconSizes = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 };
 
-  // Styles by variant
   const getStyles = () => {
     if (isDisabled) {
       return {
@@ -80,7 +78,6 @@ const Button = ({
     }
   };
 
-  // Hover animations
   const hoverStyle = isDisabled ? {} : {
     scale: 1.02,
     filter: 'brightness(1.1)',
@@ -89,7 +86,6 @@ const Button = ({
       : '0 4px 12px rgba(0,0,0,0.2)',
   };
 
-  // Button content
   const renderContent = () => {
     const iconSize = iconSizes[size];
 

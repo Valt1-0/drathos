@@ -125,7 +125,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
         if (!buffer.success) {
           throw new Error(buffer.error || 'Failed to read file');
         }
-        // Create a Blob from the buffer
         const blob = new Blob([buffer.buffer], { type: 'application/octet-stream' });
         fileToUpload = new File([blob], selectedFile.name, { type: 'application/octet-stream' });
       }
@@ -157,7 +156,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
         className="w-full max-w-2xl"
       >
         <Card variant="glass">
-          {/* Header */}
           <Card.Header
             icon={<FiUpload className="w-5 h-5" />}
             title={t('mods.uploadMod')}
@@ -175,10 +173,8 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
             }
           />
 
-        {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 max-h-[70vh] overflow-y-auto">
           <div className="space-y-6">
-            {/* File Upload */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                 {t('mods.modFile')} *
@@ -230,13 +226,11 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
               </div>
             </div>
 
-            {/* Game Selection */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                 {t('mods.gameLabel')} *
               </label>
 
-              {/* Selected Game Display */}
               {selectedGame ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -297,7 +291,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
                 </button>
               )}
 
-              {/* Games List Modal */}
               <AnimatePresence>
                 {showGamesList && (
                   <motion.div
@@ -372,7 +365,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
               </AnimatePresence>
             </div>
 
-            {/* Mod Name */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                 {t('mods.modName')} *
@@ -393,9 +385,7 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
               />
             </div>
 
-            {/* Two Columns */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Author */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                   {t('mods.author')}
@@ -415,7 +405,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
                 />
               </div>
 
-              {/* Version */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                   {t('mods.version')}
@@ -436,7 +425,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
               </div>
             </div>
 
-            {/* Installation Path */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--app-text)' }}>
                 {t('mods.installPath')} *
@@ -460,7 +448,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
                   required
                 />
 
-                {/* Path Preview */}
                 {selectedGame && formData.installPath && (
                   <div className="relative p-3 rounded-lg border overflow-hidden" style={{ borderColor: 'var(--app-primary)' }}>
                     <div
@@ -478,7 +465,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
                   </div>
                 )}
 
-                {/* Help Text */}
                 <p className="text-xs" style={{ color: 'var(--app-textSecondary)' }}>
                   <FiAlertCircle className="inline w-3 h-3 mr-1" />
                   {t('mods.installPathHelp')}
@@ -486,7 +472,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
               </div>
             </div>
 
-            {/* Upload Progress */}
             {uploading && (
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -511,7 +496,6 @@ const UploadModModal = ({ onClose, onSuccess, preselectedGame = null }) => {
           </div>
         </form>
 
-        {/* Footer */}
         <Card.Footer>
           <div className="flex items-center justify-between w-full">
             <p className="text-sm" style={{ color: 'var(--app-textSecondary)' }}>

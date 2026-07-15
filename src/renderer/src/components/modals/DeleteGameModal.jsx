@@ -33,7 +33,6 @@ const DeleteGameModal = ({
             transition={{ duration: 0.2 }}
             className="glass text-text p-6 md:p-8 rounded-2xl w-full max-w-md relative shadow-2xl backdrop-blur-xl"
           >
-            {/* Close Button */}
             {!loading && !result && (
               <button
                 onClick={onClose}
@@ -44,7 +43,6 @@ const DeleteGameModal = ({
               </button>
             )}
 
-            {/* Loading State */}
             {loading && (
               <div className="text-center py-8">
                 <motion.div
@@ -61,7 +59,6 @@ const DeleteGameModal = ({
               </div>
             )}
 
-            {/* Success State */}
             {result?.success && !loading && (
               <div className="text-center py-4">
                 <motion.div
@@ -101,7 +98,6 @@ const DeleteGameModal = ({
               </div>
             )}
 
-            {/* Error State */}
             {result?.error && !loading && (
               <div className="text-center py-4">
                 <motion.div
@@ -132,7 +128,6 @@ const DeleteGameModal = ({
               </div>
             )}
 
-            {/* Confirmation State */}
             {!loading && !result && (
               <div>
                 <div className="flex items-center gap-3 mb-6">
@@ -149,7 +144,6 @@ const DeleteGameModal = ({
                   </div>
                 </div>
 
-                {/* Warning Banner */}
                 <div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-xl">
                   <div className="flex items-start gap-3">
                     <FiAlertTriangle className="text-warning text-xl flex-shrink-0 mt-0.5" />
@@ -164,9 +158,7 @@ const DeleteGameModal = ({
                   </div>
                 </div>
 
-                {/* Informations du jeu */}
                 <div className="space-y-3 mb-6">
-                  {/* Game Name */}
                   <div className="p-4 bg-surface/50 rounded-lg border border-border">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-surface rounded-lg flex-shrink-0 overflow-hidden">
@@ -190,7 +182,6 @@ const DeleteGameModal = ({
                     </div>
                   </div>
 
-                  {/* Deletion Information */}
                   <div className="p-4 bg-surface/30 rounded-lg border border-border/50">
                     <p className="text-sm text-text-secondary mb-2">Will be deleted:</p>
                     <ul className="text-sm text-text-secondary space-y-1">
@@ -208,7 +199,6 @@ const DeleteGameModal = ({
                   </div>
                 </div>
 
-                {/* Confirmation Message */}
                 <div className="mb-6 p-4 bg-surface/30 rounded-lg border border-border/50">
                   <p className="text-center text-text-secondary text-sm">
                     Are you sure you want to delete{" "}
@@ -216,7 +206,6 @@ const DeleteGameModal = ({
                   </p>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={onClose}

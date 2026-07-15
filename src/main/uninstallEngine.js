@@ -13,11 +13,7 @@ export class UninstallEngine {
     this.sendProgress = null;
   }
 
-  /**
-   * 🗑️ Completely uninstalls a game with enhanced security
-   */
   async uninstallGame(gameId, gamePath, { store, sendProgress }) {
-    // Uninstall state for rollback
     const uninstallState = {
       filesDeleted: false,
       dbDeleted: false,
@@ -28,15 +24,11 @@ export class UninstallEngine {
       logger.info(`[UninstallEngine] Uninstalling: ${gameId}`);
       logger.info(`[UninstallEngine] Path: ${gamePath}`);
 
-      // Initialize
       this.serverAddress = store.get("serverAddress");
       this.userToken = store.get("userToken");
       this.sendProgress = sendProgress;
 
-      // ========================================
-      // PHASE 1: PRE-CHECKS
-      // ========================================
-
+      // Phase 1 — pre-checks
       sendProgress({
         id: gameId,
         stage: "uninstalling",
@@ -44,11 +36,9 @@ export class UninstallEngine {
         message: "Pre-checks...",
       });
 
-      // Verify that the path exists
       if (!fs.existsSync(gamePath)) {
         logger.warn(`[UninstallEngine] Folder does not exist, removing from database only`);
 
-        // Delete from the database only
         const dbResult = await this.removeFromDatabase(gameId);
 
         if (dbResult) {
@@ -67,7 +57,6 @@ export class UninstallEngine {
         }
       }
 
-      // Check write permissions
       try {
         await fs.promises.access(gamePath, fs.constants.W_OK);
       } catch (err) {
@@ -76,10 +65,7 @@ export class UninstallEngine {
         );
       }
 
-      // ========================================
-      // PHASE 2: FILE DELETION
-      // ========================================
-
+      // Phase 2 — file deletion
       sendProgress({
         id: gameId,
         stage: "uninstalling",
@@ -99,7 +85,7 @@ export class UninstallEngine {
           sendProgress({
             id: gameId,
             stage: "uninstalling",
-            progress: 20 + Math.floor(progress * 0.6), // 20% → 80%
+            progress: 20 + Math.floor(progress * 0.6),
             message: `Deleting... ${Math.floor(progress)}%`,
           });
         });
@@ -110,16 +96,12 @@ export class UninstallEngine {
         logger.error(`[UninstallEngine] File deletion error:`, filesError);
         uninstallState.error = filesError;
 
-        // Do not continue if files were not deleted
         throw new Error(
           `Failed to delete files: ${filesError.message}`
         );
       }
 
-      // ========================================
-      // PHASE 3: DATABASE DELETION
-      // ========================================
-
+      // Phase 3 — database deletion
       sendProgress({
         id: gameId,
         stage: "uninstalling",
@@ -136,7 +118,6 @@ export class UninstallEngine {
         } else {
           logger.warn(`[UninstallEngine] Database removal failed, but files deleted`);
 
-          // Files are deleted but not the database
           sendProgress({
             id: gameId,
             stage: "uninstalled",
@@ -155,7 +136,6 @@ export class UninstallEngine {
       } catch (dbError) {
         logger.error(`[UninstallEngine] Database removal error:`, dbError);
 
-        // Files are deleted but not the database
         sendProgress({
           id: gameId,
           stage: "uninstalled",
@@ -172,10 +152,7 @@ export class UninstallEngine {
         };
       }
 
-      // ========================================
-      // PHASE 4: FINALIZATION
-      // ========================================
-
+      // Phase 4 — finalization
       sendProgress({
         id: gameId,
         stage: "uninstalled",
@@ -191,15 +168,10 @@ export class UninstallEngine {
     } catch (error) {
       logger.error(`[UninstallEngine] Critical error:`, error);
 
-      // ========================================
-      // ERROR HANDLING AND ROLLBACK
-      // ========================================
-
-      // If files were deleted but not the database
+      // Rollback: files gone but DB entry remains — retry the DB removal once
       if (uninstallState.filesDeleted && !uninstallState.dbDeleted) {
         logger.warn(`[UninstallEngine] Inconsistent state: files deleted but not database`);
 
-        // Try to delete from the database one last time
         try {
           const retryDb = await this.removeFromDatabase(gameId);
           if (retryDb) {
@@ -230,7 +202,6 @@ export class UninstallEngine {
         };
       }
 
-      // Error before file deletion
       sendProgress({
         id: gameId,
         stage: "failed",
@@ -247,9 +218,6 @@ export class UninstallEngine {
     }
   }
 
-  /**
-   * Recursively deletes a folder with progress reporting
-   */
   async deleteDirectory(dirPath, progressCallback) {
     const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
     const totalItems = items.length;
@@ -259,9 +227,8 @@ export class UninstallEngine {
       const itemPath = path.join(dirPath, item.name);
 
       try {
-        // fs.promises.rm handles both files and non-empty directories uniformly.
-        // Replaces the deprecated fs.promises.rmdir (removed support for non-empty
-        // dirs in Node 16+) and the manual recursive traversal for subdirectories.
+        // fs.promises.rm handles files and non-empty dirs uniformly (rmdir
+        // dropped non-empty support in Node 16+)
         await fs.promises.rm(itemPath, { recursive: true, force: true });
 
         processedItems++;
@@ -272,15 +239,10 @@ export class UninstallEngine {
       }
     }
 
-    // Remove the now-empty root directory
     await fs.promises.rm(dirPath, { recursive: true, force: true });
     logger.info(`[UninstallEngine] Directory deleted: ${dirPath}`);
   }
 
-  /**
-   * Removes the game from the backend database
-   * @returns {boolean} true if successful, false if failed
-   */
   async removeFromDatabase(gameId) {
     try {
       logger.info(`[UninstallEngine] Removing from database: ${gameId}`);

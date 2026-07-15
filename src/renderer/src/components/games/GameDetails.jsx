@@ -187,7 +187,6 @@ const GameDetails = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-background">
-      {/* Header with Cover */}
       <div className="relative h-60 overflow-hidden border-b border-border">
         {game.coverUrl ? (
           <>
@@ -223,7 +222,6 @@ const GameDetails = ({
               transition={{ duration: 0.5 }}
               className="flex items-end justify-between gap-6"
             >
-              {/* Left: Cover + Title */}
               <div className="flex items-end gap-4 flex-1 min-w-0">
               {game.coverUrl && (
                 <motion.div
@@ -338,7 +336,6 @@ const GameDetails = ({
               </div>
               </div>
 
-              {/* Right: Action Buttons */}
               <div className="shrink-0 hidden sm:block">
                 <ActionButtons
                   game={game}
@@ -362,7 +359,6 @@ const GameDetails = ({
           </div>
         </div>
 
-        {/* Bottom accent line / download progress */}
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-primary/20 to-transparent overflow-hidden">
           {activeDownload ? (
             <motion.div
@@ -377,10 +373,8 @@ const GameDetails = ({
         </div>
       </div>
 
-      {/* Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto p-4 lg:p-5">
-          {/* Small screen action buttons */}
           <div className="sm:hidden mb-4">
             <ActionButtons
               game={game}
@@ -402,9 +396,7 @@ const GameDetails = ({
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Left Column */}
             <div className="xl:col-span-2 space-y-4">
-              {/* About */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -433,19 +425,15 @@ const GameDetails = ({
                 )}
               </motion.div>
 
-              {/* Stats */}
               {isInstalled && gameStats && gameStats.totalSessions > 0 && (
                 <GameStatistics stats={gameStats} isPlaying={isPlaying} />
               )}
 
-              {/* Mods */}
               {isInstalled && <CollapsibleMods gameId={game._id} />}
 
-              {/* Launch arguments */}
               {isInstalled && <LaunchOptions gameId={game._id} />}
             </div>
 
-            {/* Right Column */}
             <div className="xl:col-span-1">
               <div className="sticky top-4">
                 <GameInformation
@@ -461,7 +449,6 @@ const GameDetails = ({
         </div>
       </div>
 
-      {/* Keyboard shortcuts hint */}
       <div className="shrink-0 border-t border-border/50 px-5 py-1.5 flex items-center gap-5 bg-background">
         <span className="flex items-center gap-1.5 text-[11px] text-text-secondary/50">
           <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border text-[10px] font-mono leading-none">Ctrl+R</kbd>

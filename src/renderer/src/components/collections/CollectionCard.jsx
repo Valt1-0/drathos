@@ -35,7 +35,6 @@ const CollectionCard = ({ collection, onEdit, onAddGames }) => {
         onMouseLeave={() => setHovered(false)}
         onClick={() => onAddGames(collection)}
       >
-        {/* Game Previews */}
         <div className="flex gap-1.5 mb-3 h-20">
           {previews.length > 0 ? (
             previews.map((g, i) => {
@@ -72,7 +71,6 @@ const CollectionCard = ({ collection, onEdit, onAddGames }) => {
           )}
         </div>
 
-        {/* Info */}
         <div className="flex items-center gap-2">
           <IconComponent className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--app-primary)' }} />
           <div className="flex-1 min-w-0">
@@ -84,7 +82,6 @@ const CollectionCard = ({ collection, onEdit, onAddGames }) => {
             </p>
           </div>
 
-          {/* Actions */}
           {hovered && (
             <div className="flex gap-1">
               <button

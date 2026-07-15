@@ -33,7 +33,6 @@ export function useFocusTrap(isActive) {
         (el) => !el.closest("[aria-hidden='true']")
       );
 
-    // Focus first element on open
     const focusable = getFocusable();
     focusable[0]?.focus();
 

@@ -2,8 +2,6 @@ import { fetchWithTimeout } from "../utils/apiUtils";
 import { buildServerUrl } from "../utils/urlHelper";
 import logger from "../services/logger";
 
-// ==================== CRUD COLLECTIONS ====================
-
 export const getUserCollections = async () => {
   try {
     const serverAddress = await window.store.get("serverAddress");
@@ -143,8 +141,6 @@ export const deleteCollection = async (collectionId) => {
     throw error;
   }
 };
-
-// ==================== GESTION DES JEUX ====================
 
 export const addGamesToCollection = async (collectionId, gameIds) => {
   try {

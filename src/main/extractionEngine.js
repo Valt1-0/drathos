@@ -1,6 +1,3 @@
-// src/main/extractionEngine.js - Multi-format extraction engine
-// Supports: ZIP, TAR, TAR.GZ, TGZ, TAR.BZ2, TBZ2, TAR.XZ, TXZ, 7Z, RAR, BZ2, XZ
-
 import fs from "fs";
 import path from "path";
 import unzipper from "unzipper";
@@ -15,7 +12,6 @@ export class ExtractionEngine {
   constructor() {
     this.supportedFormats = [".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz", ".7z", ".rar", ".bz2", ".xz"];
 
-    // Get the path to embedded 7z binary
     let binPath = sevenBin.path7za;
 
     // In production, replace app.asar with app.asar.unpacked
@@ -32,29 +28,20 @@ export class ExtractionEngine {
     logger.info(`[ExtractionEngine] 7-Zip binary: ${this.sevenZipPath}`);
   }
 
-  /**
-   * 🎯 MAIN METHOD - Extract any supported archive format
-   * @param {string} archivePath - Path to the archive file
-   * @param {string} extractPath - Destination directory
-   * @param {Function} onProgress - Progress callback (progress, extractedFiles, totalFiles, currentFile)
-   * @returns {Promise<string>} - Path to extracted content
-   */
+  // onProgress callback: (progress, extractedFiles, totalFiles, currentFile)
   async extract(archivePath, extractPath, onProgress = null) {
     const fileExtension = this.getFileExtension(archivePath);
 
     logger.info(`[ExtractionEngine] Extracting ${fileExtension} archive: ${path.basename(archivePath)}`);
 
-    // Validate format
     if (!this.isSupported(fileExtension)) {
       throw new Error(
         `Unsupported format: ${fileExtension}. Supported formats: ${this.supportedFormats.join(", ")}`,
       );
     }
 
-    // Create extraction directory (recursive: true is a no-op if it already exists)
     await fs.promises.mkdir(extractPath, { recursive: true });
 
-    // Route to appropriate extractor
     switch (fileExtension) {
       case ".zip":
         return await this.extractZip(archivePath, extractPath, onProgress);
@@ -81,9 +68,6 @@ export class ExtractionEngine {
     }
   }
 
-  /**
-   * 📂 Extract ZIP archives (using unzipper)
-   */
   async extractZip(archivePath, extractPath, onProgress) {
     logger.info(`[ExtractionEngine] Extracting ZIP: ${archivePath}`);
 
@@ -122,7 +106,7 @@ export class ExtractionEngine {
             const timeout = setTimeout(() => {
               if (!resolved) {
                 resolved = true;
-                writeStream.destroy(); // ✅ Cleanup
+                writeStream.destroy();
                 reject(
                   new Error(`Timeout lors de l'extraction de ${entry.path}`),
                 );
@@ -152,7 +136,7 @@ export class ExtractionEngine {
                 }
               })
               .on("close", () => {
-                // ✅ FIX: If the stream closes without finish/error
+                // Stream closed without finish/error
                 if (!resolved) {
                   resolved = true;
                   cleanup();
@@ -183,20 +167,16 @@ export class ExtractionEngine {
     return extractPath;
   }
 
-  /**
-   * 📦 Extract TAR archives (using tar-stream)
-   */
   async extractTar(archivePath, extractPath, onProgress) {
     logger.info(`[ExtractionEngine] Extracting TAR: ${archivePath}`);
 
     return new Promise((resolve, reject) => {
       const extract = tar.extract();
       let extractedCount = 0;
-      let totalFiles = 0; // ✅ FIX: Counted during extraction instead of a separate pass
+      let totalFiles = 0; // counted during extraction instead of a separate pass
 
-      // Single pass: extract and count simultaneously
       extract.on("entry", async (header, stream, next) => {
-        totalFiles++; // Count as we go
+        totalFiles++;
         let outputPath;
         try {
           outputPath = validateAndResolvePath(extractPath, header.name);
@@ -271,9 +251,6 @@ export class ExtractionEngine {
     });
   }
 
-  /**
-   * 🗜️ Extract TAR.GZ/TGZ archives (using tar-stream + zlib) — single-pass
-   */
   async extractTarGz(archivePath, extractPath, onProgress) {
     logger.info(`[ExtractionEngine] Extracting TAR.GZ: ${archivePath}`);
 
@@ -353,9 +330,6 @@ export class ExtractionEngine {
     });
   }
 
-  /**
-   * 📦 Extract 7Z archives (using node-7z with better error handling)
-   */
   async extract7z(archivePath, extractPath, onProgress) {
     logger.info(`[ExtractionEngine] Extracting 7Z: ${archivePath}`);
 
@@ -364,16 +338,14 @@ export class ExtractionEngine {
     }
 
     try {
-      // Verify file exists and is readable
       const stats = await fs.promises.stat(archivePath).catch(() => null);
       if (!stats) throw new Error(`Archive file not found: ${archivePath}`);
       if (stats.size === 0) throw new Error(`Archive file is empty: ${archivePath}`);
 
       logger.info(`[ExtractionEngine] 7Z file size: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`);
 
-      // Use embedded 7z binary from 7zip-bin package
       const sevenZip = Seven.extractFull(archivePath, extractPath, {
-        $bin: this.sevenZipPath, // Use embedded binary (like GameVault approach)
+        $bin: this.sevenZipPath,
         $progress: true,
         recursive: true,
       });
@@ -407,7 +379,6 @@ export class ExtractionEngine {
       });
 
       sevenZip.on("data", (data) => {
-        // Count files as they're discovered
         if (data.file) {
           totalFiles++;
         }
@@ -421,7 +392,6 @@ export class ExtractionEngine {
         sevenZip.on("end", () => {
           logger.info(`[ExtractionEngine] 7Z extraction complete: ${extractedCount} operations`);
 
-          // Final progress update
           if (onProgress) {
             onProgress(100, extractedCount, extractedCount, "Complete!");
           }
@@ -430,7 +400,6 @@ export class ExtractionEngine {
         });
 
         sevenZip.on("error", (err) => {
-          // More detailed error message
           const errorMsg = err.message || err.toString();
           logger.error(`[ExtractionEngine] 7Z extraction failed: ${errorMsg}`);
 
@@ -463,9 +432,7 @@ export class ExtractionEngine {
     }
   }
 
-  /**
-   * 🔍 Get file extension (handles .tar.gz specially)
-   */
+  // Handles double extensions like .tar.gz
   getFileExtension(filePath) {
     const fileName = path.basename(filePath).toLowerCase();
 
@@ -477,20 +444,13 @@ export class ExtractionEngine {
     return path.extname(filePath).toLowerCase();
   }
 
-  /**
-   * ✅ Check if format is supported
-   */
   isSupported(extension) {
     return this.supportedFormats.includes(extension.toLowerCase());
   }
 
-  /**
-   * 📋 Get list of supported formats
-   */
   getSupportedFormats() {
     return [...this.supportedFormats];
   }
 }
 
-// Singleton instance
 export const extractionEngine = new ExtractionEngine();

@@ -74,7 +74,6 @@ class ErrorBoundaryClass extends Component {
             <div className={`backdrop-blur-xl rounded-3xl shadow-2xl border border-red-500/30 overflow-hidden ${
               isLight ? 'bg-white/90' : 'bg-slate-800/50'
             }`}>
-              {/* Header */}
               <div className={`bg-gradient-to-r from-red-600/20 to-orange-600/20 p-8 border-b ${
                 isLight ? 'border-red-500/30' : 'border-red-500/20'
               }`}>
@@ -93,7 +92,6 @@ class ErrorBoundaryClass extends Component {
                 </div>
               </div>
 
-              {/* Error Details */}
               <div className="p-8 space-y-6">
                 <div>
                   <h2 className={`text-lg font-semibold mb-3 ${getTextClass?.('primary') || 'text-white'}`}>
@@ -133,7 +131,6 @@ class ErrorBoundaryClass extends Component {
                   </details>
                 )}
 
-                {/* Actions */}
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={this.handleReset}

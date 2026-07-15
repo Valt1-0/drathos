@@ -1,12 +1,5 @@
 import { motion } from "framer-motion";
 
-/**
- * LoadingSkeleton - Modern skeleton loading component
- * @param {object} props
- * @param {('card'|'text'|'circle'|'stat'|'game')} props.variant - Skeleton type
- * @param {number} props.count - Number of skeletons to display
- * @param {string} props.className - Additional CSS classes
- */
 const LoadingSkeleton = ({
   variant = 'text',
   count = 1,

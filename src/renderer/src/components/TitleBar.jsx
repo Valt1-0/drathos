@@ -54,12 +54,9 @@ const TitleBar = () => {
         borderBottom: '1px solid var(--app-border)',
       }}
     >
-      {/* Draggable area */}
       <div className="flex-1 h-full" />
 
-      {/* Control buttons */}
       <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' }}>
-        {/* Big Picture mode */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("drathos:bigpicture"))}
           onMouseEnter={() => setHovered('bp')}
@@ -71,7 +68,6 @@ const TitleBar = () => {
           <IoGameControllerOutline size={16} style={{ color: getIconColor('bp') }} />
         </button>
 
-        {/* Minimize */}
         <button
           onClick={() => window.api.windowMinimize()}
           onMouseEnter={() => setHovered('min')}
@@ -82,7 +78,6 @@ const TitleBar = () => {
           <FiMinus size={16} style={{ color: getIconColor('min') }} />
         </button>
 
-        {/* Maximize / Restore */}
         <button
           onClick={handleMaximize}
           onMouseEnter={() => setHovered('max')}
@@ -96,7 +91,6 @@ const TitleBar = () => {
           }
         </button>
 
-        {/* Close */}
         <button
           onClick={() => window.api.windowClose()}
           onMouseEnter={() => setHovered('close')}

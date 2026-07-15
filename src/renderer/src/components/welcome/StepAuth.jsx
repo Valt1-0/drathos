@@ -28,7 +28,6 @@ const StepAuth = ({
       exit={{ opacity: 0, x: 50 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Header */}
       <motion.div className="flex flex-col items-center gap-6 mb-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
         <motion.h2 className="text-3xl font-bold text-white" key={authMode} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           {authMode === "login" ? t("welcome.login") : t("welcome.register")}
@@ -44,7 +43,6 @@ const StepAuth = ({
         </div>
       </motion.div>
 
-      {/* Error Message */}
       <AnimatePresence>
         {error && (
           <motion.div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 border border-red-500/50" initial={{ opacity: 0, y: -20, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: -20, height: 0 }}>
@@ -62,10 +60,8 @@ const StepAuth = ({
         )}
       </AnimatePresence>
 
-      {/* Form */}
       <AnimatePresence mode="wait">
         <motion.div key={authMode} className="space-y-3" initial={{ opacity: 0, x: authMode === "login" ? -30 : 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: authMode === "login" ? 30 : -30 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
-          {/* Username */}
           <motion.div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} layout>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="relative z-10">
@@ -81,7 +77,6 @@ const StepAuth = ({
             </div>
           </motion.div>
 
-          {/* Password */}
           <motion.div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }} layout>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="relative z-10">
@@ -102,7 +97,6 @@ const StepAuth = ({
             </div>
           </motion.div>
 
-          {/* Confirm Password (register only) */}
           {authMode === "register" && (
             <motion.div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 transition-all duration-300" initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, delay: 0.3 }} layout>
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -125,7 +119,6 @@ const StepAuth = ({
             </motion.div>
           )}
 
-          {/* Invitation Code (register only, when registration is closed) */}
           {authMode === "register" && inviteRequired && (
             <motion.div className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-blue-500/30 transition-all duration-300" initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, delay: 0.4 }} layout>
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -146,7 +139,6 @@ const StepAuth = ({
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation */}
       <motion.div className="grid grid-cols-2 gap-3 mt-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: authMode === "register" ? 0.5 : 0.4 }}>
         <motion.button onClick={onBack} className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <div className="absolute inset-0 bg-gradient-to-br from-slate-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

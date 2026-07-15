@@ -36,7 +36,6 @@ const PatchNotesModal = ({ isOpen, onClose }) => {
             className="w-full max-w-3xl h-[70vh] rounded-2xl border shadow-2xl flex overflow-hidden"
             style={{ background: "var(--app-backgroundSecondary)", borderColor: "var(--app-border)" }}
           >
-            {/* Sidebar — version list */}
             <div
               className="w-48 shrink-0 flex flex-col border-r overflow-hidden"
               style={{ borderColor: "var(--app-border)" }}
@@ -72,7 +71,6 @@ const PatchNotesModal = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* Main content */}
             <div className="flex-1 flex flex-col overflow-hidden">
               <div
                 className="flex items-center justify-between px-6 py-4 border-b"

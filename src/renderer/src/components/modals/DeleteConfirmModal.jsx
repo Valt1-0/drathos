@@ -16,7 +16,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confir
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -25,7 +24,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confir
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
       />
 
-      {/* Modal */}
       <motion.div
         ref={containerRef}
         role="dialog"
@@ -38,7 +36,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confir
           isLight ? 'border border-gray-200' : 'border border-gray-700'
         }`}
       >
-        {/* Icon */}
         <div className="p-6 pb-4">
           <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${
             isLight ? 'bg-red-50' : 'bg-red-500/10'
@@ -46,18 +43,15 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confir
             <FiAlertTriangle className="text-3xl text-red-500" />
           </div>
 
-          {/* Title */}
           <h3 className={`text-2xl font-bold text-center mb-3 ${getTextClass('primary')}`}>
             {title}
           </h3>
 
-          {/* Message */}
           <p className={`text-center ${getTextClass('secondary')}`}>
             {message}
           </p>
         </div>
 
-        {/* Actions */}
         <div className={`p-6 pt-4 border-t ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
           <div className="flex gap-3">
             <Button variant="ghost" className="flex-1" onClick={onClose}>

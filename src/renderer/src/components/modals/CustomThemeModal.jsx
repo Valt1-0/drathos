@@ -16,7 +16,6 @@ const DEFAULT_COLORS = {
 
 const ColorSwatch = ({ label, value, onChange }) => (
   <div className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 transition-all">
-    {/* Color zone — click opens native picker */}
     <div className="relative h-14" style={{ backgroundColor: value }}>
       <input
         type="color"
@@ -24,18 +23,15 @@ const ColorSwatch = ({ label, value, onChange }) => (
         onChange={(e) => onChange(e.target.value)}
         className="absolute inset-0 w-full h-full opacity-0 cursor-crosshair"
       />
-      {/* Hover overlay */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-sm">
           <FiDroplet className="text-white text-xs" />
           <span className="text-white text-[10px] font-medium">Pick</span>
         </div>
       </div>
-      {/* Glow at bottom */}
       <div className="absolute bottom-0 inset-x-0 h-6 bg-linear-to-t from-black/30 to-transparent" />
     </div>
 
-    {/* Label + hex input */}
     <div className="bg-background px-2.5 py-2 flex items-center justify-between gap-2">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary/70 shrink-0">
         {label}
@@ -205,7 +201,6 @@ export default function CustomThemeModal({ isOpen, onClose, editTheme = null }) 
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-2xl overflow-hidden"
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
                 <div
@@ -231,7 +226,6 @@ export default function CustomThemeModal({ isOpen, onClose, editTheme = null }) 
               </button>
             </div>
 
-            {/* Name input */}
             <div className="px-6 pt-5 pb-0">
               <input
                 type="text"
@@ -243,9 +237,7 @@ export default function CustomThemeModal({ isOpen, onClose, editTheme = null }) 
               />
             </div>
 
-            {/* Body */}
             <div className="grid grid-cols-2 gap-5 p-6">
-              {/* Left — color swatches */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary/60 mb-3">
                   {t("settings.colors")}
@@ -260,7 +252,6 @@ export default function CustomThemeModal({ isOpen, onClose, editTheme = null }) 
                     />
                   ))}
                 </div>
-                {/* Text color — full width */}
                 <div className="mt-2">
                   <ColorSwatch
                     label={swatches[4].label}
@@ -270,7 +261,6 @@ export default function CustomThemeModal({ isOpen, onClose, editTheme = null }) 
                 </div>
               </div>
 
-              {/* Right — live preview */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary/60 mb-3">
                   {t("settings.preview")}
@@ -279,7 +269,6 @@ export default function CustomThemeModal({ isOpen, onClose, editTheme = null }) 
               </div>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-background/40">
               <button
                 onClick={onClose}

@@ -38,7 +38,6 @@ const SearchBar = memo(({
           : 'none',
       }}
     >
-      {/* Search icon */}
       <div className="pl-3 pr-1 shrink-0 flex items-center pointer-events-none">
         <motion.div animate={{ scale: focused ? 1.1 : 1 }} transition={{ duration: 0.15 }}>
           <FiSearch
@@ -48,7 +47,6 @@ const SearchBar = memo(({
         </motion.div>
       </div>
 
-      {/* Input */}
       <input
         ref={inputRef}
         type="text"
@@ -64,7 +62,6 @@ const SearchBar = memo(({
         {...props}
       />
 
-      {/* Right side: clear btn or keyboard shortcut */}
       <div className="pr-2 shrink-0 flex items-center">
         <AnimatePresence mode="wait">
           {hasValue ? (

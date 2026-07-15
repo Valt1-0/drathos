@@ -69,7 +69,6 @@ const ConfirmationModal = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -78,7 +77,6 @@ const ConfirmationModal = ({
             className="absolute inset-0 bg-black/70 backdrop-blur-md"
           />
 
-          {/* Modal */}
           <motion.div
             ref={containerRef}
             role="dialog"
@@ -91,7 +89,6 @@ const ConfirmationModal = ({
             className="relative w-full max-w-md"
           >
             <div className="glass backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden">
-              {/* Close Button */}
               {!loading && !success && cancelText && (
                 <button
                   onClick={onClose}
@@ -102,9 +99,7 @@ const ConfirmationModal = ({
                 </button>
               )}
 
-              {/* Content */}
               <div className="p-8">
-                {/* Icon */}
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -120,7 +115,6 @@ const ConfirmationModal = ({
                   </div>
                 </motion.div>
 
-                {/* Title */}
                 <motion.h2
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -131,7 +125,6 @@ const ConfirmationModal = ({
                   {title}
                 </motion.h2>
 
-                {/* Error State */}
                 {error && !loading && !success && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -153,7 +146,6 @@ const ConfirmationModal = ({
                   </motion.div>
                 )}
 
-                {/* Normal Message */}
                 {!loading && !success && !error && message && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -167,7 +159,6 @@ const ConfirmationModal = ({
                   </motion.div>
                 )}
 
-                {/* Lock Info Badge */}
                 {showLockInfo && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -182,7 +173,6 @@ const ConfirmationModal = ({
                   </motion.div>
                 )}
 
-                {/* Action Buttons */}
                 {!loading && !success && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}

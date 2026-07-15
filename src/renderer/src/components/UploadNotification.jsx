@@ -29,7 +29,6 @@ const UploadNotification = () => {
   } = useUpload();
   const { getTextClass } = useTheme();
 
-  // Function to format speed
   const formatSpeed = (bytesPerSecond) => {
     if (bytesPerSecond === 0) return t('upload.calculating');
     const mbps = bytesPerSecond / (1024 * 1024);
@@ -40,7 +39,6 @@ const UploadNotification = () => {
     return `${kbps.toFixed(2)} KB/s`;
   };
 
-  // Function to format remaining time
   const formatETA = (seconds) => {
     if (seconds === 0 || !isFinite(seconds)) return t('upload.calculating');
     const hours = Math.floor(seconds / 3600);
@@ -56,7 +54,6 @@ const UploadNotification = () => {
     }
   };
 
-  // Function to format bytes
   const formatBytes = (bytes) => {
     if (bytes === 0) return "0 B";
     const mb = bytes / (1024 * 1024);
@@ -77,7 +74,6 @@ const UploadNotification = () => {
         className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-3rem)]"
       >
         <div className="backdrop-blur-xl rounded-2xl shadow-2xl border overflow-hidden bg-surface border-border">
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-3">
               {uploadState === "queued" && (
@@ -150,7 +146,6 @@ const UploadNotification = () => {
               </div>
             </div>
 
-            {/* Close button - only if not uploading */}
             {uploadState !== "uploading" && (
               <button
                 onClick={dismissUpload}
@@ -161,7 +156,6 @@ const UploadNotification = () => {
             )}
           </div>
 
-          {/* Body */}
           <div className="p-4">
             {uploadState === "queued" && (
               <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
@@ -182,7 +176,6 @@ const UploadNotification = () => {
 
             {uploadState === "uploading" && (
               <>
-                {/* Progress Bar */}
                 <div className="mb-4">
                   <div className="flex justify-between text-xs mb-2">
                     <span className={getTextClass('secondary')}>{t('upload.progress')}</span>
@@ -198,9 +191,7 @@ const UploadNotification = () => {
                   </div>
                 </div>
 
-                {/* Statistics */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  {/* Speed */}
                   <div className="rounded-lg p-3 border bg-background-secondary border-border">
                     <div className="flex items-center gap-2 mb-1">
                       <FiZap className="text-primary text-sm" />
@@ -211,7 +202,6 @@ const UploadNotification = () => {
                     </p>
                   </div>
 
-                  {/* Time Remaining */}
                   <div className="rounded-lg p-3 border bg-background-secondary border-border">
                     <div className="flex items-center gap-2 mb-1">
                       <FiClock className="text-secondary text-sm" />
@@ -223,7 +213,6 @@ const UploadNotification = () => {
                   </div>
                 </div>
 
-                {/* Upload Size */}
                 <div className="rounded-lg p-2 border bg-background border-border">
                   <div className="flex justify-between items-center">
                     <span className={`text-xs ${getTextClass('secondary')}`}>{t('upload.sent')}</span>

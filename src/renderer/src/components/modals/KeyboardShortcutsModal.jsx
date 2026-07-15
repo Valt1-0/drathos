@@ -77,7 +77,6 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="relative w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-2xl overflow-hidden"
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
                 <h2 className={`text-lg font-bold ${getTextClass('primary')}`}>
@@ -93,9 +92,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
               </button>
             </div>
 
-            {/* Body — 2-column grid */}
             <div className="grid grid-cols-2 gap-6 p-6">
-              {/* Left column */}
               <div className="space-y-5">
                 <Section title={t("keyboard.navigation")}>
                   <ShortcutRow keys={["Ctrl", "H"]} label={t("keyboard.ctrlH")} />
@@ -110,7 +107,6 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
                 </Section>
               </div>
 
-              {/* Right column */}
               <div className="space-y-5">
                 <Section title={t("keyboard.games")}>
                   <ShortcutRow keys={["↵"]} label={t("keyboard.enter")} />
@@ -126,7 +122,6 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Footer hint */}
             <div className="px-6 py-3 border-t border-border bg-background-secondary/50">
               <p className={`text-xs ${getTextClass('secondary')} opacity-60 text-center`}>
                 {t("keyboard.question")} — <Kbd>Ctrl</Kbd> <Kbd>Shift</Kbd> <Kbd>?</Kbd>

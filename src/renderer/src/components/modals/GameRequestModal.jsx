@@ -55,7 +55,6 @@ const GameRequestModal = ({ isOpen, onClose, onCreated, prefillTitle = "" }) => 
             className="w-full max-w-md rounded-2xl border p-6 shadow-2xl"
             style={{ background: "var(--app-backgroundSecondary)", borderColor: "var(--app-border)" }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div
@@ -75,7 +74,6 @@ const GameRequestModal = ({ isOpen, onClose, onCreated, prefillTitle = "" }) => 
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Game title */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
                   {t("requests.gameTitle")} <span className="text-error">*</span>
@@ -95,7 +93,6 @@ const GameRequestModal = ({ isOpen, onClose, onCreated, prefillTitle = "" }) => 
                 />
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
                   {t("requests.description")}
@@ -115,7 +112,6 @@ const GameRequestModal = ({ isOpen, onClose, onCreated, prefillTitle = "" }) => 
                 <p className="text-xs text-text-secondary mt-1 text-right">{description.length}/1000</p>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"

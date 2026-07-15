@@ -18,9 +18,6 @@ const getCachedResult = (key) => {
 
 const cacheResult = (key, data) => cache.set(key, { data, ts: Date.now() });
 
-/**
- * Invalidate cache for specific patterns
- */
 export const invalidateModsCache = (pattern) => {
   if (!pattern) {
     cache.clear();
@@ -42,9 +39,6 @@ const buildUrl = async (path, params = {}) => {
   return buildServerUrl(serverAddress, `${path}${queryString ? `?${queryString}` : ''}`);
 };
 
-/**
- * Cached fetch with deduplication
- */
 const cachedFetch = async (cacheKey, fetchFn) => {
   const cached = getCachedResult(cacheKey);
   if (cached) return cached;
@@ -67,10 +61,7 @@ const cachedFetch = async (cacheKey, fetchFn) => {
   return promise;
 };
 
-/**
- * Normalize ID to always return a string
- * Handles both populated objects {_id: "..."} and plain strings
- */
+// Accepts a populated {_id} object or a plain id string
 const normalizeId = (id) => {
   if (!id) return null;
   if (typeof id === 'string') return id;

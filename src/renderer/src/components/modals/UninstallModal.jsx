@@ -36,7 +36,6 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
             transition={{ duration: 0.2 }}
             className="glass backdrop-blur-xl text-text p-6 md:p-8 rounded-2xl w-full max-w-md relative shadow-2xl"
           >
-            {/* Close Button */}
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-lg bg-surface hover:bg-surface/80 transition-all duration-300 group"
@@ -45,7 +44,6 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
               <FiX className="text-xl text-text-secondary group-hover:text-text" />
             </button>
 
-            {/* Header */}
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-error rounded-xl">
                 <FiTrash2 className="text-2xl text-white" />
@@ -60,7 +58,6 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
               </div>
             </div>
 
-            {/* Warning banner */}
             <div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-xl">
               <div className="flex items-start gap-3">
                 <FiAlertTriangle className="text-warning text-xl flex-shrink-0 mt-0.5" />
@@ -75,7 +72,6 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
               </div>
             </div>
 
-            {/* Game info */}
             <div className="space-y-3 mb-6">
               <div className="p-4 bg-surface rounded-lg border border-border">
                 <div className="flex items-center gap-3">
@@ -102,7 +98,6 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
                 </div>
               </div>
 
-              {/* Size info */}
               {gameSize && (
                 <div className="p-4 bg-surface/50 rounded-lg border border-border">
                   <div className="flex items-center gap-2 mb-1">
@@ -118,14 +113,12 @@ const UninstallModal = ({ isOpen, onClose, onConfirm, game, gameSize }) => {
               )}
             </div>
 
-            {/* Confirmation message */}
             <div className="mb-6 p-4 bg-surface/50 rounded-lg border border-border">
               <p className="text-center text-text-secondary text-sm">
                 {t('modals.uninstall.confirmMessage', { name: game.name })}
               </p>
             </div>
 
-            {/* Action buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={onClose}

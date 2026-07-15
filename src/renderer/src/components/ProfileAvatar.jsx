@@ -19,11 +19,6 @@ const getServerAddress = async () => {
   return serverAddressPromise;
 };
 
-/**
- * ProfileAvatar - A component that displays a user's profile picture
- * Handles both local uploads and external URLs automatically
- * Uses imageCacheService for caching
- */
 const ProfileAvatar = ({
   profilePicture,
   username,
@@ -89,7 +84,6 @@ const ProfileAvatar = ({
 
   const dimensionClasses = sizeClass.split(' ').slice(0, 2).join(' ');
 
-  // Show image if we have a valid URL and no error
   if (imageUrl && !imageError) {
     return (
       <img

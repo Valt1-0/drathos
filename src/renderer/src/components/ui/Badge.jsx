@@ -1,17 +1,5 @@
 import { motion } from "framer-motion";
 
-/**
- * Badge Component - Drathos design system
- *
- * Badge component for displaying statuses, tags, etc.
- *
- * @param {string} variant - Style: 'primary', 'secondary', 'success', 'warning', 'error', 'ghost'
- * @param {string} size - Size: 'sm', 'md', 'lg'
- * @param {React.ReactNode} icon - Optional icon
- * @param {boolean} dot - Show an indicator dot
- * @param {boolean} pulse - Animate the dot
- * @param {string} className - Additional CSS classes
- */
 const Badge = ({
   variant = 'primary',
   size = 'md',
@@ -22,7 +10,6 @@ const Badge = ({
   children,
   ...props
 }) => {
-  // Sizes
   const sizeClasses = {
     sm: 'px-2 py-0.5 text-xs',
     md: 'px-3 py-1 text-sm',
@@ -41,7 +28,6 @@ const Badge = ({
     lg: 'w-2.5 h-2.5',
   };
 
-  // Styles by variant
   const getInlineStyles = () => {
     const styles = {
       display: 'inline-flex',
@@ -103,7 +89,6 @@ const Badge = ({
       whileTap={{ scale: 0.95 }}
       {...props}
     >
-      {/* Indicator dot */}
       {dot && (
         <span className="relative flex items-center">
           <span
@@ -127,10 +112,8 @@ const Badge = ({
         </span>
       )}
 
-      {/* Icon */}
       {icon && <span className={iconSizes[size]}>{icon}</span>}
 
-      {/* Text */}
       {children}
     </motion.span>
   );

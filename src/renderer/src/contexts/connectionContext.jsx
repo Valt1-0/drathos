@@ -39,7 +39,6 @@ export function ConnectionProvider({ children }) {
     }
   }, []);
 
-  // Initial check once
   useEffect(() => {
     checkConnection();
   }, [checkConnection]);
@@ -97,7 +96,6 @@ export function ConnectionProvider({ children }) {
     };
   }, [isOnline, checkConnection]);
 
-  // Sync queue when coming back online
   useEffect(() => {
     if (isOnline) syncQueue.processQueue();
   }, [isOnline]);

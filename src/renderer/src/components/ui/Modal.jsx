@@ -67,7 +67,6 @@ const Modal = ({
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={handleBackdropClick}
         >
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -78,7 +77,6 @@ const Modal = ({
             }}
           />
 
-          {/* Modal Content */}
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -101,14 +99,12 @@ const Modal = ({
             }}
             {...props}
           >
-            {/* Header */}
             {(title || icon || showCloseButton) && (
               <div
                 className="flex items-start justify-between p-6 border-b"
                 style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
               >
                 <div className="flex items-center gap-4">
-                  {/* Icon */}
                   {icon && (
                     <div
                       className="flex items-center justify-center w-12 h-12 rounded-xl"
@@ -121,7 +117,6 @@ const Modal = ({
                     </div>
                   )}
 
-                  {/* Title */}
                   {title && (
                     <h2
                       id="modal-title"
@@ -133,7 +128,6 @@ const Modal = ({
                   )}
                 </div>
 
-                {/* Close button */}
                 {showCloseButton && (
                   <Button
                     variant="ghost"
@@ -148,12 +142,10 @@ const Modal = ({
               </div>
             )}
 
-            {/* Body */}
             <div className="p-6" style={{ color: 'var(--app-text)' }}>
               {children}
             </div>
 
-            {/* Footer */}
             {footer && (
               <div
                 className="flex items-center justify-end gap-3 p-6 border-t"

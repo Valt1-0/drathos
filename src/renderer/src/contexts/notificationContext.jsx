@@ -24,7 +24,6 @@ export function NotificationProvider({ children }) {
     await window.store.set("notificationsEnabled", value);
   }, []);
 
-  // Connect only if user is logged in AND notifications enabled
   useEffect(() => {
     if (!user || !enabled) {
       disconnectSocket();

@@ -1,25 +1,16 @@
-// drathos/src/renderer/src/api/gameManager.js
 import logger from './logger.js';
 
-/**
- * Simplified API for game management
- */
 class GameManager {
   constructor() {
-    this.statusListeners = new Map(); // Map<gameId, callback[]>
-    this.uninstallListeners = new Map(); // Map<gameId, callback[]>
+    this.statusListeners = new Map();
+    this.uninstallListeners = new Map();
     this.setupEventListeners();
   }
 
-  /**
-   * Configures global event listeners
-   */
   setupEventListeners() {
-    // Listen for game status changes
     window.api.onGameStatusChanged((status) => {
       logger.debug(`[GameManager] Event received: ${status.gameId} - ${status.status}`);
 
-      // Call listeners for this specific gameId
       const listeners = this.statusListeners.get(status.gameId) || [];
       logger.debug(`[GameManager] Specific listeners for ${status.gameId}: ${listeners.length}`);
       listeners.forEach((callback) => {
@@ -30,7 +21,6 @@ class GameManager {
         }
       });
 
-      // Also call global listeners (wildcard "*")
       const globalListeners = this.statusListeners.get("*") || [];
       logger.debug(`[GameManager] Global listeners (*): ${globalListeners.length}`);
       globalListeners.forEach((callback) => {
@@ -42,9 +32,7 @@ class GameManager {
       });
     });
 
-    // NEW - Listen for uninstall progress events
     window.api.onUninstallProgress((progress) => {
-      // Call listeners for this specific gameId
       const listeners = this.uninstallListeners.get(progress.id) || [];
       listeners.forEach((callback) => {
         try {
@@ -54,7 +42,6 @@ class GameManager {
         }
       });
 
-      // Also call global listeners (wildcard "*")
       const globalListeners = this.uninstallListeners.get("*") || [];
       globalListeners.forEach((callback) => {
         try {
@@ -66,14 +53,6 @@ class GameManager {
     });
   }
 
-  /**
-   * Launches a game with automatic executable detection if needed
-   * @param {string} gameId - Unique game ID
-   * @param {string} gamePath - Path to the game folder
-   * @param {string|null} executableName - Executable name (null for auto-detection)
-   * @param {string} gameName - Game name to assist detection
-   * @param {Function} onStatusChange - Optional callback for state changes
-   */
   async launchGame(
     gameId,
     gamePath,
@@ -84,7 +63,6 @@ class GameManager {
     try {
       logger.info(`[GameManager] Launching ${gameId}...`);
 
-      // Automatic executable detection if needed
       let finalExecutableName = executableName;
 
       if (!finalExecutableName) {
@@ -103,12 +81,10 @@ class GameManager {
         logger.info(`[GameManager] Executable detected: ${finalExecutableName}`);
       }
 
-      // Add the callback if provided
       if (onStatusChange) {
         this.addStatusListener(gameId, onStatusChange);
       }
 
-      // Call the native API with the correct format (no double wrapping)
       const result = await window.api.launchGame({
         gameId,
         gamePath,
@@ -127,11 +103,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Detects all available executables for a game
-   * @param {string} gamePath - Path to the game folder
-   * @param {string} gameName - Game name
-   */
   async detectExecutables(gamePath, gameName = "") {
     try {
       const result = await window.api.detectExecutables({ gamePath, gameName });
@@ -142,11 +113,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Gets the best executable for a game
-   * @param {string} gamePath - Path to the game folder
-   * @param {string} gameName - Game name
-   */
   async getBestExecutable(gamePath, gameName = "") {
     try {
       const result = await window.api.getBestExecutable({ gamePath, gameName });
@@ -157,10 +123,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Lists the contents of a game folder
-   * @param {string} gamePath - Path to the game folder
-   */
   async listGameDirectory(gamePath) {
     try {
       const result = await window.api.listGameDirectory(gamePath);
@@ -171,10 +133,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Checks if a game is currently running
-   * @param {string} gameId - Game ID
-   */
   async isGameRunning(gameId) {
     try {
       return await window.api.isGameRunning(gameId);
@@ -184,9 +142,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Gets the list of all active games
-   */
   async getActiveGames() {
     try {
       return await window.api.getActiveGames();
@@ -196,10 +151,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Opens a game folder in the file explorer
-   * @param {string} gamePath - Path to the game folder
-   */
   async openGameFolder(gamePath) {
     try {
       return await window.api.openGameFolder(gamePath);
@@ -209,10 +160,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Gets the process information for a game
-   * @param {string} gameId - Game ID
-   */
   async getGameProcess(gameId) {
     try {
       return await window.api.getGameProcess(gameId);
@@ -222,11 +169,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Adds a listener for game status changes
-   * @param {string} gameId - Game ID
-   * @param {Function} callback - Function to call on changes
-   */
   addStatusListener(gameId, callback) {
     if (!this.statusListeners.has(gameId)) {
       this.statusListeners.set(gameId, []);
@@ -234,11 +176,6 @@ class GameManager {
     this.statusListeners.get(gameId).push(callback);
   }
 
-  /**
-   * Removes a specific listener
-   * @param {string} gameId - Game ID
-   * @param {Function} callback - Function to remove
-   */
   removeStatusListener(gameId, callback) {
     const listeners = this.statusListeners.get(gameId);
     if (listeners) {
@@ -249,18 +186,10 @@ class GameManager {
     }
   }
 
-  /**
-   * Removes all listeners for a game
-   * @param {string} gameId - Game ID
-   */
   removeStatusListeners(gameId) {
     this.statusListeners.delete(gameId);
   }
 
-  /**
-   * Formats a duration in seconds to a readable format
-   * @param {number} seconds - Duration in seconds
-   */
   formatDuration(seconds) {
     if (seconds < 60) {
       return `${seconds}s`;
@@ -275,10 +204,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Formats a file size
-   * @param {number} sizeInMB - Size in MB
-   */
   formatFileSize(sizeInMB) {
     if (sizeInMB >= 1024) {
       return `${(sizeInMB / 1024).toFixed(1)} GB`;
@@ -286,16 +211,12 @@ class GameManager {
     return `${sizeInMB.toFixed(1)} MB`;
   }
 
-  /**
-   * 🛑 Stops a running game
-   */
   async stopGame(gameId, force = false) {
     try {
       logger.info(`[GameManager] Stopping ${gameId} (force: ${force})`);
 
       const result = await window.api.stopGame({ gameId, force });
 
-      // Clean up listeners if the game stops successfully
       if (result.success) {
         this.removeStatusListeners(gameId);
       }
@@ -310,9 +231,6 @@ class GameManager {
     }
   }
 
-  /**
-   * ⚡ Force stop a game
-   */
   async forceStopGame(gameId) {
     try {
       logger.info(`[GameManager] Force stopping ${gameId}`);
@@ -333,14 +251,10 @@ class GameManager {
     }
   }
 
-  /**
-   * 🗑️ Completely uninstalls a game
-   */
   async uninstallGame(gameId, gamePath, gameName, onProgress = null) {
     try {
       logger.info(`[GameManager] Uninstalling ${gameName}...`);
 
-      // Add the progress listener if provided
       if (onProgress) {
         this.addUninstallListener(gameId, onProgress);
       }
@@ -353,7 +267,6 @@ class GameManager {
 
       logger.info(`[GameManager] Uninstall result: ${JSON.stringify(result)}`);
 
-      // Clean up all listeners for this game
       this.removeStatusListeners(gameId);
       this.removeUninstallListeners(gameId);
 
@@ -367,9 +280,6 @@ class GameManager {
     }
   }
 
-  /**
-   * 🔍 Checks if a game can be uninstalled
-   */
   async canUninstallGame(gameId, gamePath) {
     try {
       return await window.api.canUninstallGame({ gameId, gamePath });
@@ -379,10 +289,6 @@ class GameManager {
     }
   }
 
-  /**
-   * 📊 Gets the size of an installed game
-   * @param {string} gamePath - Game path
-   */
   async getGameSize(gamePath) {
     try {
       return await window.api.getGameSize({ gamePath });
@@ -392,11 +298,6 @@ class GameManager {
     }
   }
 
-  /**
-   * Adds a listener for uninstall events
-   * @param {string} gameId - Game ID
-   * @param {Function} callback - Function to call
-   */
   addUninstallListener(gameId, callback) {
     if (!this.uninstallListeners.has(gameId)) {
       this.uninstallListeners.set(gameId, []);
@@ -404,11 +305,6 @@ class GameManager {
     this.uninstallListeners.get(gameId).push(callback);
   }
 
-  /**
-   * Removes a specific uninstall listener for a game
-   * @param {string} gameId - Game ID
-   * @param {Function} callback - Function to remove
-   */
   removeUninstallListener(gameId, callback) {
     const listeners = this.uninstallListeners.get(gameId);
     if (listeners) {
@@ -417,16 +313,11 @@ class GameManager {
     }
   }
 
-  /**
-   * Removes all uninstall listeners for a game
-   * @param {string} gameId - Game ID
-   */
   removeUninstallListeners(gameId) {
     this.uninstallListeners.delete(gameId);
   }
 }
 
-// Singleton instance
 const gameManager = new GameManager();
 
 export default gameManager;

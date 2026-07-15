@@ -34,7 +34,6 @@ const CollectionRow = ({ collection, onEdit, onAddGames }) => {
         onMouseLeave={() => setHovered(false)}
         onClick={() => onAddGames(collection)}
       >
-        {/* Icon */}
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{ background: isLight ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.15)' }}
@@ -42,7 +41,6 @@ const CollectionRow = ({ collection, onEdit, onAddGames }) => {
           <IconComponent className="w-4 h-4" style={{ color: 'var(--app-primary)' }} />
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate" style={{ color: 'var(--app-text)' }}>
             {collection.name}
@@ -54,7 +52,6 @@ const CollectionRow = ({ collection, onEdit, onAddGames }) => {
           )}
         </div>
 
-        {/* Game Previews */}
         <div className="flex -space-x-2">
           {previews.map((g, i) => {
             const game = g.serverGameId || g;
@@ -91,7 +88,6 @@ const CollectionRow = ({ collection, onEdit, onAddGames }) => {
           )}
         </div>
 
-        {/* Count */}
         <span className="text-xs px-2 py-0.5 rounded-full" style={{
           background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
           color: 'var(--app-textSecondary)'
@@ -99,7 +95,6 @@ const CollectionRow = ({ collection, onEdit, onAddGames }) => {
           {games.length}
         </span>
 
-        {/* Actions */}
         {hovered ? (
           <div className="flex gap-1">
             <button

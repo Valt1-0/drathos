@@ -41,7 +41,6 @@ const Drawer = ({ children }) => {
     ] : []),
   ], [t, user?.role]);
 
-  // Listen to sync queue changes
   useEffect(() => {
     setPendingSyncs(syncQueue.getPendingCount());
     const listenerId = syncQueue.addListener(setPendingSyncs);
@@ -62,7 +61,6 @@ const Drawer = ({ children }) => {
 
   return (
     <div className="flex h-full overflow-hidden relative">
-      {/* Sidebar */}
       <motion.div
         initial={false}
         animate={{ width: isOpen ? 280 : 80 }}
@@ -76,7 +74,6 @@ const Drawer = ({ children }) => {
         }}
       >
 
-        {/* Header with toggle button */}
         <motion.div
           className="relative z-10 flex items-center"
           style={{ borderBottom: '1px solid var(--app-border)' }}
@@ -124,7 +121,6 @@ const Drawer = ({ children }) => {
           </motion.button>
         </motion.div>
 
-        {/* Navigation Menu */}
         <nav
           aria-label="Main navigation"
           className={`relative z-10 flex-1 py-4 space-y-2 ${isOpen ? "px-3" : "px-2"}`}
@@ -215,7 +211,6 @@ const Drawer = ({ children }) => {
           })}
         </nav>
 
-        {/* Bottom Section - User Info & Actions */}
         <motion.div
           className="relative z-10 space-y-2"
           style={{ borderTop: '1px solid var(--app-border)' }}
@@ -224,7 +219,6 @@ const Drawer = ({ children }) => {
           }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
-          {/* Delete Data Button */}
           <button
             onClick={openDeleteModal}
             aria-label={t('nav.clearData')}
@@ -259,7 +253,6 @@ const Drawer = ({ children }) => {
             </motion.div>
           </button>
 
-          {/* User Profile with Server Status */}
           {user && (
             <motion.div
               className="relative overflow-hidden rounded-xl"
@@ -281,7 +274,6 @@ const Drawer = ({ children }) => {
                 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               >
-                {/* Avatar with status indicator */}
                 <div className="relative">
                   <ProfileAvatar
                     profilePicture={user.profilePicture}
@@ -289,7 +281,6 @@ const Drawer = ({ children }) => {
                     size={isOpen ? "md" : "sm"}
                     className="rounded-lg transition-all duration-300"
                   />
-                  {/* Server status dot */}
                   <div
                     className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
                     style={{
@@ -325,16 +316,13 @@ const Drawer = ({ children }) => {
         </motion.div>
       </motion.div>
 
-      {/* Main Content */}
       <div className="flex-1 bg-background overflow-hidden">
         {children}
       </div>
 
-      {/* Onglet flottant — Game Requests */}
       <AnimatePresence>
         {isOnline && !requestsPanelOpen && (
           <>
-            {/* Zone de clic invisible — large pour être accessible */}
             <div
               className="absolute right-0 top-0 bottom-0 w-6 z-40 cursor-pointer"
               style={{ WebkitAppRegion: 'no-drag' }}
@@ -342,7 +330,6 @@ const Drawer = ({ children }) => {
               onMouseLeave={() => setTabHovered(false)}
               onClick={() => { setRequestsPanelOpen(true); setTabHovered(false); }}
             />
-            {/* Onglet visuel — pointer-events-none */}
             <motion.div
               className="absolute right-0 z-50 w-10"
               style={{ top: '50%', pointerEvents: 'none' }}
@@ -368,7 +355,6 @@ const Drawer = ({ children }) => {
 
       <GameRequestsPanel isOpen={requestsPanelOpen} onClose={() => setRequestsPanelOpen(false)} />
 
-      {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={showDeleteModal}
         onClose={closeDeleteModal}

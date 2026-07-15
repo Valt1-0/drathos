@@ -225,7 +225,6 @@ const GameRow = memo(
           }`}
         >
           <div className="flex items-center gap-2.5">
-            {/* Cover compact */}
             <div className="relative w-12 h-12 rounded-md shrink-0 overflow-hidden bg-linear-to-br from-surface to-background animate-pulse">
               <GameCover
                 src={game.coverUrl}
@@ -270,7 +269,6 @@ const GameRow = memo(
               )}
             </div>
 
-            {/* Game info */}
             <div className="flex-1 min-w-0">
               <h3 className="font-medium truncate text-sm mb-0.5 text-text">
                 {highlightText(game.name, searchTerm)}
@@ -457,7 +455,6 @@ const GameCard = memo(
             size="medium"
           />
 
-          {/* Status badges — top right */}
           <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
             {playing && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-sm">
@@ -498,7 +495,6 @@ const GameCard = memo(
             )}
           </div>
 
-          {/* Top left: rating + status dot */}
           <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
             {displayRating && (
               <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/70 backdrop-blur-sm">
@@ -521,7 +517,6 @@ const GameCard = memo(
             )}
           </div>
 
-          {/* Bottom gradient with title + playtime */}
           <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/95 via-black/55 to-transparent pt-10 pb-3 px-3 group-hover:opacity-0 transition-opacity duration-150">
             <h3 className="text-white font-bold text-sm leading-tight line-clamp-2">
               {game.name}
@@ -538,12 +533,10 @@ const GameCard = memo(
               )}
           </div>
 
-          {/* Hover overlay */}
           <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-out bg-linear-to-t from-black via-black/90 to-transparent pt-10 pb-3 px-2.5">
             <p className="text-white font-bold text-xs leading-tight line-clamp-1 mb-2">
               {game.name}
             </p>
-            {/* Info tags */}
             {(genres[0] || year) && (
               <div className="flex flex-wrap gap-1 mb-2.5">
                 {genres[0] && (
@@ -563,7 +556,6 @@ const GameCard = memo(
                 )}
               </div>
             )}
-            {/* Action buttons */}
             <div className="flex gap-1.5">
               {!downloading && !queued && !uninstalling && !pending && (
                 <>
@@ -1047,13 +1039,11 @@ const GameLibrary = () => {
             }
       }
     >
-      {/* Header */}
       <motion.div
         layout="position"
         className="shrink-0"
         style={{ borderBottom: "1px solid var(--app-border)" }}
       >
-        {/* Title row — always visible */}
         <div className="flex items-center gap-2 px-4 pt-4 pb-3">
           <motion.h1
             layout="position"
@@ -1093,7 +1083,6 @@ const GameLibrary = () => {
           </div>
         </div>
 
-        {/* Offline banner — shown in both compact and expanded modes */}
         <AnimatePresence>
           {!isOnline && (
             <motion.div
@@ -1114,7 +1103,6 @@ const GameLibrary = () => {
           )}
         </AnimatePresence>
 
-        {/* Compact mode controls */}
         <AnimatePresence>
           {!expanded && (
             <motion.div
@@ -1140,7 +1128,6 @@ const GameLibrary = () => {
           )}
         </AnimatePresence>
 
-        {/* Expanded mode toolbar */}
         <AnimatePresence>
           {expanded && (
             <motion.div
@@ -1177,7 +1164,6 @@ const GameLibrary = () => {
         </AnimatePresence>
       </motion.div>
 
-      {/* Game list / grid */}
       <div
         className={`flex-1 min-h-0 ${
           expanded
@@ -1248,7 +1234,6 @@ const GameLibrary = () => {
         )}
       </div>
 
-      {/* Footer */}
       <motion.div
         layout="position"
         className="shrink-0 px-4 py-3 flex items-center gap-3"

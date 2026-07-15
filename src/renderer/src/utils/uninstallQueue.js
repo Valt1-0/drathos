@@ -1,19 +1,12 @@
-// drathos/src/renderer/src/utils/uninstallQueue.js
 import logger from "../services/logger.js";
 
-/**
- * Simple queue for pending uninstallations
- * Stores requests that will be executed when the server comes back online
- */
+// Holds uninstall requests made while offline; run when the server is back.
 class UninstallQueue {
   constructor() {
     this.queue = [];
     this.listeners = new Map();
   }
 
-  /**
-   * Loads the queue from localStorage
-   */
   async loadQueue() {
     try {
       const savedQueue = await window.store.get("uninstallQueue");
@@ -28,9 +21,6 @@ class UninstallQueue {
     }
   }
 
-  /**
-   * Saves the queue to localStorage
-   */
   async saveQueue() {
     try {
       await window.store.set("uninstallQueue", this.queue);
@@ -40,9 +30,6 @@ class UninstallQueue {
     }
   }
 
-  /**
-   * Adds an uninstallation to the queue (without deleting files)
-   */
   async enqueue(gameId, gameName, gamePath) {
     const existing = this.queue.find((item) => item.gameId === gameId);
     if (existing) {
@@ -63,9 +50,6 @@ class UninstallQueue {
     logger.info(`[UninstallQueue] ${gameName} added to queue`);
   }
 
-  /**
-   * Removes an uninstallation from the queue
-   */
   async dequeue(gameId) {
     const initialLength = this.queue.length;
     this.queue = this.queue.filter((item) => item.gameId !== gameId);
@@ -76,48 +60,30 @@ class UninstallQueue {
     }
   }
 
-  /**
-   * Checks if a game is pending
-   */
   isPending(gameId) {
     return this.queue.some((item) => item.gameId === gameId);
   }
 
-  /**
-   * Retrieves all items in the queue
-   */
   getAll() {
     return [...this.queue];
   }
 
-  /**
-   * Completely clears the queue
-   */
   async clear() {
     this.queue = [];
     await this.saveQueue();
     logger.info("[UninstallQueue] Queue cleared");
   }
 
-  /**
-   * Adds a listener for changes
-   */
   addListener(callback) {
     const id = Date.now() + Math.random();
     this.listeners.set(id, callback);
     return id;
   }
 
-  /**
-   * Removes a listener
-   */
   removeListener(id) {
     this.listeners.delete(id);
   }
 
-  /**
-   * Notifies all listeners
-   */
   notifyListeners() {
     this.listeners.forEach((callback) => {
       try {
@@ -129,10 +95,8 @@ class UninstallQueue {
   }
 }
 
-// Instance singleton
 const uninstallQueue = new UninstallQueue();
 
-// Load the queue on startup
 uninstallQueue.loadQueue();
 
 export default uninstallQueue;

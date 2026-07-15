@@ -25,20 +25,16 @@ export const CollectionsProvider = ({ children }) => {
   const userRef = useRef(user);
   userRef.current = user;
 
-  // ==================== LAZY LOADING ====================
-
   const fetchCollections = useCallback(async () => {
     if (initialized || loading) return;
 
     setLoading(true);
 
-    // Load from cache first
     const cached = await storeGet('collectionsCache');
     if (cached?.custom) {
       setCollections(cached.custom);
     }
 
-    // Sync with backend if online
     if (isOnlineRef.current && userRef.current) {
       try {
         const data = await collectionsAPI.getUserCollections();
@@ -74,8 +70,6 @@ export const CollectionsProvider = ({ children }) => {
       logger.error('[Collections] Failed to sync collections:', error);
     }
   }, []);
-
-  // ==================== CRUD OPERATIONS ====================
 
   const createCollection = useCallback(async (collectionData) => {
     try {
@@ -118,8 +112,6 @@ export const CollectionsProvider = ({ children }) => {
     }
   }, [t]);
 
-  // ==================== GAMES MANAGEMENT ====================
-
   const addGamesToCollection = useCallback(async (collectionId, gameIds) => {
     try {
       const response = await collectionsAPI.addGamesToCollection(collectionId, gameIds);
@@ -151,8 +143,6 @@ export const CollectionsProvider = ({ children }) => {
       throw error;
     }
   }, [t]);
-
-  // ==================== CONTEXT VALUE ====================
 
   const contextValue = useMemo(
     () => ({
@@ -187,8 +177,6 @@ export const CollectionsProvider = ({ children }) => {
     </CollectionsContext.Provider>
   );
 };
-
-// ==================== HOOKS ====================
 
 export const useCollections = () => {
   const context = useContext(CollectionsContext);

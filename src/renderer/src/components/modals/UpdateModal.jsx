@@ -65,7 +65,6 @@ export default function UpdateModal() {
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm ${isLight ? 'bg-black/30' : 'bg-black/60'}`}>
       <div ref={containerRef} role="dialog" aria-modal="true" className={`relative w-full max-w-md rounded-xl shadow-2xl ${isLight ? 'bg-white border-gray-200' : 'bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700'} border`}>
-        {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
           <div className="flex items-center gap-3">
             {updateStatus === 'downloaded' ? (
@@ -109,7 +108,6 @@ export default function UpdateModal() {
           )}
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {updateStatus === 'available' && (
             <>

@@ -1,35 +1,26 @@
-/**
- * Local cache service for game images
- * Uses IndexedDB to store images as blobs
- */
 import logger from './logger.js';
 
 const DB_NAME = 'gameCoversCache';
-const MEMORY_CACHE_MAX = 300; // max entries in memory cache
+const MEMORY_CACHE_MAX = 300;
 const DB_VERSION = 1;
 const STORE_NAME = 'covers';
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
 
 class ImageCacheService {
   constructor() {
     this.db = null;
     this.isAvailable = false;
     this.initializationPromise = null;
-    this.memoryCache = new Map(); // In-memory cache to avoid hitting IndexedDB every time
+    this.memoryCache = new Map();
     this.initDB();
   }
 
-  /**
-   * Initializes the IndexedDB database
-   */
   async initDB() {
-    // Avoid multiple initializations
     if (this.initializationPromise) {
       return this.initializationPromise;
     }
 
     this.initializationPromise = new Promise((resolve) => {
-      // Check if IndexedDB is available
       if (!window.indexedDB) {
         logger.warn('[ImageCache] IndexedDB non disponible dans cet environnement');
         this.isAvailable = false;
@@ -56,7 +47,6 @@ class ImageCacheService {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
 
-        // Create the store if it does not exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'url' });
           objectStore.createIndex('timestamp', 'timestamp', { unique: false });
@@ -67,13 +57,7 @@ class ImageCacheService {
     return this.initializationPromise;
   }
 
-  /**
-   * Retrieves an image from the cache
-   * @param {string} url - Image URL
-   * @returns {Promise<string|null>} Blob URL of the image or null if not found/expired
-   */
   async getImage(url) {
-    // If IndexedDB is not available, return null
     if (!this.isAvailable) {
       await this.initDB();
       if (!this.isAvailable) {
@@ -95,17 +79,14 @@ class ImageCacheService {
         request.onsuccess = () => {
           const data = request.result;
 
-          // Check if the image exists and is not expired
           if (data && data.blob && data.timestamp) {
             const now = Date.now();
             const age = now - data.timestamp;
 
             if (age < CACHE_DURATION) {
-              // Create a blob URL from the stored blob
               const blobUrl = URL.createObjectURL(data.blob);
               resolve(blobUrl);
             } else {
-              // Image expired, delete it
               this.deleteImage(url).catch(() => {});
               resolve(null);
             }
@@ -120,14 +101,7 @@ class ImageCacheService {
     }
   }
 
-  /**
-   * Stores an image in the cache
-   * @param {string} url - Image URL
-   * @param {Blob} blob - Image blob
-   * @returns {Promise<void>}
-   */
   async setImage(url, blob) {
-    // If IndexedDB is not available, do nothing
     if (!this.isAvailable) {
       await this.initDB();
       if (!this.isAvailable) {
@@ -150,7 +124,7 @@ class ImageCacheService {
 
         request.onerror = () => {
           logger.warn(`[ImageCache] Erreur lors du stockage: ${request.error?.message}`);
-          resolve(); // Resolve anyway to avoid blocking
+          resolve();
         };
 
         request.onsuccess = () => {
@@ -163,18 +137,11 @@ class ImageCacheService {
     }
   }
 
-  /**
-   * Removes an image from the cache
-   * @param {string} url - URL of the image to remove
-   * @returns {Promise<void>}
-   */
   async deleteImage(url) {
-    // Revoke the blob URL before removing from memory cache
     const cached = this.memoryCache.get(url);
     if (cached?.blobUrl) URL.revokeObjectURL(cached.blobUrl);
     this.memoryCache.delete(url);
 
-    // If IndexedDB is not available, do nothing
     if (!this.isAvailable) {
       await this.initDB();
       if (!this.isAvailable) {
@@ -190,7 +157,7 @@ class ImageCacheService {
 
         request.onerror = () => {
           logger.warn(`[ImageCache] Erreur lors de la suppression: ${request.error?.message}`);
-          resolve(); // Resolve anyway
+          resolve();
         };
 
         request.onsuccess = () => {
@@ -203,27 +170,18 @@ class ImageCacheService {
     }
   }
 
-  /**
-   * Downloads and caches an image
-   * @param {string} url - URL of the image to download
-   * @returns {Promise<string>} Blob URL of the image
-   */
   async fetchAndCache(url) {
     try {
-      // 1. Check the in-memory cache first (instant)
       if (this.memoryCache.has(url)) {
         const cached = this.memoryCache.get(url);
-        // Check that the blob URL is still valid
         if (cached && cached.blobUrl) {
           return cached.blobUrl;
         }
       }
 
-      // 2. Check IndexedDB if available
       if (this.isAvailable) {
         const cachedUrl = await this.getImage(url);
         if (cachedUrl) {
-          // Store in memory cache for next time (evict oldest if over limit)
           if (this.memoryCache.size >= MEMORY_CACHE_MAX) {
             const oldestKey = this.memoryCache.keys().next().value;
             const evicted = this.memoryCache.get(oldestKey);
@@ -235,7 +193,6 @@ class ImageCacheService {
         }
       }
 
-      // 3. Download the image
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
@@ -244,12 +201,10 @@ class ImageCacheService {
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
 
-      // 4. Store in IndexedDB (if available)
       if (this.isAvailable) {
         await this.setImage(url, blob);
       }
 
-      // 5. Store in the in-memory cache (evict oldest if over limit)
       if (this.memoryCache.size >= MEMORY_CACHE_MAX) {
         const oldestKey = this.memoryCache.keys().next().value;
         const evicted = this.memoryCache.get(oldestKey);
@@ -261,17 +216,11 @@ class ImageCacheService {
       return blobUrl;
     } catch (error) {
       logger.warn(`[ImageCache] Download error: ${error.message}`);
-      // On error, return the original URL
       return url;
     }
   }
 
-  /**
-   * Removes expired images from the cache
-   * @returns {Promise<number>} Number of images deleted
-   */
   async cleanExpiredImages() {
-    // If IndexedDB is not available, return 0
     if (!this.isAvailable) {
       await this.initDB();
       if (!this.isAvailable) {
@@ -321,15 +270,9 @@ class ImageCacheService {
     }
   }
 
-  /**
-   * Completely clears the cache
-   * @returns {Promise<void>}
-   */
   async clearCache() {
-    // Clear the in-memory cache
     this.memoryCache.clear();
 
-    // If IndexedDB is not available, do nothing
     if (!this.isAvailable) {
       await this.initDB();
       if (!this.isAvailable) {
@@ -359,12 +302,7 @@ class ImageCacheService {
     }
   }
 
-  /**
-   * Gets the current cache size
-   * @returns {Promise<number>} Number of images in the cache
-   */
   async getCacheSize() {
-    // If IndexedDB is not available, return 0
     if (!this.isAvailable) {
       await this.initDB();
       if (!this.isAvailable) {
@@ -394,18 +332,14 @@ class ImageCacheService {
   }
 }
 
-// Create a single instance of the service
 const imageCacheService = new ImageCacheService();
 
-// Clean the cache on application startup (only if IndexedDB is available)
 imageCacheService.initDB().then(() => {
   if (imageCacheService.isAvailable) {
     imageCacheService.cleanExpiredImages().catch(err => {
       logger.warn(`[ImageCache] Erreur lors du nettoyage initial: ${err.message}`);
     });
   }
-}).catch(() => {
-  // Error already logged in initDB
-});
+}).catch(() => {});
 
 export default imageCacheService;

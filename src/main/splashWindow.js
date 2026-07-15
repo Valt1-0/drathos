@@ -3,9 +3,6 @@ import { join } from 'path';
 import { is } from '@electron-toolkit/utils';
 import logger from './utils/logger.js';
 
-/**
- * Simple and efficient splash window
- */
 export class SplashWindow {
   constructor(icon) {
     this.window = null;
@@ -31,7 +28,6 @@ export class SplashWindow {
       },
     });
 
-    // Load the splash page
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       this.window.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/splash.html`);
     } else {

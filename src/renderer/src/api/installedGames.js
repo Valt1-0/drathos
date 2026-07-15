@@ -31,7 +31,6 @@ export async function getInstalledGames() {
   const serverAddress = await window.store.get("serverAddress");
   const token = await window.store.get("userToken");
 
-  // Load the local cache (object)
   const cachedGamesObject = await window.store.get("installedGamesCache", {});
 
   if (!token) {

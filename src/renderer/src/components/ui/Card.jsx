@@ -2,19 +2,6 @@ import { motion } from "framer-motion";
 import { useTheme } from "../../contexts/themeContext";
 import { isColorLight } from "../../config/themes";
 
-/**
- * Card Component - Drathos design system
- *
- * Reusable card component with glassmorphism effect,
- * variants and animations.
- *
- * @param {string} variant - Card style: 'glass', 'solid', 'gradient', 'stat'
- * @param {boolean} hover - Enable hover effects
- * @param {boolean} gradient - Use a gradient border
- * @param {string} gradientColor - Gradient color: 'primary', 'secondary', 'accent'
- * @param {string} className - Additional CSS classes
- * @param {React.ReactNode} children - Card content
- */
 const Card = ({
   variant = 'glass',
   hover = false,
@@ -26,7 +13,6 @@ const Card = ({
 }) => {
   const { theme } = useTheme();
 
-  // Base styles by variant
   const getVariantClasses = () => {
     switch (variant) {
       case 'glass':
@@ -46,11 +32,9 @@ const Card = ({
     }
   };
 
-  // Inline styles by variant and theme
   const getInlineStyles = () => {
     const styles = {};
 
-    // Determine if the theme is light
     const isLight = theme?.colors?.background && isColorLight(theme.colors.background);
 
     switch (variant) {
@@ -89,7 +73,6 @@ const Card = ({
         break;
     }
 
-    // Gradient border for glass cards
     if (gradient && variant === 'glass') {
       styles.position = 'relative';
       styles.overflow = 'hidden';
@@ -98,7 +81,6 @@ const Card = ({
     return styles;
   };
 
-  // Hover animation
   const getHoverAnimation = () => {
     if (!hover) return {};
 
@@ -108,7 +90,6 @@ const Card = ({
     };
   };
 
-  // Class for gradient border
   const gradientBorderClass = gradient && variant === 'glass' ? 'card-gradient-border' : '';
 
   return (
@@ -125,7 +106,6 @@ const Card = ({
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       {...props}
     >
-      {/* Gradient border overlay */}
       {gradient && variant === 'glass' && (
         <div
           className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -142,7 +122,6 @@ const Card = ({
         />
       )}
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col">
         {children}
       </div>
@@ -150,11 +129,6 @@ const Card = ({
   );
 };
 
-// Sub-components for better organization
-
-/**
- * Card.Header - Card header
- */
 Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
   return (
     <div
@@ -197,9 +171,6 @@ Card.Header = ({ icon, title, subtitle, action, className = '', ...props }) => {
   );
 };
 
-/**
- * Card.Body - Card body
- */
 Card.Body = ({ className = '', children, ...props }) => {
   return (
     <div className={`px-4 pb-4 pt-0 ${className}`} {...props}>
@@ -208,9 +179,6 @@ Card.Body = ({ className = '', children, ...props }) => {
   );
 };
 
-/**
- * Card.Footer - Card footer
- */
 Card.Footer = ({ className = '', children, ...props }) => {
   return (
     <div
