@@ -20,6 +20,7 @@ import LaunchOptions from "./LaunchOptions";
 import { ActionButtons } from "./GameActionButtons";
 import GameStatistics from "./GameStatistics";
 import GameInformation from "./GameInformation";
+import GameScreenshots from "./GameScreenshots";
 
 const CollapsibleMods = ({ gameId }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -425,6 +426,8 @@ const GameDetails = ({
                 )}
               </motion.div>
 
+              {!isInstalled && <GameScreenshots igdbId={game.igdbId} />}
+
               {isInstalled && gameStats && gameStats.totalSessions > 0 && (
                 <GameStatistics stats={gameStats} isPlaying={isPlaying} />
               )}
@@ -435,7 +438,7 @@ const GameDetails = ({
             </div>
 
             <div className="xl:col-span-1">
-              <div className="sticky top-4">
+              <div className="sticky top-4 space-y-4">
                 <GameInformation
                   game={game}
                   gameSize={gameSize}
@@ -443,6 +446,7 @@ const GameDetails = ({
                   getGenresArray={getGenresArray}
                   getPlatformsArray={getPlatformsArray}
                 />
+                {isInstalled && <GameScreenshots igdbId={game.igdbId} compact />}
               </div>
             </div>
           </div>

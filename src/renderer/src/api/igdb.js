@@ -84,7 +84,31 @@ export const searchGamesFromIGDB = async (query) => {
   }
 };
 
+const screenshotsCache = new Map();
+
+export const getGameScreenshots = async (igdbId) => {
+  if (!igdbId) return [];
+  if (screenshotsCache.has(igdbId)) return screenshotsCache.get(igdbId);
+  try {
+    const serverAddress = await window.store.get("serverAddress");
+    const token = await window.store.get("userToken");
+    const response = await fetch(
+      buildServerUrl(serverAddress, `/api/igdb/screenshots/${igdbId}`),
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    const shots = Array.isArray(data.screenshots) ? data.screenshots : [];
+    screenshotsCache.set(igdbId, shots);
+    return shots;
+  } catch (error) {
+    logger.debug("[IGDB] Screenshots fetch failed:", error.message);
+    return [];
+  }
+};
+
 export const clearIGDBCache = () => {
   searchCache.clear();
+  screenshotsCache.clear();
   logger.info("[IGDB] Cache cleared");
 };

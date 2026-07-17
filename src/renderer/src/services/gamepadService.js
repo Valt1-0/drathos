@@ -10,6 +10,7 @@ const BUTTONS = {
   Y: 3,
   LB: 4,
   RB: 5,
+  SELECT: 8,
   START: 9,
   DPAD_UP: 12,
   DPAD_DOWN: 13,
@@ -21,6 +22,14 @@ const AXIS_DEADZONE = 0.5;
 const INITIAL_REPEAT_MS = 400; // hold delay before a direction starts repeating
 const REPEAT_MS = 120;
 
+// Sony pads report ids like "DUALSHOCK 4 Wireless Controller" or
+// "Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)"
+const detectPadType = (id = "") => {
+  const s = id.toLowerCase();
+  if (/dualshock|dualsense|playstation|sony|054c/.test(s)) return "playstation";
+  return "xbox";
+};
+
 class GamepadService {
   constructor() {
     this.listeners = new Map(); // event -> Set<fn>
@@ -29,11 +38,16 @@ class GamepadService {
     this.rafId = null;
     this.started = false;
     this.connected = 0;
+    this.padType = "xbox"; // "xbox" | "playstation" — drives button glyphs in the UI
     // A fullscreen surface (Big Picture) claims the pad: the global spatial
     // navigation checks this and stands down while a claim is active
     this.exclusiveOwner = null;
     this._onConnect = () => this._updateConnected();
     this._onDisconnect = () => this._updateConnected();
+  }
+
+  getPadType() {
+    return this.padType;
   }
 
   claimExclusive(owner) {
@@ -95,8 +109,14 @@ class GamepadService {
 
   _updateConnected() {
     const pads = navigator.getGamepads?.() ?? [];
-    const count = [...pads].filter(Boolean).length;
-    if (count > 0 && this.connected === 0) this._emit("connected", { count });
+    const live = [...pads].filter(Boolean);
+    const count = live.length;
+    const type = count > 0 ? detectPadType(live[0].id) : this.padType;
+    if (type !== this.padType) {
+      this.padType = type;
+      this._emit("typechange", { type });
+    }
+    if (count > 0 && this.connected === 0) this._emit("connected", { count, type });
     if (count === 0 && this.connected > 0) this._emit("disconnected", {});
     this.connected = count;
     if (count > 0) this._startPolling();
@@ -113,6 +133,9 @@ class GamepadService {
 
       this._edge(pad, BUTTONS.A, "confirm");
       this._edge(pad, BUTTONS.B, "back");
+      this._edge(pad, BUTTONS.X, "action");
+      this._edge(pad, BUTTONS.Y, "secondary");
+      this._edge(pad, BUTTONS.SELECT, "select");
       this._edge(pad, BUTTONS.START, "menu");
       this._edge(pad, BUTTONS.LB, "prevSection");
       this._edge(pad, BUTTONS.RB, "nextSection");
