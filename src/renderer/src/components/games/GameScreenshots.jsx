@@ -10,7 +10,7 @@ const GameScreenshots = ({ igdbId, compact = false }) => {
   const { t } = useTranslation();
   const { getTextClass } = useTheme();
   const [shots, setShots] = useState([]);
-  const [lightbox, setLightbox] = useState(null); // index | null
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     setShots([]);

@@ -85,26 +85,47 @@ export const searchGamesFromIGDB = async (query) => {
 };
 
 const screenshotsCache = new Map();
+const pendingScreenshotRequests = new Map();
+
+const cleanExpiredScreenshots = () => {
+  const now = Date.now();
+  for (const [key, entry] of screenshotsCache.entries()) {
+    if (now - entry.timestamp > CACHE_DURATION) screenshotsCache.delete(key);
+  }
+};
 
 export const getGameScreenshots = async (igdbId) => {
   if (!igdbId) return [];
-  if (screenshotsCache.has(igdbId)) return screenshotsCache.get(igdbId);
-  try {
-    const serverAddress = await window.store.get("serverAddress");
-    const token = await window.store.get("userToken");
-    const response = await fetch(
-      buildServerUrl(serverAddress, `/api/igdb/screenshots/${igdbId}`),
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!response.ok) return [];
-    const data = await response.json();
-    const shots = Array.isArray(data.screenshots) ? data.screenshots : [];
-    screenshotsCache.set(igdbId, shots);
-    return shots;
-  } catch (error) {
-    logger.debug("[IGDB] Screenshots fetch failed:", error.message);
-    return [];
-  }
+
+  cleanExpiredScreenshots();
+  const cached = screenshotsCache.get(igdbId);
+  if (cached) return cached.data;
+
+  if (pendingScreenshotRequests.has(igdbId)) return pendingScreenshotRequests.get(igdbId);
+
+  const requestPromise = (async () => {
+    try {
+      const serverAddress = await window.store.get("serverAddress");
+      const token = await window.store.get("userToken");
+      const response = await fetch(
+        buildServerUrl(serverAddress, `/api/igdb/screenshots/${igdbId}`),
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!response.ok) return [];
+      const data = await response.json();
+      const shots = Array.isArray(data.screenshots) ? data.screenshots : [];
+      screenshotsCache.set(igdbId, { data: shots, timestamp: Date.now() });
+      return shots;
+    } catch (error) {
+      logger.debug("[IGDB] Screenshots fetch failed:", error.message);
+      return [];
+    } finally {
+      pendingScreenshotRequests.delete(igdbId);
+    }
+  })();
+
+  pendingScreenshotRequests.set(igdbId, requestPromise);
+  return requestPromise;
 };
 
 export const clearIGDBCache = () => {
