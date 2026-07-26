@@ -1,5 +1,64 @@
 [
   {
+    "version": "1.2.0",
+    "title": {
+      "en": "Game screenshots & Big Picture rework",
+      "fr": "Captures d'écran & refonte de Big Picture"
+    },
+    "releaseDate": "2026-07-26",
+    "sections": [
+      {
+        "type": "features",
+        "items": {
+          "en": [
+            "Game screenshots — in a game's details, and as a moving backdrop in Big Picture",
+            "Entry and exit sounds when opening and closing Big Picture"
+          ],
+          "fr": [
+            "Captures d'écran des jeux — dans la fiche du jeu, et en fond animé dans Big Picture",
+            "Sons d'entrée et de sortie à l'ouverture et à la fermeture de Big Picture"
+          ]
+        }
+      },
+      {
+        "type": "improvements",
+        "items": {
+          "en": [
+            "Big Picture opens faster — its code is now loaded only the first time you open it",
+            "The app no longer starts the audio device at launch",
+            "Smoother Big Picture grid while a download is running"
+          ],
+          "fr": [
+            "Big Picture s'ouvre plus vite — son code n'est chargé qu'à la première ouverture",
+            "L'application ne démarre plus le périphérique audio au lancement",
+            "Grille Big Picture plus fluide pendant un téléchargement"
+          ]
+        }
+      },
+      {
+        "type": "fixes",
+        "items": {
+          "en": [
+            "Uninstalling a game from Big Picture now updates the home page and the library too",
+            "The first D-pad press lands in the sidebar instead of the window buttons",
+            "The focus outline is visible again on sidebar links when navigating with a controller",
+            "Pressing down from an incomplete last row in Big Picture now lands on the last game",
+            "Big Picture fades out when you close it",
+            "The update dialog showed raw HTML instead of the release notes"
+          ],
+          "fr": [
+            "Désinstaller un jeu depuis Big Picture met désormais à jour l'accueil et la bibliothèque",
+            "La première pression du D-pad arrive dans la barre latérale au lieu des boutons de fenêtre",
+            "Le contour de focus est de nouveau visible sur les liens de la barre latérale à la manette",
+            "Appuyer sur bas depuis une dernière rangée incomplète amène sur le dernier jeu",
+            "Big Picture s'estompe à la fermeture",
+            "La fenêtre de mise à jour affichait du HTML brut au lieu des notes de version"
+          ]
+        }
+      }
+    ]
+  },
+  {
     "version": "1.1.0",
     "title": {
       "en": "Controller support, Big Picture & quality of life",
