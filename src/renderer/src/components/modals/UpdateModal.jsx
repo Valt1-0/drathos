@@ -5,6 +5,7 @@ import { useUpdate } from '../../contexts/updateContext';
 import { useTheme } from '../../contexts/themeContext';
 import logger from '../../services/logger';
 import { FiDownload, FiX, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import ReleaseNotes from './ReleaseNotes';
 
 export default function UpdateModal() {
   const { t } = useTranslation();
@@ -118,12 +119,8 @@ export default function UpdateModal() {
               {updateInfo?.releaseNotes && (
                 <div className={`mb-4 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-gray-800/50 border-gray-700'}`}>
                   <h3 className={`text-sm font-semibold mb-2 ${getTextClass('primary')}`}>{t('update.releaseNotes')}</h3>
-                  <div className={`text-sm max-h-32 overflow-y-auto ${getTextClass('secondary')}`}>
-                    <p className="whitespace-pre-wrap">
-                      {typeof updateInfo.releaseNotes === 'string'
-                        ? updateInfo.releaseNotes
-                        : JSON.stringify(updateInfo.releaseNotes)}
-                    </p>
+                  <div className={`max-h-64 overflow-y-auto ${getTextClass('secondary')}`}>
+                    <ReleaseNotes notes={updateInfo.releaseNotes} />
                   </div>
                 </div>
               )}
