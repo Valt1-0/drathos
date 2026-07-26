@@ -157,7 +157,7 @@ The desktop client is fully self-contained: it handles game launching, the downl
 - [x] Offline mode with background sync
 - [x] Automatic updates via GitHub Releases
 - [x] Collections, mods, and multi-user roles
-- [ ] In-app patch notes viewer
+- [x] In-app patch notes viewer
 - [ ] Additional interface languages
 
 > Suggestions and feature requests are welcome — [open an issue](https://github.com/Valt1-0/drathos/issues).
