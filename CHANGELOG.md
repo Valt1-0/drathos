@@ -23,6 +23,7 @@
 - The Big Picture close transition never ran: the overlay was unmounted before `AnimatePresence` could animate it
 - Pressing down from a partial last row in the Big Picture grid went nowhere; it now lands on the last card
 - Every navigation blip carried a 50ms lead-in; it now applies only while the audio device is still starting
+- The update dialog showed raw `<p>` / `<ul>` / `<code>` markup instead of the release notes — `electron-updater`'s GitHub provider returns GitHub's rendered HTML, which is now parsed through a tag allowlist
 
 ### Security
 - **`fast-uri` pinned to `>=4.1.1`** — the previous `>=3.1.2` override was open-ended enough to resolve to 4.1.0, covered by GHSA-v2hh-gcrm-f6hx (host confusion via a literal backslash authority delimiter). Reached only through `electron-store > conf > ajv`; that schema declares no `uri` formats and the app's own host check uses the WHATWG URL parser, so no reachable path was affected.
