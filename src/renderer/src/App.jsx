@@ -32,7 +32,11 @@ import QuickLaunch from "./components/QuickLaunch";
 import KeyboardShortcutsModal from "./components/modals/KeyboardShortcutsModal";
 import useKeyboardShortcuts, { useGlobalShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useGamepadNav } from "./hooks/useGamepadNav";
-import BigPictureMode from "./components/BigPictureMode";
+
+import { bpSounds } from "./services/bpSounds";
+import { gamepadService } from "./services/gamepadService";
+
+const BigPictureMode = lazy(() => import("./components/BigPictureMode"));
 
 const GamepadNav = () => {
   useGamepadNav();
@@ -40,15 +44,39 @@ const GamepadNav = () => {
 };
 
 // Opened by the TitleBar button or the gamepad Start button (both dispatch
-// the same window event)
+// the same window event). Only mounted (and its chunk fetched) after the
+// first open — most sessions never touch Big Picture.
 const BigPictureHost = () => {
   const [open, setOpen] = useState(false);
+  const [everOpened, setEverOpened] = useState(false);
   useEffect(() => {
-    const toggle = () => setOpen((v) => !v);
+    const toggle = () =>
+      setOpen((v) => {
+        const next = !v;
+        if (next) setEverOpened(true);
+        return next;
+      });
     window.addEventListener("drathos:bigpicture", toggle);
     return () => window.removeEventListener("drathos:bigpicture", toggle);
   }, []);
-  return <BigPictureMode isOpen={open} onClose={() => setOpen(false)} />;
+
+  // Booting the OS audio device blocks the main thread for up to ~2.5s, so pay
+  // it once a pad shows up or Big Picture is first opened — never on a plain
+  // keyboard-and-mouse session that ignores both
+  useEffect(() => {
+    if (everOpened || [...navigator.getGamepads()].some(Boolean)) {
+      bpSounds.warmup();
+      return;
+    }
+    return gamepadService.on("connected", () => bpSounds.warmup());
+  }, [everOpened]);
+
+  if (!everOpened) return null;
+  return (
+    <Suspense fallback={null}>
+      <BigPictureMode isOpen={open} onClose={() => setOpen(false)} />
+    </Suspense>
+  );
 };
 
 // * Critical pages imported directly (no lazy loading)
