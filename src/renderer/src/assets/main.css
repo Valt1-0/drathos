@@ -279,8 +279,11 @@ html, body, #root {
   100% { background-position: 200% 0; }
 }
 
-/* Gamepad navigation: strong focus ring while controller input is active
-   (body.gamepad-mode is toggled by useGamepadNav, cleared on mouse move) */
+/* Focus ring while controller input is active (body.gamepad-mode is toggled by
+   useGamepadNav, cleared on mouse move). Stays on outline rather than
+   box-shadow, which would override the elevation shadow of whatever is focused.
+   Chromium drops outlines on inline boxes wrapping block children, so anything
+   focusable needs to be a block itself — see the nav links in Drawer.jsx. */
 body.gamepad-mode :focus {
   outline: 2px solid var(--app-primary) !important;
   outline-offset: 2px;

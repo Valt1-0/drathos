@@ -1,8 +1,6 @@
 import logger from "./logger";
 
-// Gamepad input layer built on the standard mapping (https://w3c.github.io/gamepad/#remapping):
-// buttons 0-3 = A/B/X/Y, 4/5 = bumpers, 9 = start, 12-15 = d-pad; axes 0/1 = left stick.
-// Emits high-level events so the rest of the app never touches raw gamepad state.
+// Standard mapping: https://w3c.github.io/gamepad/#remapping
 const BUTTONS = {
   A: 0,
   B: 1,
@@ -19,11 +17,9 @@ const BUTTONS = {
 };
 
 const AXIS_DEADZONE = 0.5;
-const INITIAL_REPEAT_MS = 400; // hold delay before a direction starts repeating
+const INITIAL_REPEAT_MS = 400;
 const REPEAT_MS = 120;
 
-// Sony pads report ids like "DUALSHOCK 4 Wireless Controller" or
-// "Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)"
 const detectPadType = (id = "") => {
   const s = id.toLowerCase();
   if (/dualshock|dualsense|playstation|sony|054c/.test(s)) return "playstation";
@@ -32,15 +28,14 @@ const detectPadType = (id = "") => {
 
 class GamepadService {
   constructor() {
-    this.listeners = new Map(); // event -> Set<fn>
-    this.buttonState = new Map(); // "padIndex:button" -> pressed
-    this.dirState = new Map(); // direction -> { since, lastRepeat }
+    this.listeners = new Map();
+    this.buttonState = new Map();
+    this.dirState = new Map();
     this.rafId = null;
     this.started = false;
     this.connected = 0;
-    this.padType = "xbox"; // "xbox" | "playstation" — drives button glyphs in the UI
-    // A fullscreen surface (Big Picture) claims the pad: the global spatial
-    // navigation checks this and stands down while a claim is active
+    this.padType = "xbox";
+    // Big Picture claims this to make the global spatial nav stand down
     this.exclusiveOwner = null;
     this._onConnect = () => this._updateConnected();
     this._onDisconnect = () => this._updateConnected();
@@ -58,8 +53,6 @@ class GamepadService {
     if (this.exclusiveOwner === owner) this.exclusiveOwner = null;
   }
 
-  // The 60fps poll loop only runs while a pad is connected — with no
-  // controller the service costs nothing beyond two event listeners.
   start() {
     if (this.started) return;
     this.started = true;
@@ -146,7 +139,6 @@ class GamepadService {
       directions.right ||= pad.buttons[BUTTONS.DPAD_RIGHT]?.pressed || pad.axes[0] > AXIS_DEADZONE;
     }
 
-    // Directions fire on press, then auto-repeat while held
     for (const [dir, held] of Object.entries(directions)) {
       const state = this.dirState.get(dir);
       if (held && !state) {
@@ -161,7 +153,6 @@ class GamepadService {
     }
   }
 
-  // Rising-edge detection: emit once per physical press
   _edge(pad, button, event) {
     const key = `${pad.index}:${button}`;
     const pressed = pad.buttons[button]?.pressed ?? false;

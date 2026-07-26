@@ -27,6 +27,21 @@ const navRoot = () =>
 const candidates = () =>
   [...navRoot().querySelectorAll(FOCUSABLE_SELECTOR)].filter(isVisible);
 
+// Where the first d-pad press lands: the sidebar, then page content — never
+// the title bar window controls, which sit first in DOM order
+const entryPoint = () => {
+  const inRoot = candidates();
+  if (navRoot() !== document) return inRoot[0];
+  const preferred = ['nav[aria-label="Main navigation"]', "main"]
+    .map((sel) => document.querySelector(sel))
+    .filter(Boolean);
+  for (const region of preferred) {
+    const hit = inRoot.find((el) => region.contains(el));
+    if (hit) return hit;
+  }
+  return inRoot[0];
+};
+
 const center = (rect) => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
 
 // Geometric directional focus: prefer elements strictly in the requested
@@ -90,7 +105,7 @@ export function useGamepadNav() {
         setGamepadMode(true);
         const from = currentFocus();
         if (!from) {
-          const first = candidates()[0];
+          const first = entryPoint();
           if (first) focusElement(first);
           return;
         }

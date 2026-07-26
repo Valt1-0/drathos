@@ -137,7 +137,7 @@ const Drawer = ({ children }) => {
                 to={isDisabled ? "#" : item.path}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
-                className={`outline-none group/navitem${isDisabled ? " pointer-events-none" : ""}`}
+                className={`block rounded-xl outline-none group/navitem${isDisabled ? " pointer-events-none" : ""}`}
                 title={isDisabled ? t('nav.serverOffline') : undefined}
               >
                 <motion.div
