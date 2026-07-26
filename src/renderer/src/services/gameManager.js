@@ -33,6 +33,14 @@ class GameManager {
     });
 
     window.api.onUninstallProgress((progress) => {
+      // Every page keeps its own installedGames state; broadcast so the ones
+      // that didn't trigger the uninstall (Home, etc.) refresh too
+      if (progress.stage === "uninstalled") {
+        window.dispatchEvent(
+          new CustomEvent("games:uninstalled", { detail: { gameId: progress.id } })
+        );
+      }
+
       const listeners = this.uninstallListeners.get(progress.id) || [];
       listeners.forEach((callback) => {
         try {

@@ -43,6 +43,22 @@ export function useGamesLoader() {
     return () => window.removeEventListener("games:installed", handler);
   }, []);
 
+  // Drop the game after an uninstall from anywhere (Big Picture, the Games page,
+  // or the offline queue). Filtered locally rather than re-fetched: the event
+  // fires before the main process finishes purging installedGamesCache, and this
+  // has to work offline too.
+  useEffect(() => {
+    const handler = (e) => {
+      const gameId = e.detail?.gameId;
+      if (!gameId) return;
+      const kept = (g) => (g.serverGameId?._id ?? g._id) !== gameId;
+      setInstalledGames((prev) => prev.filter(kept));
+      gamesCache.set({ installedGames: (gamesCache.get().installedGames || []).filter(kept) });
+    };
+    window.addEventListener("games:uninstalled", handler);
+    return () => window.removeEventListener("games:uninstalled", handler);
+  }, []);
+
   useEffect(() => {
     if (isOnline === null) return; // not yet determined
 
