@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.2.0] - 2026-07-26
+
+### Added
+- **Game screenshots** — IGDB screenshots in the game detail view, and as the Big Picture backdrop
+- **Big Picture entry/exit sounds** — short WebAudio arpeggios on open and close
+
+### Changed
+- **Big Picture split into modules** — `BigPictureMode.jsx` from 2168 to 735 lines; grid, detail view, overlays, state hooks and shared primitives now live under `src/renderer/src/components/bigPicture/`
+- **Single source of input priority** — an `activeMode` value replaces the `nowPlaying > prompt > confirm > search > detail` cascade that was duplicated across `onNav` / `onConfirm` / `onBack`
+
+### Performance
+- **Big Picture lazy-loaded** — its 42 kB chunk is fetched only after the first open
+- **Audio device boot deferred** — constructing an `AudioContext` blocks the main thread for up to ~2.5s on Windows; that cost is now paid when a pad connects or Big Picture is first opened, never on a plain keyboard-and-mouse session
+- **Grid cards take per-card primitives** — a download ticking 4x/s no longer re-renders every card in the section
+- **IGDB screenshots deduplicated** — concurrent requests for the same game share one in-flight promise, and cache entries now honour `CACHE_DURATION`
+
+### Fixed
+- Uninstalling a game from Big Picture left it listed on Home and in the library — every view now drops it
+- The first d-pad press landed on the title bar window controls, which sit first in DOM order; focus now enters the sidebar
+- Focus ring was invisible on sidebar nav links — Chromium drops outlines on inline boxes wrapping block children, so the link is a block now
+- The Big Picture close transition never ran: the overlay was unmounted before `AnimatePresence` could animate it
+- Pressing down from a partial last row in the Big Picture grid went nowhere; it now lands on the last card
+- Every navigation blip carried a 50ms lead-in; it now applies only while the audio device is still starting
+
+### Security
+- **`fast-uri` pinned to `>=4.1.1`** — the previous `>=3.1.2` override was open-ended enough to resolve to 4.1.0, covered by GHSA-v2hh-gcrm-f6hx (host confusion via a literal backslash authority delimiter). Reached only through `electron-store > conf > ajv`; that schema declares no `uri` formats and the app's own host check uses the WHATWG URL parser, so no reachable path was affected.
+
+## [1.1.0] - 2026-07-15
+
+### Added
+- Full controller navigation across the app, and Big Picture mode
+- Per-game display selection and custom launch arguments
+- Close to system tray
+- Bug reports filed as GitHub issues from inside the app
+
+### Changed
+- Safer default install folder
+- Electron 43
+
 ## [1.0.0] - 2026-06-17
 
 ### Security

@@ -168,6 +168,8 @@ The desktop client is fully self-contained: it handles game launching, the downl
 
 ## Changelog
 
+**v1.2.0** — Game screenshots · Big Picture split into modules & lazy-loaded · Uninstall syncs across every view · Gamepad focus & navigation fixes · `fast-uri` security pin
+
 **v1.1.0** — Full controller navigation · Big Picture mode · Per-game display selection · Custom launch arguments · Close to system tray · Safer default install folder · GitHub issue bug reports · Electron 43
 
 **v1.0.0** — Open source release · GPL-3.0 licence · Security hardening (safeStorage, token refresh, CSP) · 4-language i18n (EN / FR / DE / ES) · Auto-update via GitHub Releases
