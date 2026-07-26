@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useConnection } from "../../contexts/connectionContext";
-import { getModsForGame, installMod, uninstallMod, getInstalledMods, deleteMod, normalizeGameId, normalizeModId } from "../../api/mods";
+import { getModsForGame, installMod, uninstallMod, getInstalledMods, deleteMod, normalizeModId, filterInstalledModsForGame } from "../../api/mods";
 import ModCard from "./ModCard";
 import { Button, SearchBar } from "../ui";
 
@@ -74,12 +74,6 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
     installed: { page: 1, totalPages: 1, totalMods: 0 }
   });
 
-  const filterInstalledModsForGame = useCallback((mods) => {
-    const normalizedGameId = normalizeGameId(gameId);
-    return mods.filter((im) => normalizeGameId(im.gameId) === normalizedGameId);
-  }, [gameId]);
-
-  // Load mods - memoized for proper useEffect dependency
   const loadMods = useCallback(async (reset = false, currentPage = 1) => {
     reset ? setLoading(true) : setLoadingMore(true);
 
@@ -89,7 +83,7 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
         getInstalledMods({ limit: 100 })
       ]);
 
-      const gameInstalledMods = filterInstalledModsForGame(installedData.installedMods);
+      const gameInstalledMods = filterInstalledModsForGame(installedData.installedMods, gameId);
 
       setAvailableMods(reset ? availableData.mods : prev => [...prev, ...availableData.mods]);
       setInstalledMods(gameInstalledMods);
@@ -112,7 +106,7 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [gameId, filterInstalledModsForGame, t]);
+  }, [gameId, t]);
 
   // Reload on gameId change (only if confirmed online)
   useEffect(() => {
@@ -148,11 +142,11 @@ const ModManager = ({ gameId, allowDownload = true, isOpen = true, onToggle }) =
 
   const reloadInstalledMods = useCallback(async () => {
     const { installedMods: mods } = await getInstalledMods({ limit: 100 });
-    const gameInstalledMods = filterInstalledModsForGame(mods);
+    const gameInstalledMods = filterInstalledModsForGame(mods, gameId);
     setInstalledMods(gameInstalledMods);
     setPagination(prev => ({ ...prev, installed: { ...prev.installed, totalMods: gameInstalledMods.length } }));
     return gameInstalledMods;
-  }, [filterInstalledModsForGame]);
+  }, [gameId]);
 
   const handleInstall = useCallback(async (modId) => {
     setInstalling(modId);

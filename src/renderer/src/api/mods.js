@@ -72,6 +72,11 @@ const normalizeId = (id) => {
 export const normalizeGameId = normalizeId;
 export const normalizeModId = normalizeId;
 
+export const filterInstalledModsForGame = (installedMods, gameId) => {
+  const normalizedGameId = normalizeGameId(gameId);
+  return (installedMods || []).filter((im) => normalizeGameId(im.gameId) === normalizedGameId);
+};
+
 export const getModsForGame = async (gameId, { page = 1, limit = 20, search = '' } = {}) => {
   try {
     const cacheKey = `mods_game_${gameId}_p${page}_l${limit}_s${search}`;
